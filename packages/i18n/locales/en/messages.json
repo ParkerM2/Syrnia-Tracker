@@ -1,17 +1,17 @@
 {
   "extensionDescription": {
     "description": "Extension description",
-    "message": "Chrome extension boilerplate developed with Vite, React and Typescript"
+    "message": "Syrnia Tracker"
   },
   "extensionName": {
     "description": "Extension name",
-    "message": "Chrome extension boilerplate"
+    "message": "Syrnia Tracker"
   },
   "toggleTheme": {
     "message": "Toggle theme"
   },
   "injectButton": {
-    "message": "Click to inject Content Scripts"
+    "message": "NONE"
   },
   "greeting": {
     "description": "Greeting message",
@@ -19,7 +19,7 @@
     "placeholders": {
       "name": {
         "content": "$1",
-        "example": "John Doe"
+        "example": "Parker"
       }
     }
   },
@@ -28,7 +28,7 @@
     "message": "Hello $1"
   },
   "displayErrorInfo": {
-    "message": "Error occur"
+    "message": "Error"
   },
   "displayErrorDescription": {
     "message": "Sorry, something went wrong while loading the page."
