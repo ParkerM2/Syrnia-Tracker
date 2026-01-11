@@ -1,5 +1,7 @@
-import { sampleFunction } from '@src/sample-function';
+import { scrapeScreenData } from './../../scrapeScreenData';
+import { sendData } from '../../sendData';
 
 console.log('[CEB] All content script loaded');
 
-void sampleFunction();
+void sendData();
+void scrapeScreenData();

@@ -4,8 +4,8 @@ import type { ThemeStateType, ThemeStorageType } from '../base/index.js';
 const storage = createStorage<ThemeStateType>(
   'theme-storage-key',
   {
-    theme: 'light',
-    isLight: true,
+    theme: 'dark',
+    isLight: false,
   },
   {
     storageEnum: StorageEnum.Local,

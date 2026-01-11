@@ -1,8 +1,10 @@
 const DISPLAY = {
+  DASHBOARD: 'DASHBOARD',
   STATS: 'STATS',
   LOOT: 'LOOT',
   ITEMS: 'ITEMS',
   CALCULATOR: 'CALCULATOR',
+  HISTORY: 'HISTORY',
 };
 
 export default DISPLAY;

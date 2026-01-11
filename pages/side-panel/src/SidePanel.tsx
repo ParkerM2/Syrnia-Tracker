@@ -1,26 +1,51 @@
 import '@src/SidePanel.css';
-import { t } from '@extension/i18n';
-import { PROJECT_URL_OBJECT, useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
+import Dashboard from './components/Dashboard';
+import Header from './components/Header';
+import LootMap from './components/LootMap/index';
+import Stats from './components/Stats';
+import TrackedHistory from './components/TrackedHistory';
+import DISPLAY from './constants/Tabs';
+import { withErrorBoundary, withSuspense, useStorage } from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
-import { cn, ErrorDisplay, LoadingSpinner, ToggleButton } from '@extension/ui';
+import { cn, ErrorDisplay, LoadingSpinner, ThemeToggle } from '@extension/ui';
+import { useState, useEffect } from 'react';
 
 const SidePanel = () => {
-  const { isLight } = useStorage(exampleThemeStorage);
-  const logo = isLight ? 'side-panel/logo_vertical.svg' : 'side-panel/logo_vertical_dark.svg';
+  const storageData = useStorage(exampleThemeStorage);
+  const isLight = storageData?.isLight ?? false;
+  const [display, setDisplay] = useState(DISPLAY.DASHBOARD);
 
-  const goGithubSite = () => chrome.tabs.create(PROJECT_URL_OBJECT);
+  // Apply dark mode class to document root immediately on mount and when theme changes
+  useEffect(() => {
+    const root = document.documentElement;
+    const shouldBeDark = storageData ? !isLight : true;
 
+    if (shouldBeDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [isLight, storageData]);
+
+  const renderComponent = (screen: string) => {
+    switch (screen) {
+      case DISPLAY.DASHBOARD:
+        return <Dashboard />;
+      case DISPLAY.STATS:
+        return <Stats />;
+      case DISPLAY.LOOT:
+        return <LootMap />;
+      case DISPLAY.HISTORY:
+        return <TrackedHistory />;
+      default:
+        return <Dashboard />;
+    }
+  };
   return (
-    <div className={cn('App', isLight ? 'bg-slate-50' : 'bg-gray-800')}>
-      <header className={cn('App-header', isLight ? 'text-gray-900' : 'text-gray-100')}>
-        <button onClick={goGithubSite}>
-          <img src={chrome.runtime.getURL(logo)} className="App-logo" alt="logo" />
-        </button>
-        <p>
-          Edit <code>pages/side-panel/src/SidePanel.tsx</code>
-        </p>
-        <ToggleButton onClick={exampleThemeStorage.toggle}>{t('toggleTheme')}</ToggleButton>
-      </header>
+    <div className={cn('App bg-background text-foreground min-h-screen p-8')}>
+      <Header display={display} setDisplay={setDisplay} />
+      {renderComponent(display)}
+      <ThemeToggle />
     </div>
   );
 };
