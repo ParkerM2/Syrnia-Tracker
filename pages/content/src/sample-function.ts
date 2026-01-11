@@ -1,3 +1,4 @@
+// Example Function
 export const sampleFunction = () => {
-  console.log('content script - sampleFunction() called from another module');
+  console.log('sample Function');
 };
