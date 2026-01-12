@@ -1,54 +1,74 @@
-import { useHourlyExp, useTrackedData, useScreenData, useFormatting } from '@extension/shared';
-import { cn, Card, CardContent, CardHeader, CardTitle } from '@extension/ui';
-import { useMemo, memo } from 'react';
+import { useHourlyExp, useTrackedDataQuery, useFormatting } from '@extension/shared';
+import { cn, Card, CardContent, CardHeader, CardTitle, Button, Tabs, TabsList, TabsTrigger } from '@extension/ui';
+import { useMemo, memo, useState, useEffect } from 'react';
 import type { CSVRow } from '@extension/shared';
 
 const Stats = memo(() => {
   const hourlyExp = useHourlyExp();
-  const { dataByHour, clearByHour, loading } = useTrackedData();
-  const screenData = useScreenData();
+  const { allData, clearByHour, loading } = useTrackedDataQuery();
   const { formatExp } = useFormatting();
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
 
-  // Get tracked data for current hour (use hourlyExp.currentHour which updates when hour changes)
-  const currentHourData = useMemo(() => {
-    try {
-      if (!dataByHour || hourlyExp?.currentHour === undefined || hourlyExp?.currentHour === null) {
-        return [];
-      }
-      const now = new Date();
-      const data = dataByHour(hourlyExp.currentHour, now);
+  // Group all data by location
+  const dataByLocation = useMemo(() => {
+    const locationMap = new Map<string, CSVRow[]>();
+    const allLocations: CSVRow[] = [];
 
-      if (!Array.isArray(data)) {
-        console.warn('dataByHour did not return an array:', data);
-        return [];
+    allData.forEach(row => {
+      allLocations.push(row);
+      const location = row.location?.trim() || 'Unknown';
+      if (!locationMap.has(location)) {
+        locationMap.set(location, []);
       }
-      // Sort by timestamp ascending (oldest first) for calculating gained exp
-      const sorted = [...data].sort((a, b) => {
-        try {
-          const timeA = new Date(a?.timestamp || 0).getTime();
-          const timeB = new Date(b?.timestamp || 0).getTime();
-          return timeA - timeB;
-        } catch (err) {
-          console.error('[Stats] Error sorting timestamps:', err, a, b);
-          return 0;
-        }
-      });
-      return sorted;
-    } catch (error) {
-      console.error('[Stats] Error processing hour data:', error);
-      return [];
+      locationMap.get(location)!.push(row);
+    });
+
+    // Add "All" location with all data
+    const result = new Map<string, CSVRow[]>();
+    result.set('all', allLocations);
+
+    // Sort locations by name (excluding 'all')
+    const sortedLocations = Array.from(locationMap.entries())
+      .filter(([loc]) => loc !== 'all')
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    sortedLocations.forEach(([location, rows]) => {
+      result.set(location, rows);
+    });
+
+    return result;
+  }, [allData]);
+
+  // Get list of locations for tabs
+  const locations = useMemo(() => Array.from(dataByLocation.keys()), [dataByLocation]);
+
+  // Set default selected location to first available (or 'all')
+  useEffect(() => {
+    if (locations.length > 0) {
+      if (selectedLocation === 'all' && !locations.includes('all')) {
+        setSelectedLocation(locations[0]);
+      } else if (!locations.includes(selectedLocation)) {
+        setSelectedLocation(locations[0]);
+      }
     }
-  }, [dataByHour, hourlyExp?.currentHour]);
+  }, [locations, selectedLocation]);
+
+  // Get data for selected location
+  const selectedLocationData = useMemo(
+    () => dataByLocation.get(selectedLocation) || [],
+    [dataByLocation, selectedLocation],
+  );
 
   // Prepare display data - use saved gainedExp directly with deduplication
+  // Use selectedLocationData instead of currentHourData for location-based stats
   const displayData = useMemo(() => {
-    if (currentHourData.length === 0) return [];
+    if (selectedLocationData.length === 0) return [];
 
     // Deduplicate entries: one entry per timestamp+skill (keep the one with highest gainedExp or most complete data)
     // This matches the logic in aggregateStats used by the history tab
     const uniqueEntriesMap = new Map<string, CSVRow>();
 
-    currentHourData.forEach(row => {
+    selectedLocationData.forEach(row => {
       const skill = row.skill || '';
       const key = `${row.timestamp}-${skill}`;
       const existing = uniqueEntriesMap.get(key);
@@ -88,6 +108,10 @@ const Stats = memo(() => {
             location: row.location || '',
             damageDealt: row.damageDealt || '',
             damageReceived: row.damageReceived || '',
+            peopleFighting: row.peopleFighting || '',
+            totalFights: row.totalFights || '',
+            totalInventoryHP: row.totalInventoryHP || '',
+            hpUsed: row.hpUsed || '',
             gainedExp,
           });
         }
@@ -98,78 +122,10 @@ const Stats = memo(() => {
 
     // Sort by timestamp descending (most recent first) for display
     return result.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [currentHourData]);
+  }, [selectedLocationData]);
 
   // Calculate total gained exp for the hour (sum of all gained exp, not total exp)
   const totalGainedExpThisHour = useMemo(() => displayData.reduce((sum, row) => sum + row.gainedExp, 0), [displayData]);
-
-  // Calculate stats per skill (total gained exp, level, and expForNextLevel for each skill)
-  // Use tracked data for persistence - don't rely on current screen data
-  const skillStats = useMemo(() => {
-    const stats: Record<
-      string,
-      {
-        gainedExp: number;
-        lastUpdate: string;
-        skillLevel: string;
-        expForNextLevel: string;
-      }
-    > = {};
-
-    // Process all entries to build skill stats
-    displayData.forEach(row => {
-      const skill = row.skill || 'Unknown';
-      const gainedExp = row.gainedExp;
-      const skillLevel = row.skillLevel || '';
-      const expForNextLevel = row.expForNextLevel || '';
-
-      if (!stats[skill]) {
-        // Initialize stats for this skill
-        stats[skill] = {
-          gainedExp: 0,
-          lastUpdate: row.timestamp,
-          skillLevel: skillLevel,
-          expForNextLevel: expForNextLevel,
-        };
-      }
-
-      // Always add to gained exp
-      stats[skill].gainedExp += gainedExp;
-
-      // Update level and expForNextLevel based on timestamp and availability
-      const rowTime = new Date(row.timestamp).getTime();
-      const statsTime = new Date(stats[skill].lastUpdate).getTime();
-
-      if (rowTime > statsTime) {
-        // More recent entry - update all values if available
-        stats[skill].lastUpdate = row.timestamp;
-        if (skillLevel) stats[skill].skillLevel = skillLevel;
-        if (expForNextLevel) stats[skill].expForNextLevel = expForNextLevel;
-      } else {
-        // If we don't have level/expForNextLevel yet, use them even from older entries
-        if (skillLevel && !stats[skill].skillLevel) stats[skill].skillLevel = skillLevel;
-        if (expForNextLevel && !stats[skill].expForNextLevel) stats[skill].expForNextLevel = expForNextLevel;
-      }
-    });
-
-    return stats;
-  }, [displayData]);
-
-  // Determine the current skill - the most recently trained skill (from tracked data, not just screen)
-  // This persists even when the skill is no longer on screen
-  const currentSkill = useMemo(() => {
-    // First, check if there's a skill currently on screen
-    const screenSkill = screenData?.actionText.currentActionText || '';
-
-    // Find the most recent entry with gained exp from tracked data
-    const mostRecentEntry = displayData
-      .filter(row => row.gainedExp > 0)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
-    // If there's a skill on screen, use that (most up-to-date)
-    // Otherwise, use the most recently trained skill from tracked data
-    return screenSkill || mostRecentEntry?.skill || '';
-  }, [screenData, displayData]);
 
   // Calculate current hour - must be a hook to maintain hook order
   const currentHour = useMemo(() => {
@@ -192,9 +148,10 @@ const Stats = memo(() => {
   }, [totalGainedExpThisHour, formatExp]);
 
   // Calculate performance stats: max hit, avg hit, HP lost
+  // Use selectedLocationData instead of currentHourData for location-based stats
   const performanceStats = useMemo(() => {
     try {
-      if (!Array.isArray(currentHourData) || currentHourData.length === 0) {
+      if (!Array.isArray(selectedLocationData) || selectedLocationData.length === 0) {
         return {
           maxHit: 0,
           avgHit: 0,
@@ -213,7 +170,7 @@ const Stats = memo(() => {
       // This matches the logic in aggregateStats used by the history tab
       const uniqueEntriesMap = new Map<string, CSVRow>();
 
-      currentHourData.forEach(row => {
+      selectedLocationData.forEach(row => {
         const skill = row.skill || '';
         const key = `${row.timestamp}-${skill}`;
         const existing = uniqueEntriesMap.get(key);
@@ -237,13 +194,15 @@ const Stats = memo(() => {
       const allDamageReceived: number[] = [];
       const monsterStats: Record<string, { damage: number[]; received: number[]; displayName: string }> = {};
 
-      // Get hour start time for calculating rates
-      const now = new Date();
-      const hourStart = new Date(now);
-      hourStart.setHours(hourlyExp?.currentHour ?? now.getHours(), 0, 0, 0);
-      const hourStartTime = hourStart.getTime();
-      const currentTime = now.getTime();
-      const elapsedMinutes = Math.max(1, (currentTime - hourStartTime) / (1000 * 60)); // At least 1 minute to avoid division by zero
+      // Calculate time span for rate calculations (use earliest and latest timestamps)
+      const timestamps = uniqueEntries
+        .map(row => new Date(row.timestamp).getTime())
+        .filter(ts => !isNaN(ts))
+        .sort((a, b) => a - b);
+
+      const earliestTime = timestamps.length > 0 ? timestamps[0] : Date.now();
+      const latestTime = timestamps.length > 0 ? timestamps[timestamps.length - 1] : Date.now();
+      const elapsedMinutes = Math.max(1, (latestTime - earliestTime) / (1000 * 60)); // At least 1 minute to avoid division by zero
 
       uniqueEntries.forEach(row => {
         try {
@@ -366,7 +325,7 @@ const Stats = memo(() => {
         hpLostPer15Min: 0,
       };
     }
-  }, [currentHourData, hourlyExp?.currentHour]);
+  }, [selectedLocationData]);
 
   if (loading) {
     return <div className={cn('p-4 text-lg font-semibold')}>Loading tracked data...</div>;
@@ -388,125 +347,62 @@ const Stats = memo(() => {
     }
   };
 
-  // Get level and expForNextLevel from screen data if available, otherwise use tracked data
-  // This ensures we show the most up-to-date info when on screen, but fall back to saved data when off screen
-  const getSkillInfo = (skill: string) => {
-    const isCurrentSkill = skill === currentSkill;
-    const trackedInfo = skillStats[skill];
-
-    // If this is the current skill and we have screen data, prefer screen data (most up-to-date)
-    if (isCurrentSkill && screenData?.actionText.currentActionText === skill) {
-      return {
-        level: screenData?.actionText.skillLevel || trackedInfo?.skillLevel || '',
-        expForNextLevel: screenData?.actionText.expForNextLevel || trackedInfo?.expForNextLevel || '',
-      };
-    }
-
-    // Otherwise, use tracked data (persisted from when it was on screen)
-    return {
-      level: trackedInfo?.skillLevel || '',
-      expForNextLevel: trackedInfo?.expForNextLevel || '',
-    };
-  };
-
-  // Get list of all tracked skills sorted by most recent activity
-  const trackedSkills = Object.entries(skillStats).sort(
-    (a, b) => new Date(b[1].lastUpdate).getTime() - new Date(a[1].lastUpdate).getTime(),
-  );
-
   return (
     <div className={cn('flex flex-col gap-4')}>
+      {/* Location Tabs */}
+      <Card>
+        <CardContent className="p-4">
+          <Tabs value={selectedLocation} onValueChange={setSelectedLocation}>
+            <TabsList className="w-full flex-wrap justify-start">
+              {locations.map(location => (
+                <TabsTrigger key={location} value={location}>
+                  {location === 'all' ? 'All Locations' : location}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </CardContent>
+      </Card>
+
       {/* Summary Header */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold">Current Hour ({currentHour}:00)</span>
+            <span className="text-lg font-semibold">
+              {selectedLocation === 'all' ? 'All Locations' : selectedLocation}
+            </span>
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold">
                 Total Gained: <span className="text-green-500">+{totalGainedExp}</span>
               </span>
-              <Button
-                onClick={handleClearCurrentHour}
-                variant="destructive"
-                size="sm"
-                aria-label="Clear Current Hour Data">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-1">
-                  <path d="M3 6h18"></path>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                </svg>
-                Clear Hour
-              </Button>
+              {selectedLocation !== 'all' && (
+                <Button
+                  onClick={handleClearCurrentHour}
+                  variant="destructive"
+                  size="sm"
+                  aria-label="Clear Current Hour Data">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mr-1">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
+                  Clear Hour
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Skill Stats - Show all tracked skills */}
-      {trackedSkills.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {trackedSkills.map(([skill, stats]) => {
-            const isCurrentSkill = skill === currentSkill;
-            return (
-              <Card
-                key={skill}
-                className={cn(isCurrentSkill && 'bg-primary/10 border-primary', 'min-w-[200px] flex-1')}>
-                <CardContent className="p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="text-base font-semibold">{skill}</span>
-                    <span className="text-base font-semibold text-green-500">+{formatExp(stats.gainedExp)}</span>
-                    {isCurrentSkill && (
-                      <Badge
-                        variant="outline"
-                        className="border-slate-300 bg-slate-200 text-slate-900 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-900">
-                        Current
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1 text-left text-sm">
-                    {(() => {
-                      const skillInfo = getSkillInfo(skill);
-                      const level = skillInfo.level;
-                      const expForNextLevel = formatExp(skillInfo.expForNextLevel || '0');
-
-                      return (
-                        <>
-                          {level && (
-                            <div>
-                              <span className="text-muted-foreground">Level: </span>
-                              <span className="font-semibold">{level}</span>
-                            </div>
-                          )}
-                          <div>
-                            <span className="text-muted-foreground">Current Exp: </span>
-                            <span className="font-semibold text-green-500">+{formatExp(stats.gainedExp)}</span>
-                          </div>
-                          {expForNextLevel !== '0' && (
-                            <div>
-                              <span className="text-muted-foreground">Exp Left: </span>
-                              <span className="font-semibold">{expForNextLevel}</span>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
 
       {/* Performance Card */}
       <Card>

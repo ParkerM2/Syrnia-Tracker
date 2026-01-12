@@ -8,11 +8,15 @@ export interface CSVRow {
   expForNextLevel: string;
   gainedExp: string; // The exp gained at this timestamp (calculated delta or combat exp value)
   drops: string; // Semicolon-separated list of drops
-  hp: string; // Current HP value at this timestamp
+  hp: string; // Current HP value at this timestamp (deprecated, use totalInventoryHP)
   monster: string; // Name of the monster being fought
   location: string; // Location name where fighting
   damageDealt: string; // Semicolon-separated array of damage dealt by player
   damageReceived: string; // Semicolon-separated array of damage received by player
+  peopleFighting: string; // Number of people fighting at the location (empty string if not available)
+  totalFights: string; // Total number of fights completed (empty string if not available)
+  totalInventoryHP: string; // Current HP value from inventory (empty string if not available)
+  hpUsed: string; // HP used from fight log (parsed from "gained X HP" lines, empty string if not available)
 }
 
 /**
@@ -32,11 +36,16 @@ export const screenDataToCSVRows = (data: ScreenData): CSVRow[] => {
       expForNextLevel: data.actionText.expForNextLevel || '',
       gainedExp: '', // Will be calculated when saving
       drops: data.actionText.drops.join(';'), // Save all drops
-      hp: data.actionText.inventory.hp || '', // Save HP
+      hp: data.actionText.inventory.hp || '', // Save HP (deprecated, kept for backward compatibility)
       monster: data.monster || '',
       location: data.location || '',
       damageDealt: (data.damageDealt || []).join(';'), // Save all damage dealt as semicolon-separated
       damageReceived: (data.damageReceived || []).join(';'), // Save all damage received as semicolon-separated
+      peopleFighting:
+        data.peopleFighting !== null && data.peopleFighting !== undefined ? String(data.peopleFighting) : '',
+      totalFights: data.totalFights !== null && data.totalFights !== undefined ? String(data.totalFights) : '',
+      totalInventoryHP: data.totalInventoryHP || '', // Save current HP from inventory
+      hpUsed: data.hpUsed !== null && data.hpUsed !== undefined ? String(data.hpUsed) : '', // Save HP used from fight log
     });
   }
 
@@ -50,11 +59,16 @@ export const screenDataToCSVRows = (data: ScreenData): CSVRow[] => {
       expForNextLevel: combatExp.expForNextLevel || '',
       gainedExp: combatExp.exp, // For combat exp, the exp value IS the gained exp
       drops: '', // Combat exp rows don't have drops
-      hp: data.actionText.inventory.hp || '', // Save HP
+      hp: data.actionText.inventory.hp || '', // Save HP (deprecated, kept for backward compatibility)
       monster: data.monster || '',
       location: data.location || '',
       damageDealt: (data.damageDealt || []).join(';'), // Save all damage dealt as semicolon-separated
       damageReceived: (data.damageReceived || []).join(';'), // Save all damage received as semicolon-separated
+      peopleFighting:
+        data.peopleFighting !== null && data.peopleFighting !== undefined ? String(data.peopleFighting) : '',
+      totalFights: data.totalFights !== null && data.totalFights !== undefined ? String(data.totalFights) : '',
+      totalInventoryHP: data.totalInventoryHP || '', // Save current HP from inventory
+      hpUsed: data.hpUsed !== null && data.hpUsed !== undefined ? String(data.hpUsed) : '', // Save HP used from fight log
     });
   });
 
@@ -71,11 +85,15 @@ export const screenDataToCSVRow = (data: ScreenData): CSVRow => ({
   expForNextLevel: data.actionText.expForNextLevel || '',
   gainedExp: '', // Will be calculated when saving
   drops: data.actionText.drops.join(';'),
-  hp: data.actionText.inventory.hp || '',
+  hp: data.actionText.inventory.hp || '', // Deprecated, kept for backward compatibility
   monster: data.monster || '',
   location: data.location || '',
   damageDealt: (data.damageDealt || []).join(';'), // Save all damage dealt as semicolon-separated
   damageReceived: (data.damageReceived || []).join(';'), // Save all damage received as semicolon-separated
+  peopleFighting: data.peopleFighting !== null && data.peopleFighting !== undefined ? String(data.peopleFighting) : '',
+  totalFights: data.totalFights !== null && data.totalFights !== undefined ? String(data.totalFights) : '',
+  totalInventoryHP: data.totalInventoryHP || '', // Save current HP from inventory
+  hpUsed: data.hpUsed !== null && data.hpUsed !== undefined ? String(data.hpUsed) : '', // Save HP used from fight log
 });
 
 /**
@@ -92,8 +110,17 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   // New (6 fields): timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops
   // New with HP (7 fields): timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp
   // New with HP and combat (11 fields): timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived
+  // New with HP, combat, and people (12 fields): timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting
+  // New with HP, combat, people, and totalFights (13 fields): timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights
+  // New with HP, combat, people, totalFights, totalInventoryHP, and hpUsed (15 fields): timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed
 
-  // Check for 11 fields first - need to distinguish between old new format and new format with combat
+  // Check for 15 fields first - new format with all fields including totalInventoryHP and hpUsed
+  const isNewFormatWithHpFields = row.length === 15;
+  // Check for 13 fields - new format with all fields including totalFights
+  const isNewFormatWithTotalFights = row.length === 13;
+  // Check for 12 fields - new format with all fields including peopleFighting (but not totalFights)
+  const isNewFormatWithPeople = row.length === 12;
+  // Check for 11 fields - need to distinguish between old new format and new format with combat
   // Old new format: row[7] is gainedExp (number), row[8] is drops (string), row[9] is images, row[10] is links
   // New format with combat: row[7] is monster (string, not a number), row[8] is location, row[9] is damageDealt, row[10] is damageReceived
   const isNewFormatWithCombat = row.length === 11 && row[7] && !row[7].match(/^[\d,]+$/); // 8th field is monster (not a number)
@@ -110,7 +137,68 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   const isNewFormatWithHP = row.length === 7 && row[3] && /^\d+$/.test(row[3].replace(/,/g, '')); // expForNextLevel is a number
   const isOldFormat = row.length === 7 && !isNewFormatWithHP;
 
-  if (isNewFormatWithCombat) {
+  if (isNewFormatWithHpFields) {
+    // New format with HP, combat, people, totalFights, totalInventoryHP, and hpUsed: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed
+    return {
+      timestamp: row[0] || '',
+      skill: row[1] || '',
+      skillLevel: row[2] || '',
+      expForNextLevel: row[3] || '',
+      gainedExp: row[4] || '',
+      drops: row[5] || '',
+      hp: row[6] || '',
+      monster: row[7] || '',
+      location: row[8] || '',
+      damageDealt: row[9] || '',
+      damageReceived: row[10] || '',
+      peopleFighting: row[11] || '',
+      totalFights: row[12] || '',
+      totalInventoryHP: row[13] || '',
+      hpUsed: row[14] || '',
+    };
+  }
+
+  if (isNewFormatWithTotalFights) {
+    // New format with HP, combat, people, and totalFights: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights
+    return {
+      timestamp: row[0] || '',
+      skill: row[1] || '',
+      skillLevel: row[2] || '',
+      expForNextLevel: row[3] || '',
+      gainedExp: row[4] || '',
+      drops: row[5] || '',
+      hp: row[6] || '',
+      monster: row[7] || '',
+      location: row[8] || '',
+      damageDealt: row[9] || '',
+      damageReceived: row[10] || '',
+      peopleFighting: row[11] || '',
+      totalFights: row[12] || '',
+      totalInventoryHP: '', // Backward compatible: not available in old format
+      hpUsed: '', // Backward compatible: not available in old format
+    };
+  }
+
+  if (isNewFormatWithPeople) {
+    // New format with HP, combat, and people: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting
+    return {
+      timestamp: row[0] || '',
+      skill: row[1] || '',
+      skillLevel: row[2] || '',
+      expForNextLevel: row[3] || '',
+      gainedExp: row[4] || '',
+      drops: row[5] || '',
+      hp: row[6] || '',
+      monster: row[7] || '',
+      location: row[8] || '',
+      damageDealt: row[9] || '',
+      damageReceived: row[10] || '',
+      peopleFighting: row[11] || '',
+      totalFights: '', // Backward compatible: no totalFights in old format
+      totalInventoryHP: '', // Backward compatible: not available in old format
+      hpUsed: '', // Backward compatible: not available in old format
+    };
+  } else if (isNewFormatWithCombat) {
     // New format with HP and combat: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived
     return {
       timestamp: row[0] || '',
@@ -124,6 +212,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       location: row[8] || '',
       damageDealt: row[9] || '',
       damageReceived: row[10] || '',
+      peopleFighting: '', // Not available in this format
+      totalFights: '', // Not available in this format
+      totalInventoryHP: '', // Not available in this format
+      hpUsed: '', // Not available in this format
     };
   } else if (isNewFormatWithHP) {
     // New format with HP: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp
@@ -139,6 +231,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       location: '', // Not available in this format
       damageDealt: '', // Not available in this format
       damageReceived: '', // Not available in this format
+      peopleFighting: '', // Not available in this format
+      totalFights: '', // Not available in this format
+      totalInventoryHP: '', // Not available in this format
+      hpUsed: '', // Not available in this format
     };
   } else if (isNewFormat) {
     // New format: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops
@@ -154,6 +250,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       location: '', // Not available in this format
       damageDealt: '', // Not available in this format
       damageReceived: '', // Not available in this format
+      peopleFighting: '', // Not available in this format
+      totalFights: '', // Not available in this format
+      totalInventoryHP: '', // Not available in this format
+      hpUsed: '', // Not available in this format
     };
   } else if (isOldNewFormat) {
     // Old new format (11 fields): timestamp,skill,exp,speedText,addExp,skillLevel,expForNextLevel,gainedExp,drops,images,links
@@ -169,6 +269,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       location: '', // Not available in old format
       damageDealt: '', // Not available in old format
       damageReceived: '', // Not available in old format
+      peopleFighting: '', // Not available in old format
+      totalFights: '', // Not available in old format
+      totalInventoryHP: '', // Not available in old format
+      hpUsed: '', // Not available in old format
     };
   } else if (isMediumFormat) {
     // Medium format (9 fields): timestamp,skill,exp,speedText,addExp,skillLevel,expForNextLevel,images,links
@@ -184,6 +288,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       location: '', // Not available in old format
       damageDealt: '', // Not available in old format
       damageReceived: '', // Not available in old format
+      peopleFighting: '', // Not available in old format
+      totalFights: '', // Not available in old format
+      totalInventoryHP: '', // Not available in old format
+      hpUsed: '', // Not available in old format
     };
   } else if (isOldFormat) {
     // Old format (7 fields): timestamp,skill,exp,speedText,addExp,images,links
@@ -199,6 +307,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       location: '', // Not available in old format
       damageDealt: '', // Not available in old format
       damageReceived: '', // Not available in old format
+      peopleFighting: '', // Not available in old format
+      totalFights: '', // Not available in old format
+      totalInventoryHP: '', // Not available in old format
+      hpUsed: '', // Not available in old format
     };
   }
 
@@ -216,6 +328,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
     location: row[8] || '', // Try to get location if available
     damageDealt: row[9] || '', // Try to get damageDealt if available
     damageReceived: row[10] || '', // Try to get damageReceived if available
+    peopleFighting: row[11] || '', // Try to get peopleFighting if available
+    totalFights: row[12] || '', // Try to get totalFights if available
+    totalInventoryHP: row[13] || '', // Try to get totalInventoryHP if available
+    hpUsed: row[14] || '', // Try to get hpUsed if available
   };
   return result;
 };
@@ -247,13 +363,17 @@ export const csvRowToString = (row: CSVRow): string =>
     escapeCSVField(row.location),
     escapeCSVField(row.damageDealt),
     escapeCSVField(row.damageReceived),
+    escapeCSVField(row.peopleFighting),
+    escapeCSVField(row.totalFights),
+    escapeCSVField(row.totalInventoryHP),
+    escapeCSVField(row.hpUsed),
   ].join(',');
 
 /**
  * Get CSV header row
  */
 export const getCSVHeader = (): string =>
-  'timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived';
+  'timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed';
 
 /**
  * Convert ScreenData to CSV line

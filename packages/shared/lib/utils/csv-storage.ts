@@ -1,4 +1,5 @@
 import { screenDataToCSVRows, csvRowToString, getCSVHeader, parseCSV } from './csv-tracker.js';
+import { updateWeeklyStats } from './weekly-stats-storage.js';
 import type { CSVRow } from './csv-tracker.js';
 import type { ScreenData } from './types.js';
 
@@ -81,6 +82,13 @@ export const appendToCSV = async (data: ScreenData): Promise<void> => {
         : `${existingCSV}\n${newLines.join('\n')}`;
 
     await chrome.storage.local.set({ [CSV_STORAGE_KEY]: updatedCSV });
+
+    // Update weekly stats after saving to CSV
+    // Get all rows to calculate weekly stats
+    const allRows = await getCSVRows();
+    await updateWeeklyStats(allRows).catch(error => {
+      console.error('Error updating weekly stats:', error);
+    });
   } catch (error) {
     console.error('Error appending to CSV:', error);
   }

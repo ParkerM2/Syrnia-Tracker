@@ -1,22 +1,154 @@
-import { useHourlyExp, useTrackedData, useHourStats, useFormatting, useScreenData } from '@extension/shared';
-import { cn, Card, CardContent, CardHeader, CardTitle } from '@extension/ui';
-import { useMemo, memo } from 'react';
+import {
+  useHourlyExp,
+  useTrackedDataQuery,
+  useHourStats,
+  useFormatting,
+  useScreenData,
+  useItemValuesQuery,
+  useUserStatsQuery,
+} from '@extension/shared';
+import { cn, Card, CardContent, CardHeader, CardTitle, Badge } from '@extension/ui';
+import { useMemo, memo, useState } from 'react';
+
+/**
+ * Normalize skill name for image URL
+ * Converts skill name to lowercase for URL matching
+ */
+const getSkillImageUrl = (skillName: string): string => {
+  const normalized = skillName.toLowerCase();
+  return `https://www.syrnia.com/images/skills/skills37/${normalized}.jpg`;
+};
+
+// Component for drop badge with image fallback
+const DropBadge = memo(
+  ({
+    name,
+    imageUrl,
+    stats,
+    totalValue,
+  }: {
+    name: string;
+    imageUrl: string;
+    stats: { count: number; totalAmount: number };
+    totalValue: number;
+  }) => {
+    const [imageError, setImageError] = useState(false);
+
+    return (
+      <Badge
+        variant="secondary"
+        className="border-border/50 relative flex items-center gap-1.5 px-4 py-2 text-xs font-medium">
+        <div className="relative">
+          {!imageError ? (
+            <img src={imageUrl} alt={name} className="h-8 w-8 object-contain" onError={() => setImageError(true)} />
+          ) : (
+            <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
+              <span className="truncate text-[10px] font-medium">{name}</span>
+            </div>
+          )}
+          {/* Total amount badge on top left of image */}
+          <span className="text-foreground absolute -left-1 -top-1 text-[10px] font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {stats.totalAmount.toLocaleString()}
+          </span>
+        </div>
+        <span className="sr-only">{name}</span>
+        <span className="font-bold text-green-500">
+          +
+          {totalValue.toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}{' '}
+          GP
+        </span>
+      </Badge>
+    );
+  },
+);
+
+DropBadge.displayName = 'DropBadge';
+
+/**
+ * Dashboard Skill Card Component - handles image loading state
+ */
+const DashboardSkillCard = memo(
+  ({
+    skill,
+    level,
+    gainedExp,
+    weeklyExp,
+    formatExp,
+  }: {
+    skill: string;
+    level: number;
+    gainedExp: number;
+    weeklyExp: number | null;
+    formatExp: (exp: number | string) => string;
+  }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const [imageError, setImageError] = useState(false);
+
+    return (
+      <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+        {/* Header: Image, Level, Skill Name, +Hour, +Week */}
+        <div className="mb-2 flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <img
+              src={getSkillImageUrl(skill)}
+              alt={`${skill}${level > 0 ? ` - Level ${level}` : ''}`}
+              className="h-8 w-8 flex-shrink-0 rounded object-cover"
+              onLoad={() => setImageLoaded(true)}
+              onError={e => {
+                setImageError(true);
+                // Hide image if it fails to load
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            {level > 0 && <span className="text-sm font-bold">{level}</span>}
+          </div>
+          <div className="flex flex-1 items-center justify-end gap-2">
+            {(!imageLoaded || imageError) && <span className="mr-auto text-sm font-semibold">{skill}</span>}
+            <div className="flex flex-col items-end gap-0.5">
+              {gainedExp > 0 && <span className="text-xs font-semibold text-green-500">+{formatExp(gainedExp)}</span>}
+              {weeklyExp !== null && weeklyExp > 0 && (
+                <span className="text-[10px] font-semibold text-blue-500">+{formatExp(weeklyExp)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+DashboardSkillCard.displayName = 'DashboardSkillCard';
 
 const Dashboard = memo(() => {
   const hourlyExp = useHourlyExp();
-  const { loading, stats: overallStats, dataByHour } = useTrackedData();
-  const { formatExp } = useFormatting();
+  const { loading, dataByHour } = useTrackedDataQuery();
+  const { formatExp, parseDrops, parseDropAmount } = useFormatting();
   const screenData = useScreenData();
+  const { itemValues } = useItemValuesQuery();
+  const { userStats } = useUserStatsQuery();
 
   // Get current hour - ensure it updates when hour changes
   const currentHour = useMemo(() => hourlyExp?.currentHour ?? new Date().getHours(), [hourlyExp?.currentHour]); // currentHour dependency is needed to trigger recalculation
 
   const previousHour = useMemo(() => (currentHour === 0 ? 23 : currentHour - 1), [currentHour]);
 
-  // Use the reusable hook for hour stats - pass current date to ensure fresh calculation
-  const now = useMemo(() => new Date(), []); // Recreate date when hour changes
-  const currentHourStats = useHourStats(currentHour, now);
-  const previousHourStats = useHourStats(previousHour, now);
+  // Use the reusable hook for hour stats
+  // Note: useHourStats will recalculate when dataByHour changes (when new data is added)
+  const currentHourStats = useHourStats(currentHour);
+  const previousHourStats = useHourStats(previousHour);
+
+  // Debug logging
+  useMemo(() => {
+    console.log('[Dashboard] Current hour stats:', {
+      currentHour,
+      totalExp: currentHourStats.totalExp,
+      skillCount: Object.keys(currentHourStats.expBySkill).length,
+      dropCount: Object.keys(currentHourStats.dropStats).length,
+      hasHP: !!currentHourStats.hpUsed,
+    });
+  }, [currentHour, currentHourStats]);
 
   // Get hour data for calculating skill stats
   const currentHourData = useMemo(() => {
@@ -55,6 +187,44 @@ const Dashboard = memo(() => {
 
   // Get current skill from screen data
   const currentSkill = useMemo(() => screenData?.actionText.currentActionText || '', [screenData]);
+
+  // Helper function to format location (replace "Rima city - barracks" with "Barracks")
+  const formatLocation = (location: string): string => {
+    if (location.toLowerCase() === 'rima city - barracks') {
+      return 'Barracks';
+    }
+    return location;
+  };
+
+  // Get current training activity description (monster, location)
+  const currentTrainingDescription = useMemo(() => {
+    // Get the most recent entry from current hour data
+    const mostRecent = currentHourData
+      .filter(row => row.skill && (row.monster || row.location))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+    if (!mostRecent) {
+      // Fallback to screen data
+      const monster = screenData?.monster || '';
+      const location = screenData?.location || '';
+
+      if (monster && location) {
+        return `Killing ${monster} at ${formatLocation(location)}`;
+      }
+      return null;
+    }
+
+    const monster = mostRecent.monster || '';
+    const location = mostRecent.location || '';
+
+    if (monster && location) {
+      return `Killing ${monster} at ${formatLocation(location)}`;
+    } else if (location) {
+      return `Training at ${formatLocation(location)}`;
+    }
+
+    return null;
+  }, [currentHourData, screenData]);
 
   // Helper function to format hour range
   const formatHourRange = (hour: number) => {
@@ -168,6 +338,40 @@ const Dashboard = memo(() => {
     return Array.from(locations);
   }, [previousHourData]);
 
+  // Calculate average people fighting for current hour
+  const currentHourAvgPeopleFighting = useMemo(() => {
+    const peopleCounts: number[] = [];
+    currentHourData.forEach(row => {
+      const peopleFighting = row.peopleFighting?.trim();
+      if (peopleFighting) {
+        const count = parseInt(peopleFighting, 10);
+        if (!isNaN(count) && count > 0) {
+          peopleCounts.push(count);
+        }
+      }
+    });
+    if (peopleCounts.length === 0) return null;
+    const sum = peopleCounts.reduce((acc, val) => acc + val, 0);
+    return Math.round(sum / peopleCounts.length);
+  }, [currentHourData]);
+
+  // Calculate average people fighting for previous hour
+  const previousHourAvgPeopleFighting = useMemo(() => {
+    const peopleCounts: number[] = [];
+    previousHourData.forEach(row => {
+      const peopleFighting = row.peopleFighting?.trim();
+      if (peopleFighting) {
+        const count = parseInt(peopleFighting, 10);
+        if (!isNaN(count) && count > 0) {
+          peopleCounts.push(count);
+        }
+      }
+    });
+    if (peopleCounts.length === 0) return null;
+    const sum = peopleCounts.reduce((acc, val) => acc + val, 0);
+    return Math.round(sum / peopleCounts.length);
+  }, [previousHourData]);
+
   // Get tracked skills for each hour - use expBySkill from useHourStats (correct calculation)
   const currentHourTrackedSkills = useMemo(
     () =>
@@ -211,272 +415,358 @@ const Dashboard = memo(() => {
     [previousHourStats.expBySkill, previousHourData],
   );
 
+  // Calculate net profit for current hour
+  const currentHourNetProfit = useMemo(() => {
+    let totalDropValue = 0;
+
+    // Calculate total drop value
+    currentHourData.forEach(row => {
+      const drops = parseDrops(row.drops || '');
+      drops.forEach(drop => {
+        const { amount, name } = parseDropAmount(drop);
+        const itemValue = parseFloat(itemValues[name] || '0');
+        if (!isNaN(itemValue)) {
+          totalDropValue += amount * itemValue;
+        }
+      });
+    });
+
+    // Calculate HP value (HP used * 2.5)
+    const hpUsed = currentHourStats.hpUsed?.used || 0;
+    const hpValue = hpUsed * 2.5;
+
+    // Calculate net profit
+    const netProfit = totalDropValue - hpValue;
+
+    return {
+      dropValue: totalDropValue,
+      hpValue,
+      netProfit,
+    };
+  }, [currentHourData, currentHourStats.hpUsed, parseDrops, parseDropAmount, itemValues]);
+
+  // Calculate net profit for previous hour
+  const previousHourNetProfit = useMemo(() => {
+    let totalDropValue = 0;
+
+    // Calculate total drop value
+    previousHourData.forEach(row => {
+      const drops = parseDrops(row.drops || '');
+      drops.forEach(drop => {
+        const { amount, name } = parseDropAmount(drop);
+        const itemValue = parseFloat(itemValues[name] || '0');
+        if (!isNaN(itemValue)) {
+          totalDropValue += amount * itemValue;
+        }
+      });
+    });
+
+    // Calculate HP value (HP used * 2.5)
+    const hpUsed = previousHourStats.hpUsed?.used || 0;
+    const hpValue = hpUsed * 2.5;
+
+    // Calculate net profit
+    const netProfit = totalDropValue - hpValue;
+
+    return {
+      dropValue: totalDropValue,
+      hpValue,
+      netProfit,
+    };
+  }, [previousHourData, previousHourStats.hpUsed, parseDrops, parseDropAmount, itemValues]);
+
   if (loading) {
     return <div className={cn('p-4 text-lg font-semibold')}>Loading tracked data...</div>;
   }
 
   return (
     <div className={cn('flex flex-col gap-4')}>
-      {/* Overall Progress Section */}
+      {/* Current Hour Skills - Compact Grid */}
       <Card>
         <CardHeader>
-          <CardTitle>Overall Progress</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex-1 text-left">
+              {currentTrainingDescription || `Current Hour (${formatHourRange(currentHour)})`}
+            </CardTitle>
+            {currentTrainingDescription && (
+              <Badge
+                variant="outline"
+                className="flex-shrink-0 border-slate-300 bg-slate-200 text-slate-900 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-900">
+                Current
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-muted-foreground mb-1 text-sm">Total Experience</p>
-              <p className="text-2xl font-bold">{formatExp(overallStats.totalExp)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1 text-sm">Skills Tracked</p>
-              <p className="text-2xl font-bold">{Object.keys(overallStats.skills).length}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tracked Skills - Current Hour */}
-      {currentHourTrackedSkills.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Hour ({formatHourRange(currentHour)})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3"
-              style={{ gridAutoRows: 'auto', gridAutoFlow: 'row dense' }}>
-              {/* Skill Cards */}
+          {currentHourTrackedSkills.length > 0 ||
+          (currentHourStats.hpUsed && currentHourStats.hpUsed.used !== 0) ||
+          currentHourOverallAvgHit > 0 ||
+          Object.keys(currentHourStats.dropStats).length > 0 ||
+          currentHourData.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {/* Skill Cards - Compact */}
               {currentHourTrackedSkills.map(skillData => {
                 const skillInfo = getSkillInfo(skillData.skill, {
                   skillLevel: skillData.skillLevel,
                   expForNextLevel: skillData.expForNextLevel,
                 });
+
+                // Get weekly exp from userStats if available
+                const weeklyExp = userStats?.skills?.[skillData.skill]?.gainedThisWeek
+                  ? parseInt(userStats.skills[skillData.skill].gainedThisWeek?.replace(/,/g, '') || '0', 10)
+                  : null;
+
+                const level = skillInfo.level ? parseInt(skillInfo.level, 10) : 0;
+
                 return (
-                  <Card key={skillData.skill} className="h-auto min-w-[150px] flex-shrink-0 p-3">
-                    <CardContent className="h-full p-0">
-                      <div className="flex h-full flex-col gap-2">
-                        <p className="text-muted-foreground text-xs">
-                          {skillData.skill}
-                          {skillInfo.level ? ` ${skillInfo.level}` : ''}
-                        </p>
-                        <p className="text-lg font-semibold text-green-500">+{formatExp(skillData.gainedExp)}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <DashboardSkillCard
+                    key={skillData.skill}
+                    skill={skillData.skill}
+                    level={level}
+                    gainedExp={skillData.gainedExp}
+                    weeklyExp={weeklyExp}
+                    formatExp={formatExp}
+                  />
                 );
               })}
 
-              {/* Drops Card */}
-              {Object.keys(currentHourStats.dropStats).length > 0 && (
-                <Card className="h-auto min-w-[150px] p-3" style={{ gridColumn: 'span 2' }}>
-                  <CardContent className="h-full p-0">
-                    <div className="flex h-full flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">Drops</p>
-                      <div className="space-y-1">
-                        {Object.entries(currentHourStats.dropStats)
-                          .sort((a, b) => b[1].totalAmount - a[1].totalAmount)
-                          .map(([name, stats]) => (
-                            <div key={name} className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground truncate pr-2">{name}</span>
-                              <span className="whitespace-nowrap font-semibold">
-                                {stats.totalAmount.toLocaleString()} ({stats.count}x)
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* HP Used Card */}
+              {/* Stats Cards - Compact */}
               {currentHourStats.hpUsed && (
-                <Card className="h-auto min-w-[150px] flex-shrink-0 p-3">
-                  <CardContent className="h-full p-0">
-                    <div className="flex h-full flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">HP Used</p>
-                      <p
-                        className={cn(
-                          'text-lg font-semibold',
-                          currentHourStats.hpUsed.used > 0
-                            ? 'text-red-500'
-                            : currentHourStats.hpUsed.used < 0
-                              ? 'text-green-500'
-                              : 'text-foreground',
-                        )}>
-                        {currentHourStats.hpUsed.used > 0 ? '-' : ''}
-                        {Math.abs(currentHourStats.hpUsed.used).toLocaleString()}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {currentHourStats.hpUsed.startHP.toLocaleString()} →{' '}
-                        {currentHourStats.hpUsed.endHP.toLocaleString()}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">HP Used</p>
+                  <p
+                    className={cn(
+                      'mt-1 text-base font-bold',
+                      currentHourStats.hpUsed.used > 0
+                        ? 'text-red-500'
+                        : currentHourStats.hpUsed.used < 0
+                          ? 'text-green-500'
+                          : 'text-foreground',
+                    )}>
+                    {currentHourStats.hpUsed.used > 0 ? '-' : ''}
+                    {Math.abs(currentHourStats.hpUsed.used).toLocaleString()}
+                  </p>
+                </div>
               )}
 
-              {/* Overall Average Hit Card */}
               {currentHourOverallAvgHit > 0 && (
-                <Card className="h-auto min-w-[150px] flex-shrink-0 p-3">
-                  <CardContent className="h-full p-0">
-                    <div className="flex h-full flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">Avg Hit</p>
-                      <p className="text-lg font-semibold">{Math.round(currentHourOverallAvgHit).toLocaleString()}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Avg Hit</p>
+                  <p className="mt-1 text-base font-bold">{Math.round(currentHourOverallAvgHit).toLocaleString()}</p>
+                </div>
               )}
 
-              {/* Fighting Location Cards */}
-              {currentHourLocations.map(location => (
-                <Card key={`fighting-location-${location}`} className="min-w-[150px] flex-shrink-0 p-3">
-                  <CardContent className="p-0">
-                    <div className="flex flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">Fighting Location</p>
-                      <p className="text-lg font-semibold">{location}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* Average Hit by Location Cards */}
-              {Object.entries(currentHourStats.averageHitByLocation)
-                .sort((a, b) => b[1] - a[1])
-                .map(([location, avgHit]) => (
-                  <Card key={`location-${location}`} className="min-w-[150px] flex-shrink-0 p-3">
-                    <CardContent className="p-0">
-                      <div className="flex flex-col gap-2">
-                        <p className="text-muted-foreground text-xs">Avg Hit at {location}</p>
-                        <p className="text-lg font-semibold">{Math.round(avgHit).toLocaleString()}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* Location Cards */}
+              {currentHourLocations.length > 0 &&
+                currentHourLocations.map(location => (
+                  <div key={location} className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                    <p className="text-muted-foreground text-xs font-medium">Location</p>
+                    <p className="mt-1 truncate text-base font-bold">{location}</p>
+                  </div>
                 ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Tracked Skills - Previous Hour */}
+              {/* Average People Fighting Card */}
+              {currentHourAvgPeopleFighting !== null && (
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Avg People Fighting</p>
+                  <p className="mt-1 text-base font-bold">{currentHourAvgPeopleFighting}</p>
+                </div>
+              )}
+
+              {/* Net Profit Card */}
+              {(currentHourNetProfit.dropValue > 0 || currentHourNetProfit.hpValue > 0) && (
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Net Profit</p>
+                  <p
+                    className={cn(
+                      'mt-1 text-base font-bold',
+                      currentHourNetProfit.netProfit > 0
+                        ? 'text-green-500'
+                        : currentHourNetProfit.netProfit < 0
+                          ? 'text-red-500'
+                          : 'text-foreground',
+                    )}>
+                    {currentHourNetProfit.netProfit >= 0 ? '+' : ''}
+                    {currentHourNetProfit.netProfit.toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}{' '}
+                    GP
+                  </p>
+                </div>
+              )}
+
+              {/* Total Fights Card */}
+              {currentHourStats.totalFights > 0 && (
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Total Fights</p>
+                  <p className="mt-1 text-base font-bold">{currentHourStats.totalFights.toLocaleString()}</p>
+                </div>
+              )}
+
+              {/* Drops - Compact */}
+              {Object.keys(currentHourStats.dropStats).length > 0 && (
+                <div className="col-span-full rounded-lg border p-3">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">Drops</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(currentHourStats.dropStats)
+                      .sort((a, b) => {
+                        // Sort by total value (amount * itemValue) descending
+                        const aValue = a[1].totalAmount * (parseFloat(itemValues[a[0]] || '0') || 0);
+                        const bValue = b[1].totalAmount * (parseFloat(itemValues[b[0]] || '0') || 0);
+                        return bValue - aValue;
+                      })
+                      .map(([name, stats]) => {
+                        const itemValue = parseFloat(itemValues[name] || '0') || 0;
+                        const totalValue = stats.totalAmount * itemValue;
+                        const imageUrl = `https://www.syrnia.com/images/inventory/${name.replace(/\s/g, '%20')}.png`;
+                        return (
+                          <DropBadge key={name} name={name} imageUrl={imageUrl} stats={stats} totalValue={totalValue} />
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-muted-foreground flex items-center justify-center py-8">
+              <p className="text-sm">No data tracked for this hour yet</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Previous Hour Skills - Compact Grid */}
       {previousHourTrackedSkills.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Previous Hour ({formatHourRange(previousHour)})</CardTitle>
+            <CardTitle>{formatHourRange(previousHour)}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div
-              className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3"
-              style={{ gridAutoRows: 'auto', gridAutoFlow: 'row dense' }}>
-              {/* Skill Cards */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {/* Skill Cards - Compact */}
               {previousHourTrackedSkills.map(skillData => {
                 const skillInfo = getSkillInfo(skillData.skill, {
                   skillLevel: skillData.skillLevel,
                   expForNextLevel: skillData.expForNextLevel,
                 });
+
+                // Get weekly exp from userStats if available
+                const weeklyExp = userStats?.skills?.[skillData.skill]?.gainedThisWeek
+                  ? parseInt(userStats.skills[skillData.skill].gainedThisWeek?.replace(/,/g, '') || '0', 10)
+                  : null;
+
+                const level = skillInfo.level ? parseInt(skillInfo.level, 10) : 0;
+
                 return (
-                  <Card key={skillData.skill} className="h-auto min-w-[150px] flex-shrink-0 p-3">
-                    <CardContent className="h-full p-0">
-                      <div className="flex h-full flex-col gap-2">
-                        <p className="text-muted-foreground text-xs">
-                          {skillData.skill}
-                          {skillInfo.level ? ` ${skillInfo.level}` : ''}
-                        </p>
-                        <p className="text-lg font-semibold text-green-500">+{formatExp(skillData.gainedExp)}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <DashboardSkillCard
+                    key={skillData.skill}
+                    skill={skillData.skill}
+                    level={level}
+                    gainedExp={skillData.gainedExp}
+                    weeklyExp={weeklyExp}
+                    formatExp={formatExp}
+                  />
                 );
               })}
 
-              {/* Drops Card */}
-              {Object.keys(previousHourStats.dropStats).length > 0 && (
-                <Card className="h-auto min-w-[150px] p-3" style={{ gridColumn: 'span 2' }}>
-                  <CardContent className="h-full p-0">
-                    <div className="flex h-full flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">Drops</p>
-                      <div className="space-y-1">
-                        {Object.entries(previousHourStats.dropStats)
-                          .sort((a, b) => b[1].totalAmount - a[1].totalAmount)
-                          .map(([name, stats]) => (
-                            <div key={name} className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground truncate pr-2">{name}</span>
-                              <span className="whitespace-nowrap font-semibold">
-                                {stats.totalAmount.toLocaleString()} ({stats.count}x)
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* HP Used Card */}
+              {/* Stats Cards - Compact */}
               {previousHourStats.hpUsed && (
-                <Card className="h-auto min-w-[150px] flex-shrink-0 p-3">
-                  <CardContent className="h-full p-0">
-                    <div className="flex h-full flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">HP Used</p>
-                      <p
-                        className={cn(
-                          'text-lg font-semibold',
-                          previousHourStats.hpUsed.used > 0
-                            ? 'text-red-500'
-                            : previousHourStats.hpUsed.used < 0
-                              ? 'text-green-500'
-                              : 'text-foreground',
-                        )}>
-                        {previousHourStats.hpUsed.used > 0 ? '-' : ''}
-                        {Math.abs(previousHourStats.hpUsed.used).toLocaleString()}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {previousHourStats.hpUsed.startHP.toLocaleString()} →{' '}
-                        {previousHourStats.hpUsed.endHP.toLocaleString()}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">HP Used</p>
+                  <p
+                    className={cn(
+                      'mt-1 text-base font-bold',
+                      previousHourStats.hpUsed.used > 0
+                        ? 'text-red-500'
+                        : previousHourStats.hpUsed.used < 0
+                          ? 'text-green-500'
+                          : 'text-foreground',
+                    )}>
+                    {previousHourStats.hpUsed.used > 0 ? '-' : ''}
+                    {Math.abs(previousHourStats.hpUsed.used).toLocaleString()}
+                  </p>
+                </div>
               )}
 
-              {/* Overall Average Hit Card */}
               {previousHourOverallAvgHit > 0 && (
-                <Card className="h-auto min-w-[150px] flex-shrink-0 p-3">
-                  <CardContent className="h-full p-0">
-                    <div className="flex h-full flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">Avg Hit</p>
-                      <p className="text-lg font-semibold">{Math.round(previousHourOverallAvgHit).toLocaleString()}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Avg Hit</p>
+                  <p className="mt-1 text-base font-bold">{Math.round(previousHourOverallAvgHit).toLocaleString()}</p>
+                </div>
               )}
 
-              {/* Fighting Location Cards */}
-              {previousHourLocations.map(location => (
-                <Card key={`fighting-location-${location}`} className="min-w-[150px] flex-shrink-0 p-3">
-                  <CardContent className="p-0">
-                    <div className="flex flex-col gap-2">
-                      <p className="text-muted-foreground text-xs">Fighting Location</p>
-                      <p className="text-lg font-semibold">{location}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* Average Hit by Location Cards */}
-              {Object.entries(previousHourStats.averageHitByLocation)
-                .sort((a, b) => b[1] - a[1])
-                .map(([location, avgHit]) => (
-                  <Card key={`location-${location}`} className="min-w-[150px] flex-shrink-0 p-3">
-                    <CardContent className="p-0">
-                      <div className="flex flex-col gap-2">
-                        <p className="text-muted-foreground text-xs">Avg Hit at {location}</p>
-                        <p className="text-lg font-semibold">{Math.round(avgHit).toLocaleString()}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* Location Cards */}
+              {previousHourLocations.length > 0 &&
+                previousHourLocations.map(location => (
+                  <div key={location} className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                    <p className="text-muted-foreground text-xs font-medium">Location</p>
+                    <p className="mt-1 truncate text-base font-bold">{location}</p>
+                  </div>
                 ))}
+
+              {/* Average People Fighting Card */}
+              {previousHourAvgPeopleFighting !== null && (
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Avg People Fighting</p>
+                  <p className="mt-1 text-base font-bold">{previousHourAvgPeopleFighting}</p>
+                </div>
+              )}
+
+              {/* Net Profit Card */}
+              {(previousHourNetProfit.dropValue > 0 || previousHourNetProfit.hpValue > 0) && (
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Net Profit</p>
+                  <p
+                    className={cn(
+                      'mt-1 text-base font-bold',
+                      previousHourNetProfit.netProfit > 0
+                        ? 'text-green-500'
+                        : previousHourNetProfit.netProfit < 0
+                          ? 'text-red-500'
+                          : 'text-foreground',
+                    )}>
+                    {previousHourNetProfit.netProfit >= 0 ? '+' : ''}
+                    {previousHourNetProfit.netProfit.toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}{' '}
+                    GP
+                  </p>
+                </div>
+              )}
+
+              {/* Total Fights Card */}
+              {previousHourStats.totalFights > 0 && (
+                <div className="hover:bg-accent flex flex-col rounded-lg border p-3 transition-colors">
+                  <p className="text-muted-foreground text-xs font-medium">Total Fights</p>
+                  <p className="mt-1 text-base font-bold">{previousHourStats.totalFights.toLocaleString()}</p>
+                </div>
+              )}
+
+              {/* Drops - Compact */}
+              {Object.keys(previousHourStats.dropStats).length > 0 && (
+                <div className="col-span-full rounded-lg border p-3">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">Drops</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(previousHourStats.dropStats)
+                      .sort((a, b) => {
+                        // Sort by total value (amount * itemValue) descending
+                        const aValue = a[1].totalAmount * (parseFloat(itemValues[a[0]] || '0') || 0);
+                        const bValue = b[1].totalAmount * (parseFloat(itemValues[b[0]] || '0') || 0);
+                        return bValue - aValue;
+                      })
+                      .map(([name, stats]) => {
+                        const itemValue = parseFloat(itemValues[name] || '0') || 0;
+                        const totalValue = stats.totalAmount * itemValue;
+                        const imageUrl = `https://www.syrnia.com/images/inventory/${name.replace(/\s/g, '%20')}.png`;
+                        return (
+                          <DropBadge key={name} name={name} imageUrl={imageUrl} stats={stats} totalValue={totalValue} />
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

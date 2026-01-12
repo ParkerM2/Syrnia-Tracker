@@ -1,4 +1,4 @@
-import { useHourlyExp, useTrackedData, useFormatting } from '@extension/shared';
+import { useHourlyExp, useTrackedDataQuery, useFormatting, useItemValuesQuery } from '@extension/shared';
 import {
   cn,
   Card,
@@ -13,13 +13,73 @@ import {
   TableRow,
   Badge,
   Button,
+  Input,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@extension/ui';
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState, useCallback } from 'react';
+
+// Component for drop badge with image (for LootMap table)
+const DropBadgeTable = memo(
+  ({
+    drop,
+    itemValues,
+    parseDropAmount,
+  }: {
+    drop: string;
+    itemValues: Record<string, string>;
+    parseDropAmount: (dropString: string) => { amount: number; name: string };
+  }) => {
+    const [imageError, setImageError] = useState(false);
+    const { amount, name } = parseDropAmount(drop);
+    const itemValue = parseFloat(itemValues[name] || '0') || 0;
+    const totalValue = amount * itemValue;
+    const imageUrl = `https://www.syrnia.com/images/inventory/${name.replace(/\s/g, '%20')}.png`;
+
+    return (
+      <Badge
+        variant="secondary"
+        className="border-border/50 relative flex items-center gap-1.5 px-4 py-2 text-xs font-medium">
+        <div className="relative">
+          {!imageError ? (
+            <img src={imageUrl} alt={name} className="h-8 w-8 object-contain" onError={() => setImageError(true)} />
+          ) : (
+            <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
+              <span className="truncate text-[10px] font-medium">{name}</span>
+            </div>
+          )}
+          {/* Total amount badge on top left of image */}
+          <span className="text-foreground absolute -left-1 -top-1 text-[10px] font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {amount.toLocaleString()}
+          </span>
+        </div>
+        <span className="sr-only">{name}</span>
+        <span className="font-bold text-green-500">
+          +
+          {totalValue.toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}{' '}
+          GP
+        </span>
+      </Badge>
+    );
+  },
+);
+
+DropBadgeTable.displayName = 'DropBadgeTable';
 
 const LootMap = memo(() => {
   const hourlyExp = useHourlyExp();
-  const { dataByHour, clearByHour, loading } = useTrackedData();
+  const { dataByHour, allData, loading } = useTrackedDataQuery();
   const { formatTime, parseDrops, parseDropAmount } = useFormatting();
+  const { itemValues, save, isSaving } = useItemValuesQuery();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tempItemValues, setTempItemValues] = useState<Record<string, string>>({});
 
   // Get tracked data for current hour
   const currentHourData = useMemo(() => {
@@ -62,87 +122,150 @@ const LootMap = memo(() => {
     [dropStats],
   );
 
-  // Calculate HP used per hour
-  const hpUsedThisHour = useMemo(() => {
-    // Get all HP values from current hour data, sorted by timestamp
-    const hpEntries = currentHourData
-      .filter(row => row.hp && row.hp.trim() !== '')
-      .map(row => {
-        // Parse HP value (remove commas)
-        const hpValue = parseInt(row.hp.replace(/,/g, ''), 10);
-        return {
-          timestamp: row.timestamp,
-          hp: isNaN(hpValue) ? null : hpValue,
-        };
-      })
-      .filter(entry => entry.hp !== null)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    if (hpEntries.length < 2) {
-      // Need at least 2 entries to calculate HP used
-      return null;
-    }
-
-    // HP used = first HP - last HP (if HP decreased, this is positive)
-    const firstHP = hpEntries[0].hp!;
-    const lastHP = hpEntries[hpEntries.length - 1].hp!;
-    const hpUsed = firstHP - lastHP;
-
-    return {
-      used: hpUsed,
-      startHP: firstHP,
-      endHP: lastHP,
-    };
-  }, [currentHourData]); // parseDrops not used in this calculation
-
-  // Prepare table data - entries with drops
-  const tableData = useMemo(() => {
-    const entriesWithDrops: Array<{ timestamp: string; drops: string[] }> = [];
-
-    currentHourData.forEach(row => {
+  // Get all unique drop item names from ALL tracked data (not just current hour)
+  const allUniqueItems = useMemo(() => {
+    const items = new Set<string>();
+    allData.forEach(row => {
       const drops = parseDrops(row.drops || '');
-      if (drops.length > 0) {
-        entriesWithDrops.push({
-          timestamp: row.timestamp,
-          drops: drops,
-        });
+      drops.forEach(drop => {
+        const { name } = parseDropAmount(drop);
+        items.add(name);
+      });
+    });
+    return Array.from(items).sort();
+  }, [allData, parseDrops, parseDropAmount]);
+
+  // Handle settings dialog open
+  const handleOpenSettings = useCallback(() => {
+    setTempItemValues({ ...itemValues });
+    setIsSettingsOpen(true);
+  }, [itemValues]);
+
+  // Handle settings dialog close
+  const handleCloseSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+    setTempItemValues({});
+  }, []);
+
+  // Handle save item values
+  const handleSaveItemValues = useCallback(async () => {
+    try {
+      await save(tempItemValues);
+      setIsSettingsOpen(false);
+    } catch (error) {
+      console.error('Error saving item values:', error);
+      alert('Error saving item values');
+    }
+  }, [tempItemValues, save]);
+
+  // Handle item value change in form
+  const handleItemValueChange = useCallback((itemName: string, value: string) => {
+    setTempItemValues(prev => ({
+      ...prev,
+      [itemName]: value,
+    }));
+  }, []);
+
+  // Calculate total HP used for the hour from fight log
+  const totalHpUsedThisHour = useMemo(() => {
+    // Sum all hpUsed values from fight log (parsed from "gained X HP" lines)
+    let totalHpUsed = 0;
+    currentHourData.forEach(row => {
+      if (row.hpUsed && row.hpUsed.trim() !== '') {
+        const hpUsedValue = parseInt(row.hpUsed.replace(/,/g, ''), 10);
+        if (!isNaN(hpUsedValue) && hpUsedValue > 0) {
+          totalHpUsed += hpUsedValue;
+        }
+      }
+    });
+    return totalHpUsed > 0 ? totalHpUsed : null;
+  }, [currentHourData]);
+
+  // Prepare table data - entries with drops, HP, and profit calculations
+  const tableData = useMemo(() => {
+    // Get entries with drops
+    const entries = currentHourData
+      .filter(row => {
+        const drops = parseDrops(row.drops || '');
+        return drops.length > 0;
+      })
+      .map(row => ({
+        timestamp: row.timestamp,
+        drops: parseDrops(row.drops || ''),
+      }));
+
+    // Calculate HP used, drop values, HP values, and net profit for each entry
+    // Create a map of timestamp to hpUsed from fight log
+    const hpUsedMap = new Map<string, number>();
+    currentHourData.forEach(row => {
+      if (row.hpUsed && row.hpUsed.trim() !== '') {
+        const hpUsedValue = parseInt(row.hpUsed.replace(/,/g, ''), 10);
+        if (!isNaN(hpUsedValue) && hpUsedValue > 0) {
+          hpUsedMap.set(row.timestamp, hpUsedValue);
+        }
       }
     });
 
+    const entriesWithProfit = entries.map(entry => {
+      // Get HP used from fight log (parsed from "gained X HP" lines)
+      const hpUsed = hpUsedMap.get(entry.timestamp) ?? null;
+
+      // Calculate drop value
+      let dropValue = 0;
+      entry.drops.forEach(drop => {
+        const { amount, name } = parseDropAmount(drop);
+        const itemValue = parseFloat(itemValues[name] || '0');
+        if (!isNaN(itemValue)) {
+          dropValue += amount * itemValue;
+        }
+      });
+
+      // Calculate HP value (HP used * 2.5)
+      const hpValue = hpUsed !== null ? hpUsed * 2.5 : 0;
+
+      // Calculate net profit (drop value - HP value)
+      const netProfit = dropValue - hpValue;
+
+      return {
+        ...entry,
+        hpUsed,
+        dropValue,
+        hpValue,
+        netProfit,
+      };
+    });
+
     // Sort by timestamp descending (most recent first) for display
-    return entriesWithDrops.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [currentHourData, parseDrops]); // parseDrops is used in the calculation
+    return entriesWithProfit.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [currentHourData, parseDrops, parseDropAmount, itemValues]); // Added parseDropAmount and itemValues dependencies
+
+  // Calculate total profit values for the hour
+  const totalProfitValues = useMemo(() => {
+    let totalDropValue = 0;
+
+    tableData.forEach(entry => {
+      totalDropValue += entry.dropValue;
+    });
+
+    // Use totalHpUsedThisHour for HP value calculation to ensure consistency
+    // HP value = total HP used * 2.5
+    const totalHpValue = totalHpUsedThisHour !== null ? totalHpUsedThisHour * 2.5 : 0;
+
+    // Recalculate total net profit using the correct HP value
+    const recalculatedNetProfit = totalDropValue - totalHpValue;
+
+    return {
+      totalDropValue,
+      totalHpValue,
+      totalNetProfit: recalculatedNetProfit,
+    };
+  }, [tableData, totalHpUsedThisHour]);
 
   if (loading) {
     return <div className={cn('p-4 text-lg font-semibold')}>Loading tracked data...</div>;
   }
 
   const currentHour = hourlyExp?.currentHour ?? new Date().getHours();
-
-  // Get list of all drops sorted by total amount (descending), then by count
-  const sortedDrops = Object.entries(dropStats).sort((a, b) => {
-    // Sort by total amount first, then by count
-    if (b[1].totalAmount !== a[1].totalAmount) {
-      return b[1].totalAmount - a[1].totalAmount;
-    }
-    return b[1].count - a[1].count;
-  });
-
-  const handleClearCurrentHour = async () => {
-    if (
-      confirm(
-        `Are you sure you want to clear all tracked data for hour ${currentHour}:00? This action cannot be undone.`,
-      )
-    ) {
-      try {
-        await clearByHour(currentHour);
-        alert(`Data for hour ${currentHour}:00 cleared successfully!`);
-      } catch (error) {
-        alert('Error clearing data for current hour');
-        console.error(error);
-      }
-    }
-  };
 
   return (
     <div className={cn('flex flex-col gap-4')}>
@@ -153,11 +276,58 @@ const LootMap = memo(() => {
             <span className="text-lg font-semibold">Current Hour ({currentHour}:00)</span>
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold">Total Drops: {totalDropsThisHour}</span>
-              <Button
-                onClick={handleClearCurrentHour}
-                variant="destructive"
-                size="sm"
-                aria-label="Clear Current Hour Data">
+              {totalHpUsedThisHour !== null && (
+                <span className="text-xl font-bold">
+                  HP Used:{' '}
+                  <span
+                    className={cn(
+                      totalHpUsedThisHour > 0
+                        ? 'text-red-500'
+                        : totalHpUsedThisHour < 0
+                          ? 'text-green-500'
+                          : 'text-foreground',
+                    )}>
+                    {totalHpUsedThisHour > 0 ? '-' : ''}
+                    {Math.abs(totalHpUsedThisHour).toLocaleString()}
+                  </span>
+                </span>
+              )}
+              {tableData.length > 0 && (
+                <span className="text-xl font-bold">
+                  Net Profit:{' '}
+                  <span
+                    className={cn(
+                      totalProfitValues.totalNetProfit > 0
+                        ? 'text-green-500'
+                        : totalProfitValues.totalNetProfit < 0
+                          ? 'text-red-500'
+                          : 'text-foreground',
+                    )}>
+                    {totalProfitValues.totalNetProfit >= 0 ? '+' : ''}
+                    {totalProfitValues.totalNetProfit.toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}{' '}
+                    GP
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Profit Table */}
+      {tableData.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">No drops tracked for this hour yet.</CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Profit</CardTitle>
+              <Button onClick={handleOpenSettings} variant="outline" size="icon" aria-label="Item Value Settings">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -167,130 +337,184 @@ const LootMap = memo(() => {
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-1">
-                  <path d="M3 6h18"></path>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
                 </svg>
-                Clear Hour
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* HP Used Section */}
-      {hpUsedThisHour !== null && (
-        <Card>
-          <CardHeader>
-            <CardTitle>HP Used This Hour</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-sm">HP Used:</span>
-                <span
-                  className={cn(
-                    'text-lg font-semibold',
-                    hpUsedThisHour.used > 0
-                      ? 'text-red-500'
-                      : hpUsedThisHour.used < 0
-                        ? 'text-green-500'
-                        : 'text-foreground',
-                  )}>
-                  {hpUsedThisHour.used > 0 ? '-' : ''}
-                  {Math.abs(hpUsedThisHour.used).toLocaleString()}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Start HP:</span>
-                  <p className="font-semibold">{hpUsedThisHour.startHP.toLocaleString()}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">End HP:</span>
-                  <p className="font-semibold">{hpUsedThisHour.endHP.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Drops</TableHead>
+                    <TableHead>HP Used</TableHead>
+                    <TableHead className="text-right">Drop Value</TableHead>
+                    <TableHead className="text-right">HP Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableData.map((entry, index) => {
+                    const time = formatTime(entry.timestamp);
 
-      {/* Drop Counts - Show all tracked drops */}
-      {sortedDrops.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tracked Drops</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-3">
-              {sortedDrops.map(([dropName, stats]) => (
-                <Card key={dropName}>
-                  <CardContent className="p-4">
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-semibold">{dropName}</span>
-                      </div>
-                      <div className="flex flex-col gap-1 text-right">
-                        <div>
-                          <span className="text-muted-foreground text-sm">Total: </span>
-                          <span className="font-semibold text-green-500">{stats.totalAmount.toLocaleString()}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs">Count: </span>
-                          <span className="text-xs font-medium">{stats.count.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Table of all tracked entries with drops */}
-      {tableData.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">No drops tracked for this hour yet.</CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Drops</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tableData.map((entry, index) => {
-                  const time = formatTime(entry.timestamp);
-
-                  return (
-                    <TableRow key={`${entry.timestamp}-${index}`}>
-                      <TableCell>{time}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {entry.drops.map((drop, dropIndex) => (
-                            <Badge key={`${drop}-${dropIndex}`} variant="secondary">
-                              {drop}
-                            </Badge>
-                          ))}
+                    return (
+                      <TableRow key={`${entry.timestamp}-${index}`}>
+                        <TableCell>{time}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {entry.drops.map((drop, dropIndex) => (
+                              <DropBadgeTable
+                                key={`${drop}-${dropIndex}`}
+                                drop={drop}
+                                itemValues={itemValues}
+                                parseDropAmount={parseDropAmount}
+                              />
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {entry.hpUsed !== null ? (
+                            <span
+                              className={cn(
+                                'font-semibold',
+                                entry.hpUsed > 0
+                                  ? 'text-red-500'
+                                  : entry.hpUsed < 0
+                                    ? 'text-green-500'
+                                    : 'text-foreground',
+                              )}>
+                              {entry.hpUsed > 0 ? '-' : ''}
+                              {Math.abs(entry.hpUsed).toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-semibold">
+                            {entry.dropValue.toLocaleString(undefined, {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            })}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={cn('font-semibold', entry.hpValue > 0 ? 'text-red-500' : 'text-foreground')}>
+                            {entry.hpValue.toLocaleString(undefined, {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            })}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {/* Summary Row */}
+                  {tableData.length > 0 && (
+                    <TableRow className="bg-muted/50">
+                      <TableCell colSpan={5} className="p-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="mb-1 text-sm font-bold">Summary:</div>
+                          <div className="flex flex-col gap-1 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Total Value of drops:</span>
+                              <span className="font-semibold">
+                                {totalProfitValues.totalDropValue.toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                })}{' '}
+                                GP
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Total HP value:</span>
+                              <span className="font-semibold text-red-500">
+                                {totalProfitValues.totalHpValue.toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                })}{' '}
+                                GP
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Total Net Profit:</span>
+                              <span
+                                className={cn(
+                                  'font-semibold',
+                                  totalProfitValues.totalNetProfit > 0
+                                    ? 'text-green-500'
+                                    : totalProfitValues.totalNetProfit < 0
+                                      ? 'text-red-500'
+                                      : 'text-foreground',
+                                )}>
+                                {totalProfitValues.totalNetProfit >= 0 ? '+' : ''}
+                                {totalProfitValues.totalNetProfit.toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                })}{' '}
+                                GP
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
         </Card>
       )}
+
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Item Value Settings</DialogTitle>
+            <DialogDescription>
+              Assign GP (gold pieces) values to all tracked items. These values will be used for profit calculations.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {allUniqueItems.length === 0 ? (
+              <div className="text-muted-foreground py-8 text-center">No items have been tracked yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {allUniqueItems.map(itemName => (
+                  <div key={itemName} className="flex items-center gap-3">
+                    <label
+                      className="text-popover-foreground w-48 truncate text-sm font-medium"
+                      title={itemName}
+                      htmlFor={`item-value-${itemName}`}>
+                      {itemName}
+                    </label>
+                    <Input
+                      id={`item-value-${itemName}`}
+                      type="number"
+                      placeholder="GP value"
+                      value={tempItemValues[itemName] || ''}
+                      onChange={e => handleItemValueChange(itemName, e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseSettings} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveItemValues} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });
