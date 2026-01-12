@@ -5,6 +5,7 @@ export default {
   content: ['lib/**/*.tsx'],
   presets: [globalConfig],
   darkMode: ['class'],
+  mode: 'jit',
   theme: {
     extend: {
       colors: {

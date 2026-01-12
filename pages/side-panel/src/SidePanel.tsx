@@ -2,9 +2,11 @@ import '@src/SidePanel.css';
 import Dashboard from './components/Dashboard';
 import Header from './components/Header';
 import LootMap from './components/LootMap/index';
+import Profile from './components/Profile';
 import Stats from './components/Stats';
 import TrackedHistory from './components/TrackedHistory';
 import DISPLAY from './constants/Tabs';
+import { QueryProvider } from './providers/QueryProvider';
 import { withErrorBoundary, withSuspense, useStorage } from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
 import { cn, ErrorDisplay, LoadingSpinner, ThemeToggle } from '@extension/ui';
@@ -31,6 +33,8 @@ const SidePanel = () => {
     switch (screen) {
       case DISPLAY.DASHBOARD:
         return <Dashboard />;
+      case DISPLAY.PROFILE:
+        return <Profile />;
       case DISPLAY.STATS:
         return <Stats />;
       case DISPLAY.LOOT:
@@ -42,11 +46,13 @@ const SidePanel = () => {
     }
   };
   return (
-    <div className={cn('App bg-background text-foreground min-h-screen p-8')}>
-      <Header display={display} setDisplay={setDisplay} />
-      {renderComponent(display)}
-      <ThemeToggle />
-    </div>
+    <QueryProvider>
+      <div className={cn('App bg-background text-foreground min-h-screen p-8')}>
+        <Header display={display} setDisplay={setDisplay} />
+        {renderComponent(display)}
+        <ThemeToggle />
+      </div>
+    </QueryProvider>
   );
 };
 

@@ -6,7 +6,7 @@ https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts
 
 ### Add New Script
 
-1. Copy `matches/example` folder and paste it with other name and edit content.
+1. Create a new folder in `matches/` with your script name and add an `index.ts` file.
 2. Edit `manifest.ts`:
 - In `content-scripts` section add object with:
 

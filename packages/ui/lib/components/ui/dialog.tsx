@@ -54,27 +54,43 @@ const Dialog: React.FC<DialogProps> = ({ open: controlledOpen, onOpenChange, chi
 };
 
 const DialogOverlay = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, onClick, onKeyDown, role, tabIndex, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/80',
-        className,
-      )}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-      role={role || 'button'}
-      tabIndex={tabIndex ?? 0}
-      aria-label="Close dialog"
-      {...props}
-    />
-  ),
+  ({ className, onClick, onKeyDown, role, tabIndex, ...props }, ref) => {
+    const dataState = (props as { 'data-state'?: 'open' | 'closed' })['data-state'] || 'open';
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          'fixed inset-0 z-50 bg-black/80 backdrop-blur-sm',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          className,
+        )}
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        role={role || 'button'}
+        tabIndex={tabIndex ?? 0}
+        aria-label="Close dialog"
+        data-state={dataState}
+        {...props}
+      />
+    );
+  },
 );
 DialogOverlay.displayName = 'DialogOverlay';
 
 const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => {
-    const { onOpenChange } = useDialogContext();
+    const { onOpenChange, open } = useDialogContext();
+
+    React.useEffect(() => {
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && open) {
+          onOpenChange(false);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }, [open, onOpenChange]);
 
     return (
       <DialogOverlay
@@ -85,11 +101,19 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
           }
         }}
         role="button"
-        tabIndex={0}>
+        tabIndex={0}
+        data-state={open ? 'open' : 'closed'}>
         <div
           ref={ref}
           className={cn(
-            'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border p-6 shadow-lg duration-200 sm:rounded-lg',
+            'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
+            'bg-popover text-popover-foreground border shadow-lg',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
+            'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
+            'rounded-lg border p-6 duration-200',
             className,
           )}
           onClick={e => e.stopPropagation()}
@@ -98,6 +122,8 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
             // Prevent dialog from closing when pressing keys inside the content
           }}
           role="dialog"
+          aria-modal="true"
+          data-state={open ? 'open' : 'closed'}
           {...props}>
           {children}
         </div>
@@ -107,15 +133,21 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
 );
 DialogContent.displayName = 'DialogContent';
 
-const DialogHeader = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props}>
-    {children}
-  </div>
+const DialogHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
+  ),
 );
 DialogHeader.displayName = 'DialogHeader';
 
-const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)} {...props} />
+const DialogFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)}
+      {...props}
+    />
+  ),
 );
 DialogFooter.displayName = 'DialogFooter';
 

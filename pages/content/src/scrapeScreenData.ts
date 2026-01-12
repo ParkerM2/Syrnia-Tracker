@@ -1,5 +1,11 @@
 import { matchText, skillExpRegex } from '@extension/shared';
-import type { ScreenData, CombatExpGain } from '@extension/shared';
+import type { ScreenData, CombatExpGain, EquipmentData, EquipmentItem } from '@extension/shared';
+
+// Track last processed fight to prevent duplicate wearDisplayTD collection
+let lastProcessedFightText: string | null = null;
+
+// Cache location - only parse once at fight end
+let cachedLocation: string = '';
 
 /**
  * Parse combat experience gains from fightLogTop element
@@ -216,13 +222,19 @@ const parseLocation = (locationElement: HTMLElement | null): string => {
 
   // Try to find location in LocationContent
   // Format: "You are attacking a {monster} {level} at {location}."
+  // Example: "You are attacking a Rima General (80) at Rima city - barracks."
   const locationText = locationElement.textContent || '';
 
-  // Primary pattern: "...at {location}."
-  const atPattern = /\bat\s+([A-Z][a-zA-Z\s]+?)(?:\.|$)/i;
+  // Primary pattern: "...at {location}." - capture everything after "at" up to the period
+  // This should match: "at Rima city - barracks." -> "Rima city - barracks"
+  const atPattern = /\bat\s+([^.]+?)(?:\.|$)/i;
   const atMatch = locationText.match(atPattern);
   if (atMatch && atMatch[1]) {
-    const location = atMatch[1].trim();
+    let location = atMatch[1].trim();
+
+    // Clean up any trailing whitespace or punctuation
+    location = location.replace(/[.,;:]+$/, '').trim();
+
     // Filter out common false positives
     if (
       location.length > 2 &&
@@ -230,7 +242,9 @@ const parseLocation = (locationElement: HTMLElement | null): string => {
       !location.toLowerCase().includes('exp') &&
       !location.toLowerCase().includes('hp') &&
       !location.toLowerCase().includes('fighting') &&
-      !location.toLowerCase().includes('attacking')
+      !location.toLowerCase().includes('attacking') &&
+      !location.toLowerCase().includes('you are') &&
+      !location.toLowerCase().includes("you're")
     ) {
       return location;
     }
@@ -271,6 +285,41 @@ const parseLocation = (locationElement: HTMLElement | null): string => {
   }
 
   return '';
+};
+
+/**
+ * Parse number of people fighting at location
+ * Looks for text like "There are X people fighting here"
+ */
+const parsePeopleFighting = (
+  locationElement: HTMLElement | null,
+  fightLogElement: HTMLElement | null,
+): number | null => {
+  // Check LocationContent first
+  if (locationElement) {
+    const locationText = locationElement.textContent || '';
+    const peopleMatch = locationText.match(/there\s+are\s+(\d+)\s+people\s+fighting\s+here/i);
+    if (peopleMatch && peopleMatch[1]) {
+      const count = parseInt(peopleMatch[1], 10);
+      if (!isNaN(count)) {
+        return count;
+      }
+    }
+  }
+
+  // Check fight log element
+  if (fightLogElement) {
+    const fightText = fightLogElement.textContent || '';
+    const peopleMatch = fightText.match(/there\s+are\s+(\d+)\s+people\s+fighting\s+here/i);
+    if (peopleMatch && peopleMatch[1]) {
+      const count = parseInt(peopleMatch[1], 10);
+      if (!isNaN(count)) {
+        return count;
+      }
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -357,6 +406,42 @@ const parseDamage = (): { dealt: string[]; received: string[] } => {
 };
 
 /**
+ * Parse HP gained from fight log
+ * Looks for lines like "{username} at X and gained X HP"
+ * Returns the total HP gained amount
+ */
+const parseHpGained = (): number | null => {
+  const fightText = getAllFightText();
+
+  if (!fightText) {
+    return null;
+  }
+
+  // Pattern: "{username} at X and gained X HP"
+  // Example: "PlayerName at Rima General and gained 5 HP"
+  // We need to match the HP amount after "gained"
+  const hpGainedPattern = /gained\s+(\d+)\s+HP/gi;
+  const matches = [...fightText.matchAll(hpGainedPattern)];
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  // Sum all HP gained amounts
+  let totalHpGained = 0;
+  matches.forEach(match => {
+    if (match && match[1]) {
+      const hpAmount = parseInt(match[1], 10);
+      if (!isNaN(hpAmount)) {
+        totalHpGained += hpAmount;
+      }
+    }
+  });
+
+  return totalHpGained > 0 ? totalHpGained : null;
+};
+
+/**
  * Parse drops from fightLogTop element
  * Drops are typically in yellow font elements
  */
@@ -406,6 +491,161 @@ const parseDrops = (fightLogElement: HTMLElement | null): string[] => {
   });
 
   return [...new Set(drops)]; // Remove duplicates
+};
+
+/**
+ * Parse equipment from wearDisplayTD table
+ * Extracts armor pieces, weapon, stats, enchants, and image URLs
+ */
+const parseEquipment = (): EquipmentData | undefined => {
+  const wearDisplayTD = document.querySelector('#wearDisplayTD') as HTMLElement | null;
+  if (!wearDisplayTD) {
+    return undefined;
+  }
+
+  const equipment: EquipmentData = {
+    totals: {},
+  };
+
+  // Slot mapping: id -> slot name
+  const slotMap: Record<string, keyof EquipmentData> = {
+    displayHelm: 'helm',
+    displayShield: 'shield',
+    displayBody: 'body',
+    displayHand: 'weapon',
+    displayLegs: 'legs',
+    displayGloves: 'gloves',
+    displayShoes: 'boots',
+    displayHorse: 'horse',
+    displayTrophy: 'trophy',
+  };
+
+  // Parse each equipment slot
+  Object.entries(slotMap).forEach(([id, slot]) => {
+    const element = wearDisplayTD.querySelector(`#${id}`) as HTMLElement | null;
+    if (!element) return;
+
+    // Extract image URL from style attribute
+    let imageUrl: string | undefined;
+    const style = element.getAttribute('style') || '';
+    const urlMatch = style.match(/url\(["']?([^"')]+)["']?\)/);
+    if (urlMatch && urlMatch[1]) {
+      imageUrl = urlMatch[1];
+    }
+
+    // Extract title (contains name and enchant/stats)
+    const title = element.getAttribute('title') || '';
+
+    // Extract text content (stats numbers like "40", "55", "167/160")
+    // textContent property automatically excludes HTML tags, giving us just the text
+    const textContent = element.textContent?.trim() || '';
+
+    // Parse title format: "Dragon helm [4 Aim]" or "Novariet scimitar [0 Durability]"
+    // Title format: "Item Name [Enchant/Stats]"
+    let name = title;
+    let enchant: string | undefined;
+    let stats: string | undefined;
+
+    // Extract name and bracket content from title
+    const titleMatch = title.match(/^(.+?)(?:\s+\[(.+?)\])?$/);
+    if (titleMatch) {
+      name = titleMatch[1].trim();
+      if (titleMatch[2]) {
+        const bracketContent = titleMatch[2];
+        // Check if it's an enchant (contains "Aim", "Power", "Armour", "Travel Time")
+        if (/\d+\s+(?:Aim|Power|Armour|Travel\s+Time)/i.test(bracketContent)) {
+          enchant = bracketContent;
+        } else {
+          // Other stats like durability
+          stats = bracketContent;
+        }
+      }
+    }
+
+    // Use text content as stats (the numbers displayed in the cell)
+    // Format: "40" or "167/160" (numbers before image)
+    if (textContent) {
+      // Extract numbers and slashes (for durability like "167/160")
+      // Match pattern: numbers, optionally with slash and more numbers
+      const statsMatch = textContent.match(/^([\d/]+)/);
+      if (statsMatch && statsMatch[1]) {
+        stats = statsMatch[1].trim();
+      } else {
+        // Fallback: extract all numbers and slashes
+        const cleanStats = textContent.replace(/[^\d/]/g, '').trim();
+        if (cleanStats) {
+          stats = cleanStats;
+        }
+      }
+    }
+
+    const item: EquipmentItem = {
+      slot: slot as string,
+      name,
+      title,
+      imageUrl,
+    };
+
+    if (stats) item.stats = stats;
+    if (enchant) item.enchant = enchant;
+
+    equipment[slot] = item;
+  });
+
+  // Calculate totals
+  // Try to find totals in specific elements
+  const bodyText = document.body.textContent || '';
+
+  // Look for patterns like "Total Armour: 123" or "Armour: 123" or "Armour 123"
+  const armourMatch = bodyText.match(/(?:total\s+)?armour[:\s]+(\d+)/i);
+  if (armourMatch) {
+    equipment.totals.armour = parseInt(armourMatch[1], 10);
+  }
+
+  const aimMatch = bodyText.match(/(?:total\s+)?aim[:\s]+(\d+)/i);
+  if (aimMatch) {
+    equipment.totals.aim = parseInt(aimMatch[1], 10);
+  }
+
+  const powerMatch = bodyText.match(/(?:total\s+)?power[:\s]+(\d+)/i);
+  if (powerMatch) {
+    equipment.totals.power = parseInt(powerMatch[1], 10);
+  }
+
+  const travelTimeMatch = bodyText.match(/(?:total\s+)?travel\s+time[:\s]+(\d+)/i);
+  if (travelTimeMatch) {
+    equipment.totals.travelTime = parseInt(travelTimeMatch[1], 10);
+  }
+
+  // If totals not found in body text, calculate from equipment enchants
+  // Sum up Aim, Power, Armour from equipment enchants
+  let totalAim = 0;
+  let totalPower = 0;
+  let totalArmour = 0;
+  let totalTravelTime = 0;
+
+  Object.values(equipment).forEach(item => {
+    if (item && typeof item === 'object' && 'enchant' in item && item.enchant) {
+      const enchant = item.enchant;
+      const aimMatch = enchant.match(/(\d+)\s+Aim/i);
+      const powerMatch = enchant.match(/(\d+)\s+Power/i);
+      const armourMatch = enchant.match(/(\d+)\s+Armour/i);
+      const travelTimeMatch = enchant.match(/(\d+)\s+Travel\s+Time/i);
+
+      if (aimMatch) totalAim += parseInt(aimMatch[1], 10);
+      if (powerMatch) totalPower += parseInt(powerMatch[1], 10);
+      if (armourMatch) totalArmour += parseInt(armourMatch[1], 10);
+      if (travelTimeMatch) totalTravelTime += parseInt(travelTimeMatch[1], 10);
+    }
+  });
+
+  // Use calculated totals if not found in page text
+  if (!equipment.totals.aim && totalAim > 0) equipment.totals.aim = totalAim;
+  if (!equipment.totals.power && totalPower > 0) equipment.totals.power = totalPower;
+  if (!equipment.totals.armour && totalArmour > 0) equipment.totals.armour = totalArmour;
+  if (!equipment.totals.travelTime && totalTravelTime > 0) equipment.totals.travelTime = totalTravelTime;
+
+  return equipment;
 };
 
 export const scrapeScreenData = (): ScreenData => {
@@ -469,9 +709,13 @@ export const scrapeScreenData = (): ScreenData => {
   const inventoryTextNode = document.body.querySelector('#inventoryStats')?.textContent;
   const locationElement = document.body.querySelector('#LocationContent') as HTMLElement | null;
 
-  // Parse monster and location
+  // Parse monster (always parse to detect new fights)
   const monster = parseMonster(locationElement, addExpTextNode);
-  const location = parseLocation(locationElement);
+
+  // Location will be parsed only at fight end (see below)
+  let location = cachedLocation;
+
+  const peopleFighting = parsePeopleFighting(locationElement, addExpTextNode);
 
   // Initialize damage arrays - only populate when combat exp is found
   let damage = { dealt: [] as string[], received: [] as string[] };
@@ -494,22 +738,8 @@ export const scrapeScreenData = (): ScreenData => {
     textContent.addExp = addExpText;
   }
 
-  // Parse combat experience gains from fightLogTop
-  if (addExpTextNode) {
-    textContent.combatExp = parseCombatExp(addExpTextNode);
-    textContent.drops = parseDrops(addExpTextNode);
-
-    const fightText = addExpTextNode.textContent || '';
-    const hasDefeatedText = /you\s+defeated/i.test(fightText);
-
-    // ONLY parse damage when "You defeated" text is present (fight just finished)
-    if (hasDefeatedText) {
-      damage = parseDamage();
-      console.log('[FIGHT ENDED] LocationContent element:', locationElement);
-    }
-  }
-
   // Parse inventory stats
+  let totalInventoryHP: string | undefined = undefined;
   if (inventoryTextNode) {
     const inventoryText = inventoryTextNode.trim();
 
@@ -517,12 +747,52 @@ export const scrapeScreenData = (): ScreenData => {
     const hpMatch = inventoryText.match(/HP:\s*([\d,]+)/i);
     if (hpMatch) {
       textContent.inventory.hp = hpMatch[1];
+      totalInventoryHP = hpMatch[1]; // Save as totalInventoryHP
     }
 
     // Parse Farming exp: matches "Farming exp: 20" or variations
     const farmingExpMatch = inventoryText.match(/Farming\s+exp:\s*([\d,]+)/i);
     if (farmingExpMatch) {
       textContent.inventory.farmingExp = farmingExpMatch[1];
+    }
+  }
+
+  // Parse combat experience gains from fightLogTop
+  let hpUsed: number | undefined = undefined;
+  let equipment: EquipmentData | undefined = undefined;
+  if (addExpTextNode) {
+    textContent.combatExp = parseCombatExp(addExpTextNode);
+    textContent.drops = parseDrops(addExpTextNode);
+
+    const fightText = addExpTextNode.textContent || '';
+    const hasDefeatedText = /you\s+defeated/i.test(fightText);
+
+    // ONLY parse damage and HP when "You defeated" text is present (fight just finished)
+    if (hasDefeatedText) {
+      // Check if this is the same fight text we already processed
+      // This prevents re-processing while sitting at the same fight end screen
+      if (fightText === lastProcessedFightText) {
+        // Same fight screen, skip ALL fight-end processing
+        // Use cached location and empty damage arrays
+        location = cachedLocation;
+      } else {
+        // New fight detected - process it
+        lastProcessedFightText = fightText;
+
+        // Parse location only once at fight end
+        location = parseLocation(locationElement);
+        cachedLocation = location; // Cache for future calls
+
+        damage = parseDamage();
+        // Parse HP gained from fight log (food eaten during fight)
+        const hpGained = parseHpGained();
+        if (hpGained !== null) {
+          hpUsed = hpGained;
+        }
+
+        // Parse equipment data (only once per fight)
+        equipment = parseEquipment();
+      }
     }
   }
 
@@ -538,5 +808,9 @@ export const scrapeScreenData = (): ScreenData => {
     location: location,
     damageDealt: damage.dealt,
     damageReceived: damage.received,
+    peopleFighting: peopleFighting,
+    totalInventoryHP: totalInventoryHP,
+    hpUsed: hpUsed,
+    equipment: equipment,
   };
 };

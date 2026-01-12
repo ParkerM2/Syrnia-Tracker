@@ -52,6 +52,10 @@ const manifest = {
       matches: ['http://*/*', 'https://*/*', '<all_urls>'],
       js: ['refresh.js'],
     },
+    {
+      matches: ['https://www.syrnia.com/theGame/includes2/stats.php*'],
+      js: ['content/stats.iife.js'],
+    },
   ],
   web_accessible_resources: [
     {

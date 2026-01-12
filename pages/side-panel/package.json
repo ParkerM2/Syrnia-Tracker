@@ -22,8 +22,9 @@
   "dependencies": {
     "@extension/shared": "workspace:*",
     "@extension/storage": "workspace:*",
-    "@extension/i18n": "workspace:*",
-    "@extension/ui": "workspace:*"
+    "@extension/ui": "workspace:*",
+    "@tanstack/react-query": "^5.62.0",
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@extension/tailwindcss-config": "workspace:*",

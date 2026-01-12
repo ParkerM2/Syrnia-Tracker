@@ -11,6 +11,7 @@ const Header: React.FC<HeaderProps> = ({ headerText = 'Loot Tracker and Calculat
   // Available tabs - only show tabs that have components implemented
   const availableTabs = [
     { key: DISPLAY.DASHBOARD, label: 'Dashboard' },
+    { key: DISPLAY.PROFILE, label: 'Profile' },
     { key: DISPLAY.STATS, label: 'Performance' },
     { key: DISPLAY.LOOT, label: 'Loot' },
     { key: DISPLAY.HISTORY, label: 'History' },
