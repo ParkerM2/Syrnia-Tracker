@@ -190,7 +190,7 @@ The Dashboard provides an overview of your current gameplay session:
 
 The Profile tab displays your character information and current training progress:
 
-![Profile Tab](https://i.gyazo.com/28e6ed73a768687abd0a763dfd639b57.png)
+<img src="https://i.gyazo.com/28e6ed73a768687abd0a763dfd639b57.png" alt="dashboard image" width="300" align="center" />
 
 **Profile Card**:
 - Username and last update timestamp
@@ -211,7 +211,7 @@ The Profile tab displays your character information and current training progres
 
 The Performance tab shows detailed statistics organized by location:
 
-![Performance Tab](https://i.gyazo.com/536cbd4044f46fbc2116782c080dcc87.png)
+<img src="https://i.gyazo.com/536cbd4044f46fbc2116782c080dcc87.png" width="300" align="center" />
 
 **Location Filtering**:
 - Tabs for each location where you've trained
@@ -239,9 +239,10 @@ The Performance tab shows detailed statistics organized by location:
 
 The Loot tab tracks all items dropped during gameplay:
 
-![Loot Tab](https://i.gyazo.com/5f1a78b7900edb30e326db0bbd8efe97.webp)
-
-![Loot Price Edit](https://i.gyazo.com/780e0e0abf006be7962d25a1917ba062.png)
+<div align="center">
+  <img src="https://i.gyazo.com/5f1a78b7900edb30e326db0bbd8efe97.webp" width="300" />
+  <img src="https://i.gyazo.com/780e0e0abf006be7962d25a1917ba062.png" width="300" />
+</div>
 
 **Current Hour Drops**:
 - All items dropped in the current hour
@@ -269,7 +270,7 @@ The Loot tab tracks all items dropped during gameplay:
 
 The History tab provides comprehensive historical data analysis:
 
-![History Tab](https://i.gyazo.com/2ba212467883e6fd1fa9b280fc52551e.png)
+<img src="https://i.gyazo.com/2ba212467883e6fd1fa9b280fc52551e.png" width="300" />
 
 **Time Period Selection**:
 - Filter by Hour, Day, Week, or Month
