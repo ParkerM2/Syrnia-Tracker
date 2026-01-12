@@ -8,10 +8,7 @@ import {
   saveLastExpBySkill,
 } from '@extension/shared/lib/utils/storage-service';
 import { updateWeeklyStatsFromStatsURL } from '@extension/shared/lib/utils/weekly-stats-storage';
-import { exampleThemeStorage } from '@extension/storage';
 import type { CSVRow } from '@extension/shared/lib/utils/csv-tracker';
-
-exampleThemeStorage.get();
 
 chrome.runtime.onMessage.addListener(message => {
   if (message.type === UPDATE_SCREEN_DATA) {
