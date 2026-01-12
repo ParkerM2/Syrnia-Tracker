@@ -161,7 +161,7 @@ The Dashboard provides an overview of your current gameplay session:
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="dark-mode-image.png">
     <source media="(prefers-color-scheme: light)" srcset="light-mode-image.png">
-    <img src="https://i.gyazo.com/1954837345d92f0455a06d6971bf23d3.png" alt="dashboard image" width="300">
+    <img src="https://i.gyazo.com/1954837345d92f0455a06d6971bf23d3.png" alt="dashboard image" width="300" />
 </picture>
 
 **Current Hour Statistics**:
