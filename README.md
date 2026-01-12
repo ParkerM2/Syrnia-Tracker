@@ -1,33 +1,3 @@
-<div align="center">
-
-<picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/99cb6303-64e4-4bed-bf3f-35735353e6de" />
-    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a5dbf71c-c509-4c4f-80f4-be88a1943a0a" />
-    <img alt="Logo" src="https://github.com/user-attachments/assets/99cb6303-64e4-4bed-bf3f-35735353e6de" />
-</picture>
-
-![](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
-![](https://img.shields.io/badge/Typescript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![](https://badges.aleen42.com/src/vitejs.svg)
-
-![GitHub action badge](https://github.com/Jonghakseo/chrome-extension-boilerplate-react-vite/actions/workflows/build-zip.yml/badge.svg)
-![GitHub action badge](https://github.com/Jonghakseo/chrome-extension-boilerplate-react-vite/actions/workflows/lint.yml/badge.svg)
-
-<a href="https://discord.gg/4ERQ6jgV9a" target="_blank"><img src="https://discord.com/api/guilds/1263404974830915637/widget.png"/></a>
-
-> This boilerplate
-> has [Legacy version](https://github.com/Jonghakseo/chrome-extension-boilerplate-react-vite/tree/legacy)
-
-</div>
-
-> [!NOTE]
-> This project is listed in the [Awesome Vite](https://github.com/vitejs/awesome-vite)
-
-> [!TIP]
-> Share storage state between all pages
->
-> https://github.com/user-attachments/assets/3b8e189f-6443-490e-a455-4f9570267f8c
-
 ## Table of Contents
 
 - [What is Syrnia Tracker?](#what-is-syrnia-tracker)
@@ -188,7 +158,11 @@ The side panel is the main interface for viewing and interacting with your track
 
 The Dashboard provides an overview of your current gameplay session:
 
-![Dashboard Tab](https://i.gyazo.com/1954837345d92f0455a06d6971bf23d3.png)
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="dark-mode-image.png">
+    <source media="(prefers-color-scheme: light)" srcset="light-mode-image.png">
+    <img src="https://i.gyazo.com/1954837345d92f0455a06d6971bf23d3.png" alt="dashboard image" width="300">
+</picture>
 
 **Current Hour Statistics**:
 - Total experience gained in the current hour
