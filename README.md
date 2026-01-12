@@ -241,7 +241,7 @@ The Profile tab displays your character information and current training progres
 
 The Performance tab shows detailed statistics organized by location:
 
-![Performance Tab](https://gyazo.com/536cbd4044f46fbc2116782c080dcc87)
+![Performance Tab](https://i.gyazo.com/536cbd4044f46fbc2116782c080dcc87.png)
 
 **Location Filtering**:
 - Tabs for each location where you've trained
@@ -269,8 +269,9 @@ The Performance tab shows detailed statistics organized by location:
 
 The Loot tab tracks all items dropped during gameplay:
 
-![Loot Tab](https://gyazo.com/5f1a78b7900edb30e326db0bbd8efe97)
-![Loot Price Edit](https://gyazo.com/780e0e0abf006be7962d25a1917ba062)
+![Loot Tab](https://i.gyazo.com/5f1a78b7900edb30e326db0bbd8efe97.webp)
+
+![Loot Price Edit](https://i.gyazo.com/780e0e0abf006be7962d25a1917ba062.png)
 
 **Current Hour Drops**:
 - All items dropped in the current hour
