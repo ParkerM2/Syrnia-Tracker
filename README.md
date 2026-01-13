@@ -1,3 +1,6 @@
+> [!IMPORTANT] 
+> **ONLY** for testing in the  **[PTR](www.ptr.syrnia.com) Environment** until further notice.
+
 ## Table of Contents
 
 - [What is Syrnia Tracker?](#what-is-syrnia-tracker)
