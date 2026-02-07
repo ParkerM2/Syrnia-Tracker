@@ -24,8 +24,7 @@ export const useItemValuesQuery = () => {
       try {
         const values = await getItemValues();
         return values;
-      } catch (err) {
-        console.error('[useItemValuesQuery] Error loading item values:', err);
+      } catch {
         return {};
       }
     },
@@ -40,7 +39,6 @@ export const useItemValuesQuery = () => {
   useEffect(() => {
     const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === 'local' && changes.drop_gp_values) {
-        console.log('[useItemValuesQuery] drop_gp_values storage changed');
         queryClient.invalidateQueries({ queryKey: ITEM_VALUES_QUERY_KEY });
       }
     };
@@ -67,12 +65,7 @@ export const useItemValuesQuery = () => {
 
   // Save function
   const save = async (values: Record<string, string>) => {
-    try {
-      await saveMutation.mutateAsync(values);
-    } catch (error) {
-      console.error('Error saving item values:', error);
-      throw error;
-    }
+    await saveMutation.mutateAsync(values);
   };
 
   return {

@@ -6,15 +6,17 @@ export const TIME_FRAME_OPTIONS: TimeFrameOption[] = [
   { value: '24h', label: 'Last 24 Hours', hours: 24 },
   { value: '7d', label: 'Last 7 Days', hours: 168 },
   { value: '30d', label: 'Last 30 Days', hours: 720 },
+  { value: '90d', label: 'Last 3 Months', hours: 2160 },
 ];
 
+// Teal/cyan color palette matching screenshot
 export const SKILL_COLORS = [
-  'hsl(221.2 83.2% 53.3%)', // Blue
-  'hsl(142.1 76.2% 36.3%)', // Green
-  'hsl(346.8 77.2% 49.8%)', // Red
-  'hsl(47.9 95.8% 53.1%)', // Yellow
-  'hsl(262.1 83.3% 57.8%)', // Purple
-  'hsl(199.4 89.1% 48.2%)', // Cyan
-  'hsl(24.6 95% 53.1%)', // Orange
-  'hsl(280 100% 70%)', // Pink
+  'hsl(180 77.11% 60.59%)', // Primary teal/cyan
+  'hsl(180 70% 55%)', // Slightly darker teal
+  'hsl(180 75% 65%)', // Slightly lighter teal
+  'hsl(180 65% 50%)', // Darker teal
+  'hsl(180 80% 70%)', // Lighter teal
+  'hsl(180 72% 58%)', // Medium teal
+  'hsl(180 68% 52%)', // Dark teal
+  'hsl(180 78% 68%)', // Light teal
 ];

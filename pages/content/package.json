@@ -23,7 +23,8 @@
   "dependencies": {
     "@extension/shared": "workspace:*",
     "@extension/storage": "workspace:*",
-    "@extension/env": "workspace:*"
+    "@extension/env": "workspace:*",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@extension/hmr": "workspace:*",

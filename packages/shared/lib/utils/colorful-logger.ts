@@ -1,27 +1,11 @@
-import { COLORS } from './const.js';
-import type { ColorType, ValueOf } from './types.js';
+import type { ColorType } from './types.js';
 
-export const colorfulLog = (message: string, type: ColorType) => {
-  let color: ValueOf<typeof COLORS>;
-
-  switch (type) {
-    case 'success':
-      color = COLORS.FgGreen;
-      break;
-    case 'info':
-      color = COLORS.FgBlue;
-      break;
-    case 'error':
-      color = COLORS.FgRed;
-      break;
-    case 'warning':
-      color = COLORS.FgYellow;
-      break;
-    default:
-      color = COLORS[type];
-      break;
-  }
-
-  console.info(color, message);
-  console.info(COLORS['Reset']);
+/**
+ * Logging utility (no-op in production)
+ * Maintains API compatibility but produces no console output
+ */
+export const colorfulLog = (_message: string, _type: ColorType): void => {
+  // No-op: all console logging removed for production
+  void _message;
+  void _type;
 };

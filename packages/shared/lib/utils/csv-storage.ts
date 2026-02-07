@@ -13,9 +13,41 @@ const LAST_EXP_BY_SKILL_KEY = 'last_exp_by_skill'; // Store last exp per skill f
 export const getCSVFromStorage = async (): Promise<string> => {
   try {
     const result = await chrome.storage.local.get(CSV_STORAGE_KEY);
-    return result[CSV_STORAGE_KEY] || getCSVHeader();
-  } catch (error) {
-    console.error('Error reading CSV from storage:', error);
+    const csvContent = result[CSV_STORAGE_KEY] || getCSVHeader();
+
+    // Ensure CSV header includes equipment and combatExp columns (migrate old CSV files)
+    const lines = csvContent.trim().split('\n');
+    if (lines.length > 0) {
+      const currentHeader = lines[0];
+      const expectedHeader = getCSVHeader();
+
+      // If header doesn't match, update it (migration for old CSV files)
+      if (currentHeader !== expectedHeader) {
+        const dataLines = lines.slice(1);
+        const currentFieldCount = currentHeader.split(',').length;
+        const expectedFieldCount = expectedHeader.split(',').length;
+
+        if (currentFieldCount < expectedFieldCount) {
+          // Old format detected - update header and add missing columns to existing rows
+          const updatedLines = [
+            expectedHeader,
+            ...dataLines.map((line: string) => {
+              const trimmedLine = line.trim();
+              // Add missing fields (equipment and/or combatExp) as empty strings
+              const missingFields = expectedFieldCount - currentFieldCount;
+              return `${trimmedLine}${','.repeat(missingFields)}`;
+            }),
+          ];
+          const updatedCSV = updatedLines.join('\n');
+          // Save updated CSV back to storage
+          await chrome.storage.local.set({ [CSV_STORAGE_KEY]: updatedCSV });
+          return updatedCSV;
+        }
+      }
+    }
+
+    return csvContent;
+  } catch {
     return getCSVHeader();
   }
 };
@@ -42,7 +74,7 @@ export const appendToCSV = async (data: ScreenData): Promise<void> => {
 
     // Calculate gainedExp for each row
     const rowsWithGainedExp = rows.map(row => {
-      // Combat exp entries already have gainedExp set in screenDataToCSVRows
+      // If gainedExp is already set, use it
       if (row.gainedExp) {
         return row;
       }
@@ -86,11 +118,9 @@ export const appendToCSV = async (data: ScreenData): Promise<void> => {
     // Update weekly stats after saving to CSV
     // Get all rows to calculate weekly stats
     const allRows = await getCSVRows();
-    await updateWeeklyStats(allRows).catch(error => {
-      console.error('Error updating weekly stats:', error);
-    });
-  } catch (error) {
-    console.error('Error appending to CSV:', error);
+    await updateWeeklyStats(allRows);
+  } catch {
+    // Silently handle errors
   }
 };
 
@@ -101,8 +131,7 @@ export const getCSVRows = async (): Promise<CSVRow[]> => {
   try {
     const csvContent = await getCSVFromStorage();
     return parseCSV(csvContent);
-  } catch (error) {
-    console.error('Error getting CSV rows:', error);
+  } catch {
     return [];
   }
 };
@@ -112,75 +141,60 @@ export const getCSVRows = async (): Promise<CSVRow[]> => {
  * @param saveAs - If true, shows file picker dialog to let user choose save location. If false, saves to default Downloads folder.
  */
 export const downloadCSV = async (saveAs: boolean = true): Promise<void> => {
-  try {
-    const csvContent = await getCSVFromStorage();
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
+  const csvContent = await getCSVFromStorage();
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
 
-    // Get current date for filename
-    const date = new Date();
-    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-    const filename = `tracked_data_${dateStr}.csv`;
+  // Get current date for filename
+  const date = new Date();
+  const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+  const filename = `tracked_data_${dateStr}.csv`;
 
-    await chrome.downloads.download({
-      url: url,
-      filename: filename,
-      saveAs: saveAs, // If true, shows file picker; if false, saves to default Downloads folder
-    });
+  await chrome.downloads.download({
+    url: url,
+    filename: filename,
+    saveAs: saveAs, // If true, shows file picker; if false, saves to default Downloads folder
+  });
 
-    // Clean up the object URL after a delay
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (error) {
-    console.error('Error downloading CSV:', error);
-    throw error;
-  }
+  // Clean up the object URL after a delay
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 /**
  * Clear all CSV data from storage
  */
 export const clearCSVData = async (): Promise<void> => {
-  try {
-    await chrome.storage.local.set({ [CSV_STORAGE_KEY]: getCSVHeader() });
-  } catch (error) {
-    console.error('Error clearing CSV data:', error);
-    throw error;
-  }
+  await chrome.storage.local.set({ [CSV_STORAGE_KEY]: getCSVHeader() });
 };
 
 /**
  * Clear CSV data for a specific hour
  */
 export const clearCSVDataByHour = async (hour: number, date?: Date): Promise<void> => {
-  try {
-    const csvContent = await getCSVFromStorage();
-    const allRows = parseCSV(csvContent);
+  const csvContent = await getCSVFromStorage();
+  const allRows = parseCSV(csvContent);
 
-    // Filter out rows for the specified hour
-    const refDate = date || new Date();
-    const targetDate = new Date(refDate);
-    targetDate.setHours(hour, 0, 0, 0);
-    const startTime = targetDate.getTime();
-    const endTime = startTime + 60 * 60 * 1000; // 1 hour later
+  // Filter out rows for the specified hour
+  const refDate = date || new Date();
+  const targetDate = new Date(refDate);
+  targetDate.setHours(hour, 0, 0, 0);
+  const startTime = targetDate.getTime();
+  const endTime = startTime + 60 * 60 * 1000; // 1 hour later
 
-    const filteredRows = allRows.filter(row => {
-      const rowTime = new Date(row.timestamp).getTime();
-      // Keep rows that are NOT in the specified hour
-      return !(rowTime >= startTime && rowTime < endTime);
-    });
+  const filteredRows = allRows.filter(row => {
+    const rowTime = new Date(row.timestamp).getTime();
+    // Keep rows that are NOT in the specified hour
+    return !(rowTime >= startTime && rowTime < endTime);
+  });
 
-    // Rebuild CSV with filtered rows
-    if (filteredRows.length === 0) {
-      await chrome.storage.local.set({ [CSV_STORAGE_KEY]: getCSVHeader() });
-    } else {
-      const header = getCSVHeader();
-      const lines = filteredRows.map(row => csvRowToString(row));
-      const updatedCSV = `${header}\n${lines.join('\n')}`;
-      await chrome.storage.local.set({ [CSV_STORAGE_KEY]: updatedCSV });
-    }
-  } catch (error) {
-    console.error('Error clearing CSV data by hour:', error);
-    throw error;
+  // Rebuild CSV with filtered rows
+  if (filteredRows.length === 0) {
+    await chrome.storage.local.set({ [CSV_STORAGE_KEY]: getCSVHeader() });
+  } else {
+    const header = getCSVHeader();
+    const lines = filteredRows.map(row => csvRowToString(row));
+    const updatedCSV = `${header}\n${lines.join('\n')}`;
+    await chrome.storage.local.set({ [CSV_STORAGE_KEY]: updatedCSV });
   }
 };
 

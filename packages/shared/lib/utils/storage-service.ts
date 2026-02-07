@@ -34,8 +34,7 @@ const getFromStorage = async <T>(key: string, defaultValue: T): Promise<T> => {
   try {
     const result = await chrome.storage.local.get(key);
     return result[key] !== undefined ? result[key] : defaultValue;
-  } catch (error) {
-    console.error(`Error reading ${key} from storage:`, error);
+  } catch {
     return defaultValue;
   }
 };
@@ -44,12 +43,7 @@ const getFromStorage = async <T>(key: string, defaultValue: T): Promise<T> => {
  * Set data in chrome.storage.local
  */
 const setInStorage = async (key: string, value: unknown): Promise<void> => {
-  try {
-    await chrome.storage.local.set({ [key]: value });
-  } catch (error) {
-    console.error(`Error writing ${key} to storage:`, error);
-    throw error;
-  }
+  await chrome.storage.local.set({ [key]: value });
 };
 
 // ============================================================================

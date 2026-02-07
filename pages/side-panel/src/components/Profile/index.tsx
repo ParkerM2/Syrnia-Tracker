@@ -58,9 +58,7 @@ const SkillCardWrapper = memo(
               {(!imageLoaded || imageError) && <span className="mr-auto text-base font-semibold">{skill}</span>}
               <span className="text-base font-semibold text-green-500">+{formatExp(stats.gainedExp)}</span>
               {isCurrentSkill && (
-                <Badge
-                  variant="outline"
-                  className="border-slate-300 bg-slate-200 text-slate-900 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-900">
+                <Badge className="border-slate-300 bg-slate-200 text-slate-900 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-900">
                   Current
                 </Badge>
               )}
@@ -108,8 +106,7 @@ const Profile = memo(() => {
         return [];
       }
       return [...data].sort((a, b) => new Date(a?.timestamp || 0).getTime() - new Date(b?.timestamp || 0).getTime());
-    } catch (error) {
-      console.error('[Profile] Error processing current hour data:', error);
+    } catch {
       return [];
     }
   }, [dataByHour, currentHour, now]);

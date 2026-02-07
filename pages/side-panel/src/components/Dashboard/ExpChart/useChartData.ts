@@ -1,5 +1,5 @@
 import { TIME_FRAME_OPTIONS, SKILL_COLORS } from './constants';
-import { useTrackedDataQuery, useUserStatsQuery } from '@extension/shared';
+import { useTrackedDataQuery } from '@extension/shared';
 import { useMemo } from 'react';
 import type { TimeFrame, ChartDataPoint, ChartDataResult } from './types';
 import type { CSVRow } from '@extension/shared';
@@ -19,6 +19,8 @@ const getIntervalMinutes = (timeFrame: TimeFrame): number => {
       return 6 * 60; // 6 hour intervals for 7 days (28 data points)
     case '30d':
       return 24 * 60; // 1 day intervals for 30 days (30 data points)
+    case '90d':
+      return 3 * 24 * 60; // 3 day intervals for 90 days (30 data points)
     default:
       return 60; // Default to 1 hour
   }
@@ -31,60 +33,27 @@ interface UseChartDataParams {
 
 export const useChartData = ({ timeFrame, selectedSkills }: UseChartDataParams): ChartDataResult => {
   const { allData } = useTrackedDataQuery();
-  const { userStats } = useUserStatsQuery();
 
   return useMemo(() => {
-    // Get weekly exp from stats URL (source of truth)
-    const weeklyExpFromStats: Record<string, number> = {};
-    if (userStats?.skills) {
-      Object.values(userStats.skills).forEach(skillStat => {
-        if (skillStat.gainedThisWeek) {
-          const exp = parseInt(skillStat.gainedThisWeek.replace(/,/g, ''), 10) || 0;
-          if (exp > 0) {
-            weeklyExpFromStats[skillStat.skill] = exp;
-          }
-        }
-      });
-    }
-
+    // Only use tracked hourly data - no profile stats
     if (!allData || allData.length === 0) {
-      // If no tracked data, but we have weekly stats from URL, create a summary point
-      if (Object.keys(weeklyExpFromStats).length > 0 && (timeFrame === '7d' || timeFrame === '30d')) {
-        const now = new Date();
-        const summaryPoint: Record<string, string | number> = {
-          date: now.toISOString(),
-        };
-
-        const skillsFromStats = Object.keys(weeklyExpFromStats).sort();
-        const config: Record<string, { label: string; color: string }> = {};
-        const totals: Record<string, number> = {};
-
-        skillsFromStats.forEach((skill, index) => {
-          const exp = weeklyExpFromStats[skill];
-          summaryPoint[skill] = exp;
-          totals[skill] = exp;
-          config[skill] = {
-            label: skill,
-            color: SKILL_COLORS[index % SKILL_COLORS.length],
-          };
-        });
-
-        return {
-          chartData: [summaryPoint] as ChartDataPoint[],
-          chartConfig: config,
-          skillTotals: totals,
-          allAvailableSkills: skillsFromStats,
-          timeFrame,
-        };
-      }
-
       return { chartData: [], chartConfig: {}, skillTotals: {}, allAvailableSkills: [], timeFrame };
     }
 
     // Filter by time frame
+    // For 24h, show all available hourly data (or last 24 hours if we have more)
     const now = new Date().getTime();
-    const timeFrameHours = TIME_FRAME_OPTIONS.find(opt => opt.value === timeFrame)?.hours || 24;
-    const cutoffTime = now - timeFrameHours * 60 * 60 * 1000;
+    let cutoffTime: number;
+
+    if (timeFrame === '24h') {
+      // For 24h, show all available data or last 24 hours, whichever is less
+      const timeFrameHours = 24;
+      cutoffTime = now - timeFrameHours * 60 * 60 * 1000;
+    } else {
+      const timeFrameHours =
+        TIME_FRAME_OPTIONS.find(opt => opt.value === timeFrame)?.hours || (timeFrame === '90d' ? 2160 : 24);
+      cutoffTime = now - timeFrameHours * 60 * 60 * 1000;
+    }
 
     const filteredData = allData.filter((row: CSVRow) => {
       const timestamp = new Date(row.timestamp).getTime();
@@ -127,13 +96,22 @@ export const useChartData = ({ timeFrame, selectedSkills }: UseChartDataParams):
       const timestamp = new Date(row.timestamp).getTime();
       const date = new Date(timestamp);
 
-      // Round down to the nearest interval
-      const totalMinutes = date.getHours() * 60 + date.getMinutes();
-      const roundedTotalMinutes = Math.floor(totalMinutes / intervalMinutes) * intervalMinutes;
-      date.setHours(Math.floor(roundedTotalMinutes / 60));
-      date.setMinutes(roundedTotalMinutes % 60, 0, 0);
+      // For 24h timeframe, group by exact hour (round down to hour)
+      // For other timeframes, use the interval-based grouping
+      let intervalKey: string;
+      if (timeFrame === '24h') {
+        // Round down to the exact hour
+        date.setMinutes(0, 0, 0);
+        intervalKey = date.toISOString();
+      } else {
+        // Round down to the nearest interval
+        const totalMinutes = date.getHours() * 60 + date.getMinutes();
+        const roundedTotalMinutes = Math.floor(totalMinutes / intervalMinutes) * intervalMinutes;
+        date.setHours(Math.floor(roundedTotalMinutes / 60));
+        date.setMinutes(roundedTotalMinutes % 60, 0, 0);
+        intervalKey = date.toISOString();
+      }
 
-      const intervalKey = date.toISOString();
       const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
       const skill = row.skill || 'Unknown';
 
@@ -153,14 +131,11 @@ export const useChartData = ({ timeFrame, selectedSkills }: UseChartDataParams):
       }
     });
 
-    // Get all unique skills from tracked data
+    // Get all unique skills from tracked data only
     const allSkills = new Set<string>();
     timeIntervalMap.forEach(skillMap => {
       skillMap.forEach((_, skill) => allSkills.add(skill));
     });
-
-    // Also include skills from stats URL that might not be in tracked data
-    Object.keys(weeklyExpFromStats).forEach(skill => allSkills.add(skill));
 
     // Filter skills based on selection
     const skillsToShow =
@@ -191,6 +166,9 @@ export const useChartData = ({ timeFrame, selectedSkills }: UseChartDataParams):
       });
     });
 
+    // Calculate hours per interval for exp/hr calculation
+    const hoursPerInterval = intervalMinutes / 60;
+
     intervals.forEach(interval => {
       const point: Record<string, string | number> = {
         date: new Date(interval.timestamp).toISOString(),
@@ -198,8 +176,9 @@ export const useChartData = ({ timeFrame, selectedSkills }: UseChartDataParams):
 
       skillsToShow.forEach(skill => {
         const expGain = interval.skills[skill] || 0;
-        // Use gained exp for this interval directly (not cumulative)
-        point[skill] = expGain;
+        // Calculate exp per hour: divide exp gained by hours in interval
+        const expPerHour = hoursPerInterval > 0 ? expGain / hoursPerInterval : expGain;
+        point[skill] = Math.round(expPerHour);
 
         // Track total for tooltip/display purposes
         const currentTotal = totalsBySkill.get(skill) || 0;
@@ -208,37 +187,6 @@ export const useChartData = ({ timeFrame, selectedSkills }: UseChartDataParams):
 
       chartPoints.push(point);
     });
-
-    // For weekly timeframes, use stats URL as source of truth for totals
-    // Stats URL weekly values fill in gaps where tracked data is missing
-    // IMPORTANT: We use stats URL for totals, but don't modify chart points to avoid duplication
-    if (timeFrame === '7d' || timeFrame === '30d') {
-      skillsToShow.forEach(skill => {
-        const weeklyExp = weeklyExpFromStats[skill] || 0;
-        const trackedTotal = trackedTotalsBySkill.get(skill) || 0;
-
-        // Stats URL is the source of truth - use it for totals when available
-        if (weeklyExp > 0) {
-          // Use stats URL value as the total (it's the authoritative source)
-          totalsBySkill.set(skill, weeklyExp);
-
-          // Only add to chart points if we have NO tracked data for this skill
-          // This ensures we show the skill in the chart even if we didn't track it
-          if (trackedTotal === 0 && chartPoints.length > 0) {
-            const lastPoint = chartPoints[chartPoints.length - 1];
-            // Only set if not already set to avoid overwriting tracked data
-            if (!lastPoint[skill] || Number(lastPoint[skill]) === 0) {
-              // Add the weekly exp to the last point so the skill appears in the chart
-              // This represents the "missing" exp that we didn't track but exists in stats URL
-              lastPoint[skill] = weeklyExp;
-            }
-          }
-          // If trackedTotal > 0, we keep the tracked data in chart points
-          // The totals will show the stats URL value (which may be higher)
-          // This way we don't duplicate data - chart shows tracked intervals, totals show stats URL truth
-        }
-      });
-    }
 
     // Create chart config
     const config: Record<string, { label: string; color: string }> = {};
@@ -260,5 +208,5 @@ export const useChartData = ({ timeFrame, selectedSkills }: UseChartDataParams):
       allAvailableSkills: Array.from(allSkills).sort(),
       timeFrame,
     };
-  }, [allData, timeFrame, selectedSkills, userStats]);
+  }, [allData, timeFrame, selectedSkills]);
 };

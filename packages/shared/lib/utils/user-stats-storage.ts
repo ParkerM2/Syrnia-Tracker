@@ -188,8 +188,7 @@ const getUserStatsCSVFromStorage = async (): Promise<string> => {
   try {
     const result = await chrome.storage.local.get(USER_STATS_STORAGE_KEY);
     return result[USER_STATS_STORAGE_KEY] || getUserStatsCSVHeader();
-  } catch (error) {
-    console.error('Error reading user stats CSV from storage:', error);
+  } catch {
     return getUserStatsCSVHeader();
   }
 };
@@ -202,8 +201,8 @@ const saveUserStatsToCSV = async (stats: UserStats): Promise<void> => {
   try {
     const csvContent = `${getUserStatsCSVHeader()}\n${userStatsToCSV(stats)}`;
     await chrome.storage.local.set({ [USER_STATS_STORAGE_KEY]: csvContent });
-  } catch (error) {
-    console.error('Error saving user stats to CSV:', error);
+  } catch {
+    // Silently handle errors
   }
 };
 
@@ -214,8 +213,7 @@ const getUserStatsFromStorage = async (): Promise<UserStats | null> => {
   try {
     const csvContent = await getUserStatsCSVFromStorage();
     return parseUserStatsCSV(csvContent);
-  } catch (error) {
-    console.error('Error getting user stats from storage:', error);
+  } catch {
     return null;
   }
 };

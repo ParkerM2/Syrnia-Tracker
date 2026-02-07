@@ -37,3 +37,19 @@ export const matchText = (text: string): SkillInfo => {
 
   return result;
 };
+
+/**
+ * Normalize location name for display
+ * Converts location names to their commonly used game names
+ * @param location - The location name to normalize
+ * @returns The normalized location name
+ */
+export const formatLocation = (location: string): string => {
+  const normalized = location.toLowerCase().trim();
+  // Only shorten "Rima City - Barracks" to "Barracks"
+  if (normalized === 'rima city - barracks') {
+    return 'Barracks';
+  }
+  // Return the original location name for all other cases
+  return location;
+};

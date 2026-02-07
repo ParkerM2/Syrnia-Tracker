@@ -5,7 +5,15 @@
       "Bash(npm run dev:*)",
       "Bash(node --version:*)",
       "Bash(npm --version)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm lint:fix:*)",
+      "Bash(pnpm --filter chrome-extension lint:*)",
+      "Bash(pnpm --filter @extension/content-script lint:*)",
+      "Bash(pnpm --filter @extension/ui lint:*)",
+      "Bash(pnpm --filter @extension/shared lint:*)",
+      "Bash(pnpm --filter @extension/shared lint:fix:*)",
+      "Bash(pnpm --filter @extension/sidepanel lint:fix:*)"
     ]
   }
 }

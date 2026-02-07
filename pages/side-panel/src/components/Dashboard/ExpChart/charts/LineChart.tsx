@@ -1,3 +1,4 @@
+import { SKILL_COLORS } from '../constants';
 import { formatChartDate, formatTooltipDate } from '../utils';
 import { ChartTooltip, ChartTooltipContent } from '@extension/ui';
 import { memo } from 'react';
@@ -25,22 +26,27 @@ const commonProps = {
 const LineChart = memo(({ chartData, chartConfig, skills, timeFrame }: LineChartProps) => (
   <ComposedChart data={chartData} {...commonProps}>
     <defs>
-      {skills.map(skill => {
+      {skills.map((skill, index) => {
         const skillConfig = chartConfig[skill];
         const color =
-          typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
+          typeof skillConfig === 'object' && 'color' in skillConfig
+            ? skillConfig.color
+            : SKILL_COLORS[index % SKILL_COLORS.length];
 
         const gradientId = `gradient-${skill.replace(/\s+/g, '-')}`;
 
+        // Gradient: lighter at top (higher opacity), darker at bottom (lower opacity)
+        // Matching screenshot style with teal/cyan theme
         return (
           <linearGradient key={gradientId} id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={color} stopOpacity={0.8} />
-            <stop offset="95%" stopColor={color} stopOpacity={0.1} />
+            <stop offset="0%" stopColor={color} stopOpacity={0.6} />
+            <stop offset="50%" stopColor={color} stopOpacity={0.4} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.15} />
           </linearGradient>
         );
       })}
     </defs>
-    <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+    <CartesianGrid vertical={false} stroke="hsl(var(--border))" opacity={0.3} />
     <XAxis
       dataKey="date"
       tickLine={false}
@@ -52,15 +58,25 @@ const LineChart = memo(({ chartData, chartConfig, skills, timeFrame }: LineChart
     />
     <YAxis tickLine={false} axisLine={false} tickMargin={8} className="fill-muted-foreground text-xs" />
     <ChartTooltip content={<ChartTooltipContent labelFormatter={value => formatTooltipDate(value, timeFrame)} />} />
-    {skills.map(skill => {
+    {skills.map((skill, index) => {
       const skillConfig = chartConfig[skill];
       const color =
-        typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
+        typeof skillConfig === 'object' && 'color' in skillConfig
+          ? skillConfig.color
+          : SKILL_COLORS[index % SKILL_COLORS.length];
       const gradientId = `gradient-${skill.replace(/\s+/g, '-')}`;
       return (
         <g key={skill}>
           <Area dataKey={skill} type="monotone" fill={`url(#${gradientId})`} fillOpacity={1} stroke="none" />
-          <Line dataKey={skill} type="monotone" stroke={color} strokeWidth={2} dot={false} />
+          <Line
+            dataKey={skill}
+            type="monotone"
+            stroke={color}
+            strokeWidth={2}
+            dot={false}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </g>
       );
     })}

@@ -54,6 +54,7 @@ export interface ScreenData {
   images: string[];
   links: string[];
   timestamp: string;
+  uuid: string; // Unique identifier for this screen scrape (UUID v4)
   monster?: string; // Name of the monster being fought
   location?: string; // Location name where fighting
   damageDealt?: string[]; // Array of damage dealt by player (from fight log)

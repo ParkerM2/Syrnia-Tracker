@@ -19,13 +19,6 @@ export const ThemeToggle = () => {
     } else {
       root.classList.remove('dark');
     }
-    // Debug log
-    console.log('ThemeToggle theme effect:', {
-      isLight,
-      storageData,
-      shouldBeDark,
-      hasDarkClass: root.classList.contains('dark'),
-    });
   }, [isLight, storageData]);
 
   return (

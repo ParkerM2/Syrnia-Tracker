@@ -10,3 +10,4 @@ export * from './useUserStatsQuery.js';
 export * from './useWeeklyStatsQuery.js';
 export * from './useDataExport.js';
 export * from './useItemValuesQuery.js';
+export * from './usePeriodStats.js';

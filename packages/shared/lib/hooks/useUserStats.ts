@@ -15,8 +15,8 @@ export const useUserStats = () => {
       setLoading(true);
       const stats = await getUserStatsFromStorage();
       setUserStats(stats);
-    } catch (error) {
-      console.error('Error loading user stats:', error);
+    } catch {
+      // Silently handle errors
     } finally {
       setLoading(false);
     }

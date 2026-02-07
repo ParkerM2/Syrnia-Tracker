@@ -46,7 +46,7 @@ const ChartVisualization = memo(
     };
 
     return (
-      <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
+      <ChartContainer config={chartConfig} className="h-[250px] w-full min-w-0">
         {renderChart()}
       </ChartContainer>
     );

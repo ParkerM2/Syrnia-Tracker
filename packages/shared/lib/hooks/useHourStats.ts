@@ -1,15 +1,29 @@
+import { useItemValuesQuery } from './useItemValuesQuery.js';
 import { useTrackedDataQuery } from './useTrackedDataQuery.js';
 import { parseDrops, parseDropAmount } from '../utils/formatting.js';
 import { useMemo } from 'react';
 import type { CSVRow } from '../utils/csv-tracker.js';
+import type { CombatExpGain } from '../utils/types.js';
 
 export interface HourStats {
   totalExp: number;
   expBySkill: Record<string, number>;
   dropStats: Record<string, { count: number; totalAmount: number }>;
+  lootItems: HourLootItem[];
+  totalDropValue: number;
+  hpValue: number;
+  netProfit: number;
   hpUsed: { used: number; startHP: number; endHP: number } | null;
   averageHitByLocation: Record<string, number>;
   totalFights: number;
+}
+
+export interface HourLootItem {
+  name: string;
+  imageUrl: string;
+  quantity: number;
+  valuePerItem: number;
+  totalValue: number;
 }
 
 /**
@@ -25,6 +39,7 @@ export interface HourStats {
 export const useHourStats = (hour: number, date?: Date): HourStats => {
   // dataByHour comes from tracked_data_csv via useTrackedDataQuery
   const { dataByHour } = useTrackedDataQuery();
+  const { itemValues } = useItemValuesQuery();
 
   return useMemo(() => {
     if (!dataByHour) {
@@ -32,6 +47,10 @@ export const useHourStats = (hour: number, date?: Date): HourStats => {
         totalExp: 0,
         expBySkill: {},
         dropStats: {},
+        lootItems: [],
+        totalDropValue: 0,
+        hpValue: 0,
+        netProfit: 0,
         hpUsed: null,
         averageHitByLocation: {},
         totalFights: 0,
@@ -39,6 +58,19 @@ export const useHourStats = (hour: number, date?: Date): HourStats => {
     }
 
     try {
+      const isValidDrop = (drop: string, name: string) => {
+        const trimmedDrop = drop.trim();
+        if (!trimmedDrop) return false;
+        if (/^[\d,]+$/.test(trimmedDrop)) return false;
+        const trimmedName = name?.trim() || '';
+        if (!trimmedName) return false;
+        const lower = trimmedName.toLowerCase();
+        if (lower.includes('experience') || lower.includes('exp ') || /^\d+\s*exp$/i.test(trimmedName)) {
+          return false;
+        }
+        return true;
+      };
+
       const now = date || new Date();
       const hourData = dataByHour(hour, now);
 
@@ -52,20 +84,24 @@ export const useHourStats = (hour: number, date?: Date): HourStats => {
       const dropStats: Record<string, { count: number; totalAmount: number }> = {};
       const averageHitByLocation: Record<string, { totalDamage: number; hitCount: number }> = {};
 
-      // Deduplicate entries: one entry per timestamp+skill (keep the one with highest gainedExp or most complete data)
-      // This matches the logic in aggregateStats used by the history tab
+      // Deduplicate entries by UUID+skill to prevent counting the same fight multiple times
+      // Each unique fight should be counted once, but sum all gainedExp values
       const uniqueEntriesMap = new Map<string, CSVRow>();
 
       sortedData.forEach(row => {
         const skill = row.skill || '';
-        const key = `${row.timestamp}-${skill}`;
+        const uuid = row.uuid || '';
+
+        // Use UUID+skill as key if UUID exists (prevents counting same fight twice)
+        // Otherwise use timestamp+skill (fallback for old data)
+        const key = uuid ? `${uuid}-${skill}` : `${row.timestamp}-${skill}`;
         const existing = uniqueEntriesMap.get(key);
 
         if (!existing) {
+          // First time seeing this fight - add it
           uniqueEntriesMap.set(key, row);
         } else {
-          // Merge data from both rows to preserve all information
-          // Keep the one with higher gainedExp, but merge drops, HP, damage, etc.
+          // Same fight (same UUID) - merge data but keep the one with higher gainedExp
           const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
           const currentGainedExp = parseInt(row.gainedExp || '0', 10) || 0;
 
@@ -117,13 +153,35 @@ export const useHourStats = (hour: number, date?: Date): HourStats => {
       uniqueEntries.forEach(row => {
         // Calculate exp - only count entries with gainedExp > 0
         const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+        const rowSkill = row.skill || '';
 
         if (gainedExp > 0) {
           totalExp += gainedExp;
 
-          const skill = row.skill || '';
-          if (skill) {
-            expBySkill[skill] = (expBySkill[skill] || 0) + gainedExp;
+          if (rowSkill) {
+            expBySkill[rowSkill] = (expBySkill[rowSkill] || 0) + gainedExp;
+          }
+        }
+
+        // Parse and add secondary exp (combatExp) from the row
+        // IMPORTANT: Skip the main skill if it appears in combatExp, since its exp
+        // is already calculated from total exp delta and stored in gainedExp
+        if (row.combatExp && row.combatExp.trim() !== '') {
+          try {
+            const combatExpGains: CombatExpGain[] = JSON.parse(row.combatExp);
+            if (Array.isArray(combatExpGains)) {
+              combatExpGains.forEach((gain: CombatExpGain) => {
+                const combatSkill = gain.skill || '';
+                const exp = parseInt(gain.exp || '0', 10) || 0;
+                // Skip if this is the main skill - its exp is already in gainedExp (calculated from total exp delta)
+                if (combatSkill && exp > 0 && combatSkill !== rowSkill) {
+                  totalExp += exp;
+                  expBySkill[combatSkill] = (expBySkill[combatSkill] || 0) + exp;
+                }
+              });
+            }
+          } catch {
+            // Silently handle JSON parse errors
           }
         }
 
@@ -131,6 +189,9 @@ export const useHourStats = (hour: number, date?: Date): HourStats => {
         const drops = parseDrops(row.drops || '');
         drops.forEach(drop => {
           const { amount, name } = parseDropAmount(drop);
+          if (!isValidDrop(drop, name)) {
+            return;
+          }
           if (!dropStats[name]) {
             dropStats[name] = { count: 0, totalAmount: 0 };
           }
@@ -241,26 +302,55 @@ export const useHourStats = (hour: number, date?: Date): HourStats => {
         }
       });
 
+      const lootItems = Object.entries(dropStats)
+        .map(([name, stats]) => {
+          const valuePerItem = parseFloat(itemValues[name] || '0') || 0;
+          const totalValue = stats.totalAmount * valuePerItem;
+          const imageUrl = `https://www.syrnia.com/images/inventory/${name.replace(/\s/g, '%20')}.png`;
+          return {
+            name,
+            imageUrl,
+            quantity: stats.totalAmount,
+            valuePerItem,
+            totalValue,
+          };
+        })
+        .sort((a, b) => {
+          if (b.totalValue !== a.totalValue) return b.totalValue - a.totalValue;
+          return a.name.localeCompare(b.name);
+        });
+
+      const totalDropValue = lootItems.reduce((sum, item) => sum + item.totalValue, 0);
+      const hpValue = hpUsed ? hpUsed.used * 2.5 : 0;
+      const netProfit = totalDropValue - hpValue;
+
       const result = {
         totalExp,
         expBySkill,
         dropStats,
+        lootItems,
+        totalDropValue,
+        hpValue,
+        netProfit,
         hpUsed,
         averageHitByLocation: avgHits,
         totalFights,
       };
 
       return result;
-    } catch (error) {
-      console.error('[useHourStats] Error calculating hour stats:', error);
+    } catch {
       return {
         totalExp: 0,
         expBySkill: {},
         dropStats: {},
+        lootItems: [],
+        totalDropValue: 0,
+        hpValue: 0,
+        netProfit: 0,
         hpUsed: null,
         averageHitByLocation: {},
         totalFights: 0,
       };
     }
-  }, [dataByHour, hour, date]);
+  }, [dataByHour, hour, date, itemValues]);
 };

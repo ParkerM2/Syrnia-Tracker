@@ -25,7 +25,6 @@ const SkillPills = memo(({ skills, chartConfig }: SkillPillsProps) => {
         return (
           <Badge
             key={skill}
-            variant="outline"
             className="border text-xs font-medium shadow-sm"
             style={{
               background: `linear-gradient(135deg, hsl(${hslValues} / 0.2) 0%, hsl(${hslValues} / 0.1) 50%, hsl(${hslValues} / 0.05) 100%)`,

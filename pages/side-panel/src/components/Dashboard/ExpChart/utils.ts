@@ -37,7 +37,8 @@ export const formatChartDate = (dateString: string, timeFrame?: TimeFrame): stri
         day: 'numeric',
       });
     case '30d':
-      // For 30 days, show month and day
+    case '90d':
+      // For 30 days and 90 days, show month and day
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -89,6 +90,7 @@ export const formatTooltipDate = (dateString: string, timeFrame?: TimeFrame): st
       });
     case '7d':
     case '30d':
+    case '90d':
       // For longer periods, show full date
       return date.toLocaleDateString('en-US', {
         month: 'short',

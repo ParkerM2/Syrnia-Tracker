@@ -1,4 +1,4 @@
-export type TimeFrame = '6h' | '12h' | '24h' | '7d' | '30d';
+export type TimeFrame = '6h' | '12h' | '24h' | '7d' | '30d' | '90d';
 
 export type ChartType = 'line' | 'bar' | 'pie' | 'radar' | 'radial';
 

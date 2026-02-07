@@ -214,8 +214,7 @@ const getWeeklyStatsFromStorage = async (): Promise<WeeklyStatsRow[]> => {
         return parseWeeklyStatsRow(row);
       })
       .filter((row: WeeklyStatsRow | null): row is WeeklyStatsRow => row !== null);
-  } catch (error) {
-    console.error('Error reading weekly stats from storage:', error);
+  } catch {
     return [];
   }
 };
@@ -351,8 +350,8 @@ const updateWeeklyStats = async (allRows: CSVRow[]): Promise<void> => {
     const csvContent = `${header}\n${lines.join('\n')}`;
 
     await chrome.storage.local.set({ [WEEKLY_STATS_STORAGE_KEY]: csvContent });
-  } catch (error) {
-    console.error('Error updating weekly stats:', error);
+  } catch {
+    // Silently handle errors
   }
 };
 
@@ -428,7 +427,6 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
         totalEntries = parseInt(existingWeekStats.totalEntries || '0', 10) || 0;
       } catch {
         // If parsing fails, calculate from tracked data
-        console.warn('Error parsing existing drops, recalculating from tracked data');
       }
     }
 
@@ -520,8 +518,8 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
     const csvContent = `${header}\n${lines.join('\n')}`;
 
     await chrome.storage.local.set({ [WEEKLY_STATS_STORAGE_KEY]: csvContent });
-  } catch (error) {
-    console.error('Error updating weekly stats from stats URL:', error);
+  } catch {
+    // Silently handle errors
   }
 };
 

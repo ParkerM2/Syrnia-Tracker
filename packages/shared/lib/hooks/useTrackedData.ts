@@ -29,8 +29,8 @@ export const useTrackedData = (): UseTrackedDataReturn => {
       setLoading(true);
       const rows = await getCSVRows();
       setAllData(rows);
-    } catch (error) {
-      console.error('Error loading tracked data:', error);
+    } catch {
+      // Silently handle errors
     } finally {
       setLoading(false);
     }
@@ -72,33 +72,18 @@ export const useTrackedData = (): UseTrackedDataReturn => {
   );
 
   const download = useCallback(async (saveAs: boolean = true) => {
-    try {
-      await downloadCSV(saveAs);
-    } catch (error) {
-      console.error('Error downloading CSV:', error);
-      throw error;
-    }
+    await downloadCSV(saveAs);
   }, []);
 
   const clear = useCallback(async () => {
-    try {
-      await clearCSVData();
-      await refresh();
-    } catch (error) {
-      console.error('Error clearing CSV data:', error);
-      throw error;
-    }
+    await clearCSVData();
+    await refresh();
   }, [refresh]);
 
   const clearByHour = useCallback(
     async (hour: number, date?: Date) => {
-      try {
-        await clearCSVDataByHour(hour, date);
-        await refresh();
-      } catch (error) {
-        console.error('Error clearing CSV data by hour:', error);
-        throw error;
-      }
+      await clearCSVDataByHour(hour, date);
+      await refresh();
     },
     [refresh],
   );

@@ -1,7 +1,7 @@
 import { useTrackedDataQuery } from './useTrackedDataQuery.js';
 import { filterByHour } from '../utils/csv-tracker.js';
 import { useState, useEffect, useCallback } from 'react';
-import type { CSVRow } from '../utils/csv-tracker.js';
+import type { CombatExpGain } from '../utils/types.js';
 
 export interface HourlyExpStats {
   totalExpThisHour: number;
@@ -36,44 +36,43 @@ export const useHourlyExp = (): HourlyExpStats => {
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
       );
 
-      // Deduplicate entries: one entry per timestamp+skill (keep the one with highest gainedExp or most complete data)
-      // This matches the logic in useHourStats to ensure consistent values
-      const uniqueEntriesMap = new Map<string, CSVRow>();
-
-      currentHourRows.forEach(row => {
-        const skill = row.skill || '';
-        const key = `${row.timestamp}-${skill}`;
-        const existing = uniqueEntriesMap.get(key);
-
-        if (!existing) {
-          uniqueEntriesMap.set(key, row);
-        } else {
-          // Keep the one with higher gainedExp or more complete data
-          const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
-          const currentGainedExp = parseInt(row.gainedExp || '0', 10) || 0;
-          if (currentGainedExp > existingGainedExp || (currentGainedExp === existingGainedExp && row.skillLevel)) {
-            uniqueEntriesMap.set(key, row);
-          }
-        }
-      });
-
-      // Process unique entries only
-      const uniqueEntries = Array.from(uniqueEntriesMap.values());
-
-      // Use saved gainedExp directly (it's already calculated and saved)
+      // Sum all gainedExp values for each skill in the current hour
+      // This directly sums all tracked gainedExp from storage for the current hour
       let totalGainedExp = 0;
       const expBySkill: Record<string, number> = {};
 
-      uniqueEntries.forEach(row => {
+      currentHourRows.forEach(row => {
         const skill = row.skill || '';
         const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
 
-        // Only count entries with gainedExp > 0
+        // Sum all gainedExp values for each skill
         if (gainedExp > 0) {
           totalGainedExp += gainedExp;
 
           if (skill) {
             expBySkill[skill] = (expBySkill[skill] || 0) + gainedExp;
+          }
+        }
+
+        // Parse and add secondary exp (combatExp) from the row
+        // IMPORTANT: Skip the main skill if it appears in combatExp, since its exp
+        // is already calculated from total exp delta and stored in gainedExp
+        if (row.combatExp && row.combatExp.trim() !== '') {
+          try {
+            const combatExpGains: CombatExpGain[] = JSON.parse(row.combatExp);
+            if (Array.isArray(combatExpGains)) {
+              combatExpGains.forEach((gain: CombatExpGain) => {
+                const combatSkill = gain.skill || '';
+                const combatExp = parseInt(gain.exp || '0', 10) || 0;
+                // Skip if this is the main skill - its exp is already in gainedExp (calculated from total exp delta)
+                if (combatSkill && combatExp > 0 && combatSkill !== skill) {
+                  totalGainedExp += combatExp;
+                  expBySkill[combatSkill] = (expBySkill[combatSkill] || 0) + combatExp;
+                }
+              });
+            }
+          } catch {
+            // Silently handle JSON parse errors
           }
         }
       });
@@ -83,8 +82,8 @@ export const useHourlyExp = (): HourlyExpStats => {
         expBySkill,
         currentHour,
       });
-    } catch (error) {
-      console.error('Error calculating hourly exp:', error);
+    } catch {
+      // Silently handle errors
     }
   }, [allData]);
 

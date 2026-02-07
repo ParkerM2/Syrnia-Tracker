@@ -140,8 +140,7 @@ export const scrapeUserStats = (): UserStats | null => {
       timestamp: new Date().toISOString(),
       skills,
     };
-  } catch (error) {
-    console.error('[scrapeUserStats] Error scraping user stats:', error);
+  } catch {
     return null;
   }
 };

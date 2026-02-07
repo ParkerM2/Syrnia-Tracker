@@ -1,3 +1,4 @@
+import { UPDATE_SCREEN_DATA } from '../../const.js';
 import { filterByTimePeriod, filterByHour, filterByDay, aggregateStats } from '../utils/csv-tracker.js';
 import {
   getTrackedData,
@@ -6,8 +7,9 @@ import {
   downloadTrackedDataCSV,
 } from '../utils/storage-service.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { CSVRow, TimePeriod, TrackedStats } from '../utils/csv-tracker.js';
+import type { ScreenData } from '../utils/types.js';
 
 // Query key for tracked data
 export const TRACKED_DATA_QUERY_KEY = ['trackedData'] as const;
@@ -39,41 +41,77 @@ export const useTrackedDataQuery = () => {
         // getTrackedData() reads from tracked_data_csv storage key
         const rows = await getTrackedData();
         return rows;
-      } catch (err) {
-        console.error('[useTrackedDataQuery] Error loading tracked data from tracked_data_csv:', err);
+      } catch {
         return [];
       }
     },
-    // Data is fresh for 1 second, preventing unnecessary refetches
-    staleTime: 1000,
+    // Data is considered stale after 100ms to allow quick updates while preventing excessive refetches
+    staleTime: 100,
     // Keep data in cache for 5 minutes
     gcTime: 5 * 60 * 1000,
     // Don't refetch on window focus
     refetchOnWindowFocus: false,
     // Don't refetch on reconnect
     refetchOnReconnect: false,
-    // Only refetch on mount if data is stale
-    refetchOnMount: false,
+    // Refetch on mount if data is stale or missing (ensures initial load)
+    refetchOnMount: 'always',
   });
+
+  // Track if we just updated via message to avoid double-updating
+  const justUpdatedViaMessageRef = useRef(false);
 
   // Listen for storage changes and invalidate query (triggers background refetch)
   // This ensures UI updates automatically when tracked_data_csv changes
   useEffect(() => {
     const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === 'local' && changes.tracked_data_csv) {
-        // Invalidate and refetch the query to trigger a background update
-        // This will update the data without showing a loading state
-        queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
-        queryClient.refetchQueries({ queryKey: TRACKED_DATA_QUERY_KEY }).catch(err => {
-          console.error('[useTrackedDataQuery] Error refetching query:', err);
-        });
+        // If we just updated via message, skip the storage invalidation to avoid double-update
+        if (justUpdatedViaMessageRef.current) {
+          justUpdatedViaMessageRef.current = false;
+          return;
+        }
+
+        // Only invalidate if the new value is not empty/null and has actual data (not just header)
+        const newValue = changes.tracked_data_csv.newValue;
+        if (newValue && newValue.trim().length > 0) {
+          // Force refetch by invalidating and refetching
+          // This ensures data updates even if it was recently fetched
+          queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
+          queryClient.refetchQueries({
+            queryKey: TRACKED_DATA_QUERY_KEY,
+            type: 'active',
+          });
+        }
+      }
+    };
+
+    // Also listen for runtime messages to update cache immediately when scrape is saved
+    // The background script only sends this message AFTER successfully saving unique scrape data
+    const messageListener = (message: { type: string; data?: ScreenData }) => {
+      if (message.type === UPDATE_SCREEN_DATA && message.data) {
+        justUpdatedViaMessageRef.current = true;
+        // Invalidate and refetch to get the updated data
+        // Use a small delay to ensure storage changes have propagated
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
+          queryClient.refetchQueries({
+            queryKey: TRACKED_DATA_QUERY_KEY,
+            type: 'active',
+          });
+          // Reset flag after a short delay
+          setTimeout(() => {
+            justUpdatedViaMessageRef.current = false;
+          }, 1000);
+        }, 50); // Small delay to ensure storage changes have propagated
       }
     };
 
     chrome.storage.onChanged.addListener(storageListener);
+    chrome.runtime.onMessage.addListener(messageListener);
 
     return () => {
       chrome.storage.onChanged.removeListener(storageListener);
+      chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, [queryClient]);
 
@@ -144,32 +182,17 @@ export const useTrackedDataQuery = () => {
 
   // Download function - moved to useDataExport hook for better separation of concerns
   const download = async (saveAs: boolean = true) => {
-    try {
-      await downloadTrackedDataCSV(saveAs);
-    } catch (error) {
-      console.error('Error downloading CSV:', error);
-      throw error;
-    }
+    await downloadTrackedDataCSV(saveAs);
   };
 
   // Clear function
   const clear = async () => {
-    try {
-      await clearMutation.mutateAsync();
-    } catch (error) {
-      console.error('Error clearing CSV data:', error);
-      throw error;
-    }
+    await clearMutation.mutateAsync();
   };
 
   // Clear by hour function
   const clearByHour = async (hour: number, date?: Date) => {
-    try {
-      await clearByHourMutation.mutateAsync({ hour, date });
-    } catch (error) {
-      console.error('Error clearing CSV data by hour:', error);
-      throw error;
-    }
+    await clearByHourMutation.mutateAsync({ hour, date });
   };
 
   return {

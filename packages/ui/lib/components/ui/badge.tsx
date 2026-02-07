@@ -2,25 +2,38 @@
 import { cn } from '../../utils';
 import type * as React from 'react';
 
-interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline';
-}
+type BadgeBaseProps = {
+  isActive?: boolean;
+};
 
-function Badge({ className, variant = 'default', ...props }: BadgeProps) {
+type BadgeAsButton = BadgeBaseProps & {
+  as: 'button';
+} & React.ButtonHTMLAttributes<HTMLButtonElement>;
+
+type BadgeAsAnchor = BadgeBaseProps & {
+  as: 'a';
+} & React.AnchorHTMLAttributes<HTMLAnchorElement>;
+
+type BadgeAsDiv = BadgeBaseProps & {
+  as?: 'div';
+} & React.HTMLAttributes<HTMLDivElement>;
+
+type BadgeProps = BadgeAsButton | BadgeAsAnchor | BadgeAsDiv;
+
+function Badge({ className, isActive = false, as: Component = 'div', ...props }: BadgeProps) {
   return (
-    <div
+    <Component
       className={cn(
-        'focus:ring-ring inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2',
-        {
-          'bg-primary text-primary-foreground hover:bg-primary/80 border-transparent': variant === 'default',
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border/50': variant === 'secondary',
-          'bg-destructive text-destructive-foreground hover:bg-destructive/80 border-transparent':
-            variant === 'destructive',
-          'text-foreground border-border': variant === 'outline',
-        },
+        'focus:ring-ring inline-flex items-center justify-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2',
+        'cursor-pointer hover:scale-105 active:scale-95',
+        // Active/Selected state: filled with primary color, subtle ring (persists on hover)
+        isActive
+          ? 'bg-primary text-primary-foreground ring-primary hover:bg-primary/90 hover:ring-primary/30 border-transparent shadow-sm ring-2'
+          : // Inactive state: border and ring visible
+            'text-foreground border-border ring-border/50 hover:ring-border hover:border-border bg-transparent ring-1',
         className,
       )}
-      {...props}
+      {...(props as Record<string, unknown>)}
     />
   );
 }

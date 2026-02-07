@@ -1,4 +1,5 @@
 import { matchText, skillExpRegex } from '@extension/shared';
+import { v4 as uuidv4 } from 'uuid';
 import type { ScreenData, CombatExpGain, EquipmentData, EquipmentItem } from '@extension/shared';
 
 // Track last processed fight to prevent duplicate wearDisplayTD collection
@@ -129,7 +130,7 @@ const parseCombatExp = (fightLogElement: HTMLElement | null): CombatExpGain[] =>
  *           "The Rima General struck at you and did 3 damage"
  */
 const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTMLElement | null): string => {
-  // Try fightLogTop first - format: "You defeated {monster}."
+  // Try fightLogTop first - format: "You defeated {monster}." or "The {monster} died. You got"
   if (fightLogElement) {
     const fightText = fightLogElement.textContent || '';
 
@@ -147,6 +148,22 @@ const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTML
         !monster.toLowerCase().includes('exp') &&
         !monster.toLowerCase().includes('damage') &&
         !monster.toLowerCase().includes('you')
+      ) {
+        return monster;
+      }
+    }
+
+    // Secondary pattern: "The {monster} died. You got"
+    const diedPattern = /the\s+(.+?)\s+died\.\s+you\s+got/i;
+    const diedMatch = fightText.match(diedPattern);
+    if (diedMatch && diedMatch[1]) {
+      const monster = diedMatch[1].trim();
+      // Filter out common false positives
+      if (
+        monster.length > 2 &&
+        !monster.toLowerCase().includes('level') &&
+        !monster.toLowerCase().includes('exp') &&
+        !monster.toLowerCase().includes('damage')
       ) {
         return monster;
       }
@@ -403,42 +420,6 @@ const parseDamage = (): { dealt: string[]; received: string[] } => {
   });
 
   return { dealt: damageDealt, received: damageReceived };
-};
-
-/**
- * Parse HP gained from fight log
- * Looks for lines like "{username} at X and gained X HP"
- * Returns the total HP gained amount
- */
-const parseHpGained = (): number | null => {
-  const fightText = getAllFightText();
-
-  if (!fightText) {
-    return null;
-  }
-
-  // Pattern: "{username} at X and gained X HP"
-  // Example: "PlayerName at Rima General and gained 5 HP"
-  // We need to match the HP amount after "gained"
-  const hpGainedPattern = /gained\s+(\d+)\s+HP/gi;
-  const matches = [...fightText.matchAll(hpGainedPattern)];
-
-  if (matches.length === 0) {
-    return null;
-  }
-
-  // Sum all HP gained amounts
-  let totalHpGained = 0;
-  matches.forEach(match => {
-    if (match && match[1]) {
-      const hpAmount = parseInt(match[1], 10);
-      if (!isNaN(hpAmount)) {
-        totalHpGained += hpAmount;
-      }
-    }
-  });
-
-  return totalHpGained > 0 ? totalHpGained : null;
 };
 
 /**
@@ -760,39 +741,70 @@ export const scrapeScreenData = (): ScreenData => {
   // Parse combat experience gains from fightLogTop
   let hpUsed: number | undefined = undefined;
   let equipment: EquipmentData | undefined = undefined;
+
+  // Check for skill level information pattern: "Skill level: 132 (28080364 exp, 86538 for next level)"
+  // This pattern indicates a fight has ended and skill info is displayed
+  // Pattern allows any skill name, level number, exp values, and exp for next level
+  let fightText = '';
+  let hasSkillLevelInfo = false;
+
+  // Regex pattern to match: "Skill level: number (number exp, number for next level)"
+  const skillLevelPattern = /\w+\s+level:\s+\d+\s+\(\d+\s+exp,\s+\d+\s+for\s+next\s+level\)/i;
+
   if (addExpTextNode) {
     textContent.combatExp = parseCombatExp(addExpTextNode);
     textContent.drops = parseDrops(addExpTextNode);
+    fightText = addExpTextNode.textContent || '';
+    hasSkillLevelInfo = skillLevelPattern.test(fightText);
+  }
 
-    const fightText = addExpTextNode.textContent || '';
-    const hasDefeatedText = /you\s+defeated/i.test(fightText);
-
-    // ONLY parse damage and HP when "You defeated" text is present (fight just finished)
-    if (hasDefeatedText) {
-      // Check if this is the same fight text we already processed
-      // This prevents re-processing while sitting at the same fight end screen
-      if (fightText === lastProcessedFightText) {
-        // Same fight screen, skip ALL fight-end processing
-        // Use cached location and empty damage arrays
-        location = cachedLocation;
-      } else {
-        // New fight detected - process it
-        lastProcessedFightText = fightText;
-
-        // Parse location only once at fight end
-        location = parseLocation(locationElement);
-        cachedLocation = location; // Cache for future calls
-
-        damage = parseDamage();
-        // Parse HP gained from fight log (food eaten during fight)
-        const hpGained = parseHpGained();
-        if (hpGained !== null) {
-          hpUsed = hpGained;
+  // Also check all fight log rows for skill level info (in case addExpTextNode doesn't contain it)
+  if (!hasSkillLevelInfo) {
+    const fightLogTopMarker = document.querySelector('#fightLogTop') as HTMLElement | null;
+    if (fightLogTopMarker) {
+      let currentSibling: Element | null = fightLogTopMarker.nextElementSibling;
+      while (currentSibling) {
+        if (currentSibling.tagName === 'TR') {
+          const siblingText = currentSibling.textContent || '';
+          if (skillLevelPattern.test(siblingText)) {
+            fightText = siblingText;
+            hasSkillLevelInfo = true;
+            break;
+          }
         }
-
-        // Parse equipment data (only once per fight)
-        equipment = parseEquipment();
+        currentSibling = currentSibling.nextElementSibling;
       }
+    }
+  }
+
+  // ONLY parse damage, HP, and equipment when skill level info is present (fight just finished)
+  if (hasSkillLevelInfo) {
+    // Check if this is the same fight text we already processed
+    // This prevents re-processing while sitting at the same fight end screen
+    if (fightText === lastProcessedFightText) {
+      // Same fight screen, skip ALL fight-end processing
+      // Use cached location and empty damage arrays
+      location = cachedLocation;
+    } else {
+      // New fight detected - process it
+      lastProcessedFightText = fightText;
+
+      // Parse location only once at fight end
+      location = parseLocation(locationElement);
+      cachedLocation = location; // Cache for future calls
+
+      damage = parseDamage();
+
+      // Calculate HP Used from damage received (sum of all damage received values)
+      if (damage.received && damage.received.length > 0) {
+        hpUsed = damage.received.reduce((sum, dmg) => {
+          const damageValue = parseInt(dmg, 10);
+          return sum + (isNaN(damageValue) ? 0 : damageValue);
+        }, 0);
+      }
+
+      // Parse equipment data (only once per fight)
+      equipment = parseEquipment();
     }
   }
 
@@ -804,6 +816,7 @@ export const scrapeScreenData = (): ScreenData => {
     images: [],
     links: [],
     timestamp: new Date().toISOString(),
+    uuid: uuidv4(), // Generate unique identifier for this screen scrape
     monster: monster,
     location: location,
     damageDealt: damage.dealt,

@@ -47,8 +47,10 @@ export type StorageConfigType<D = string> = {
 export interface ThemeStateType {
   theme: 'light' | 'dark';
   isLight: boolean;
+  themeName: string; // Theme name like 'default', 'perpetuity', etc.
 }
 
 export type ThemeStorageType = BaseStorageType<ThemeStateType> & {
   toggle: () => Promise<void>;
+  setThemeName: (themeName: string) => Promise<void>;
 };
