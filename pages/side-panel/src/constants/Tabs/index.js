@@ -6,6 +6,8 @@ const DISPLAY = {
   ITEMS: 'ITEMS',
   CALCULATOR: 'CALCULATOR',
   HISTORY: 'HISTORY',
+  SETTINGS: 'SETTINGS',
+  DATA_VIEW: 'DATA_VIEW',
 };
 
 export default DISPLAY;

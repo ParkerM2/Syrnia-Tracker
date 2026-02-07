@@ -1,7 +1,7 @@
-import { useTrackedDataQuery, useDataExport, useItemValuesQuery, useFormatting } from '@extension/shared';
+import { useTrackedDataQuery, useDataExport, usePeriodStats } from '@extension/shared';
 import {
   cn,
-  Button,
+  IconButton,
   Card,
   CardContent,
   CardHeader,
@@ -16,274 +16,25 @@ import {
   TabsList,
   TabsTrigger,
 } from '@extension/ui';
-import React, { useState, useMemo } from 'react';
-import type { CSVRow } from '@extension/shared';
-
-type TimePeriod = 'hour' | 'day' | 'week' | 'month';
+import { DownloadIcon, RefreshIcon, TrashIcon } from '@src/assets/icons';
+import React, { useState } from 'react';
+import type { TimePeriod } from '@extension/shared';
 
 const TrackedHistory = () => {
-  const { allData, stats, statsByPeriod, refresh, clear, loading } = useTrackedDataQuery();
+  const { statsByPeriod, refresh, clear } = useTrackedDataQuery();
   const { exportData, isExporting } = useDataExport();
-  const { itemValues } = useItemValuesQuery();
-  const { parseDrops, parseDropAmount } = useFormatting();
+  const {
+    periodBreakdown,
+    selectedPeriod,
+    setSelectedPeriod,
+    loading,
+    itemValues,
+    overallStats: stats,
+  } = usePeriodStats('day');
 
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('day');
   const [expandedHours, setExpandedHours] = useState<Set<string>>(new Set());
 
   const periodStats = statsByPeriod(selectedPeriod);
-
-  // Deduplicate all entries: one entry per timestamp+skill (keep the one with highest gainedExp or most complete data)
-  // This version includes ALL rows (not filtered by exp) - used for drops and HP calculations
-  // IMPORTANT: Merge drops from all rows with the same timestamp+skill to preserve all drop data
-  const allDeduplicatedData = useMemo(() => {
-    const uniqueEntriesMap = new Map<string, CSVRow>();
-
-    allData.forEach(row => {
-      const key = `${row.timestamp}-${row.skill}`;
-      const existing = uniqueEntriesMap.get(key);
-
-      if (!existing) {
-        uniqueEntriesMap.set(key, { ...row });
-      } else {
-        // Merge drops from both rows
-        const existingDrops = existing.drops || '';
-        const currentDrops = row.drops || '';
-        const mergedDrops = [existingDrops, currentDrops].filter(d => d && d.trim() !== '').join(';');
-
-        // Keep the one with higher gainedExp or most complete data, but preserve merged drops
-        const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
-        const currentGainedExp = parseInt(row.gainedExp || '0', 10) || 0;
-
-        if (currentGainedExp > existingGainedExp || (currentGainedExp === existingGainedExp && row.skillLevel)) {
-          // Current row is better, but use merged drops
-          uniqueEntriesMap.set(key, { ...row, drops: mergedDrops });
-        } else {
-          // Existing row is better, but update with merged drops
-          uniqueEntriesMap.set(key, { ...existing, drops: mergedDrops });
-        }
-      }
-    });
-
-    return Array.from(uniqueEntriesMap.values());
-  }, [allData]);
-
-  // Filtered version for exp calculations (only rows with gainedExp > 0)
-  const allDeduplicatedDataWithExp = useMemo(
-    () => allDeduplicatedData.filter(row => parseInt(row.gainedExp || '0', 10) > 0),
-    [allDeduplicatedData],
-  );
-
-  // Group all data by the selected period type (hour/day/week/month)
-  // We need to group ALL data (not just filtered) for accurate drop counting
-  const periodBreakdown = useMemo(() => {
-    // Group ALL deduplicated data by period (for drops and HP calculations)
-    const allDataPeriodMap = new Map<string, { periodKey: string; date: Date; rows: CSVRow[] }>();
-    allDeduplicatedData.forEach(row => {
-      const date = new Date(row.timestamp);
-      let periodKey: string;
-      let periodDate: Date;
-
-      if (selectedPeriod === 'hour') {
-        // Group by hour
-        periodKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
-        periodDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), 0, 0);
-      } else if (selectedPeriod === 'day') {
-        // Group by day
-        periodKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        periodDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
-      } else if (selectedPeriod === 'week') {
-        // Group by week (start of week = Sunday)
-        const weekStart = new Date(date);
-        const day = weekStart.getDay();
-        weekStart.setDate(weekStart.getDate() - day);
-        weekStart.setHours(0, 0, 0, 0);
-        periodKey = `${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
-        periodDate = weekStart;
-      } else {
-        // month
-        // Group by month
-        periodKey = `${date.getFullYear()}-${date.getMonth()}`;
-        periodDate = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0);
-      }
-
-      if (!allDataPeriodMap.has(periodKey)) {
-        allDataPeriodMap.set(periodKey, {
-          periodKey,
-          date: periodDate,
-          rows: [],
-        });
-      }
-      allDataPeriodMap.get(periodKey)!.rows.push(row);
-    });
-
-    // Group filtered data (with exp > 0) by period (for exp calculations)
-    const periodMap = new Map<string, { periodKey: string; date: Date; rows: CSVRow[] }>();
-
-    allDeduplicatedDataWithExp.forEach(row => {
-      const date = new Date(row.timestamp);
-      let periodKey: string;
-      let periodDate: Date;
-
-      if (selectedPeriod === 'hour') {
-        // Group by hour
-        periodKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
-        periodDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), 0, 0);
-      } else if (selectedPeriod === 'day') {
-        // Group by day
-        periodKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        periodDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
-      } else if (selectedPeriod === 'week') {
-        // Group by week (start of week = Sunday)
-        const weekStart = new Date(date);
-        const day = weekStart.getDay();
-        weekStart.setDate(weekStart.getDate() - day);
-        weekStart.setHours(0, 0, 0, 0);
-        periodKey = `${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
-        periodDate = weekStart;
-      } else {
-        // month
-        // Group by month
-        periodKey = `${date.getFullYear()}-${date.getMonth()}`;
-        periodDate = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0);
-      }
-
-      if (!periodMap.has(periodKey)) {
-        periodMap.set(periodKey, {
-          periodKey,
-          date: periodDate,
-          rows: [],
-        });
-      }
-      periodMap.get(periodKey)!.rows.push(row);
-    });
-
-    // Use parseDrops and parseDropAmount from useFormatting hook
-
-    // Convert to array and calculate stats for each period
-    // Use allDataPeriodMap for drops/HP, periodMap for exp
-    return Array.from(allDataPeriodMap.values())
-      .map(({ periodKey, date, rows: allRows }) => {
-        // Get exp rows for this period (filtered)
-        // Note: expRows are already deduplicated, so we calculate exp directly
-        // instead of using aggregateStats which would deduplicate again
-        const expRows = periodMap.get(periodKey)?.rows || [];
-
-        // Calculate exp manually to avoid double deduplication
-        // aggregateStats does its own deduplication, but our rows are already deduplicated
-        let totalGainedExp = 0;
-        const skills: Record<string, number> = {};
-
-        expRows.forEach(row => {
-          const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
-          if (gainedExp > 0) {
-            totalGainedExp += gainedExp;
-            const skill = row.skill || '';
-            if (skill) {
-              skills[skill] = (skills[skill] || 0) + gainedExp;
-            }
-          }
-        });
-
-        const periodStats = {
-          totalExp: totalGainedExp,
-          skills,
-        };
-
-        // Calculate HP used for this period (use ALL rows)
-        // First try to use hpUsed from fight log (food eaten during fight)
-        let totalHpUsed = 0;
-        allRows.forEach(row => {
-          if (row.hpUsed && row.hpUsed.trim() !== '') {
-            const hpUsedValue = parseInt(row.hpUsed.replace(/,/g, ''), 10);
-            if (!isNaN(hpUsedValue) && hpUsedValue > 0) {
-              totalHpUsed += hpUsedValue;
-            }
-          }
-        });
-
-        // Get totalInventoryHP for start/end (for display purposes)
-        const hpEntries = allRows
-          .filter(row => row.totalInventoryHP && row.totalInventoryHP.trim() !== '')
-          .map(row => {
-            const hpValue = parseInt(row.totalInventoryHP.replace(/,/g, ''), 10);
-            return {
-              timestamp: row.timestamp,
-              hp: isNaN(hpValue) ? null : hpValue,
-            };
-          })
-          .filter(entry => entry.hp !== null)
-          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-        let hpUsed: { used: number; startHP: number; endHP: number } | null = null;
-        if (totalHpUsed > 0) {
-          // Use hpUsed from fight log (food eaten during fight)
-          const startHP = hpEntries.length > 0 ? hpEntries[0].hp! : 0;
-          const endHP = hpEntries.length > 0 ? hpEntries[hpEntries.length - 1].hp! : 0;
-          hpUsed = {
-            used: totalHpUsed,
-            startHP,
-            endHP,
-          };
-        } else if (hpEntries.length >= 2) {
-          // Fallback to old calculation if no hpUsed from fight log
-          const firstHP = hpEntries[0].hp!;
-          const lastHP = hpEntries[hpEntries.length - 1].hp!;
-          hpUsed = {
-            used: firstHP - lastHP,
-            startHP: firstHP,
-            endHP: lastHP,
-          };
-        }
-
-        // Calculate drops for this period (use ALL rows, not just exp rows)
-        const dropStats: Record<string, { count: number; totalAmount: number }> = {};
-        allRows.forEach(row => {
-          const drops = parseDrops(row.drops || '');
-          drops.forEach(drop => {
-            const { amount, name } = parseDropAmount(drop);
-            if (!dropStats[name]) {
-              dropStats[name] = { count: 0, totalAmount: 0 };
-            }
-            dropStats[name].count += 1;
-            dropStats[name].totalAmount += amount;
-          });
-        });
-
-        const totalDrops = Object.values(dropStats).reduce((sum, stat) => sum + stat.count, 0);
-        const totalDropAmount = Object.values(dropStats).reduce((sum, stat) => sum + stat.totalAmount, 0);
-
-        // Calculate total drop value using item values
-        let totalDropValue = 0;
-        Object.entries(dropStats).forEach(([name, stats]) => {
-          const itemValue = parseFloat(itemValues[name] || '0');
-          if (!isNaN(itemValue)) {
-            totalDropValue += stats.totalAmount * itemValue;
-          }
-        });
-
-        // Calculate HP value (HP used * 2.5)
-        const hpValue = hpUsed ? hpUsed.used * 2.5 : 0;
-
-        // Calculate net profit (drop value - HP value)
-        const netProfit = totalDropValue - hpValue;
-
-        return {
-          periodKey,
-          date,
-          totalGainedExp: periodStats.totalExp,
-          skills: periodStats.skills,
-          hpUsed,
-          dropStats,
-          totalDrops,
-          totalDropAmount,
-          totalDropValue,
-          hpValue,
-          netProfit,
-          rows: expRows, // Keep exp rows for display
-        };
-      })
-      .sort((a, b) => b.date.getTime() - a.date.getTime()); // Most recent first
-  }, [allDeduplicatedData, allDeduplicatedDataWithExp, selectedPeriod, itemValues, parseDrops, parseDropAmount]);
 
   const togglePeriod = (periodKey: string) => {
     setExpandedHours(prev => {
@@ -346,9 +97,8 @@ const TrackedHistory = () => {
       // Export tracked data CSV
       await exportData('tracked', true);
       alert('CSV file downloaded successfully!');
-    } catch (error) {
+    } catch {
       alert('Error downloading CSV file');
-      console.error(error);
     }
   };
 
@@ -357,9 +107,8 @@ const TrackedHistory = () => {
       try {
         await clear();
         alert('All tracked data cleared successfully!');
-      } catch (error) {
+      } catch {
         alert('Error clearing tracked data');
-        console.error(error);
       }
     }
   };
@@ -372,60 +121,31 @@ const TrackedHistory = () => {
     <div className={cn('flex w-full flex-col gap-4')}>
       <div className="flex flex-row items-center justify-end">
         <div className="flex gap-2">
-          <Button
+          <IconButton
             onClick={handleDownload}
             disabled={isExporting}
             variant="default"
             size="icon"
-            aria-label="Download CSV">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-          </Button>
-          <Button onClick={handleClear} variant="destructive" size="icon" aria-label="Clear All Data">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round">
-              <path d="M3 6h18"></path>
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-            </svg>
-          </Button>
-          <Button onClick={refresh} variant="secondary" size="icon" aria-label="Refresh">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-              <path d="M21 3v5h-5"></path>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-              <path d="M8 16H3v5"></path>
-            </svg>
-          </Button>
+            label="Download CSV"
+            className="flex-shrink-0"
+            Icon={DownloadIcon}
+          />
+          <IconButton
+            onClick={handleClear}
+            variant="destructive"
+            size="icon"
+            label="Clear All Data"
+            className="flex-shrink-0"
+            Icon={TrashIcon}
+          />
+          <IconButton
+            onClick={refresh}
+            variant="secondary"
+            size="icon"
+            label="Refresh"
+            className="flex-shrink-0"
+            Icon={RefreshIcon}
+          />
         </div>
       </div>
 
@@ -448,7 +168,7 @@ const TrackedHistory = () => {
         <CardContent>
           {Object.keys(periodStats.skills).length > 0 && (
             <div className="flex flex-col gap-1">
-              {Object.entries(periodStats.skills)
+              {(Object.entries(periodStats.skills) as [string, number][])
                 .sort(([, a], [, b]) => b - a)
                 .map(([skill, exp]) => (
                   <div key={skill} className="flex justify-between">
@@ -693,11 +413,11 @@ const TrackedHistory = () => {
               <p className="text-2xl font-bold">{stats.totalExp.toLocaleString()}</p>
             </div>
           </div>
-          {stats.timeRange.start && (
+          {stats.timeRange.start && stats.timeRange.end && (
             <div className="mt-4">
               <p className="text-muted-foreground text-sm">
                 Tracking from:{' '}
-                {new Date(stats.timeRange.start).toLocaleString(undefined, {
+                {stats.timeRange.start.toLocaleString(undefined, {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
@@ -706,7 +426,7 @@ const TrackedHistory = () => {
                   hour12: true,
                 })}{' '}
                 to{' '}
-                {new Date(stats.timeRange.end).toLocaleString(undefined, {
+                {stats.timeRange.end.toLocaleString(undefined, {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
