@@ -322,7 +322,8 @@ export const usePerformance = () => {
 
       const earliestTime = timestamps.length > 0 ? timestamps[0] : Date.now();
       const latestTime = timestamps.length > 0 ? timestamps[timestamps.length - 1] : Date.now();
-      const elapsedMinutes = Math.max(1, (latestTime - earliestTime) / (1000 * 60)); // At least 1 minute to avoid division by zero
+      // At least 1 minute to avoid division by zero
+      const elapsedMinutes = Math.max(1, (latestTime - earliestTime) / (1000 * 60));
 
       uniqueEntries.forEach(row => {
         try {

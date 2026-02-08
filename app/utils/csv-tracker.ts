@@ -19,7 +19,9 @@ export interface CSVRow {
   totalInventoryHP: string; // Current HP value from inventory (empty string if not available)
   hpUsed: string; // HP used from fight log (parsed from "gained X HP" lines, empty string if not available)
   equipment: string; // Equipment data as JSON string (empty string if not available)
-  combatExp: string; // All combat exp gains as JSON string: [{"skill":"Strength","exp":"27"},...] (empty string if not available)
+  // All combat exp gains as JSON string: [{"skill":"Strength","exp":"27"},...]
+  // Empty string if not available
+  combatExp: string;
 }
 
 /**
@@ -64,10 +66,12 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   // Backward compatible: handle different CSV format versions
   if (row.length < 2) return null;
 
-  // Format versions:
-  // New with UUID (16 fields): timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed
-  // New with UUID and equipment (17 fields): timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed,equipment
-  // New with UUID, equipment, and combatExp (18 fields): timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed,equipment,combatExp
+  // Format versions (field count → fields):
+  // 18: timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,
+  //     monster,location,damageDealt,damageReceived,peopleFighting,
+  //     totalFights,totalInventoryHP,hpUsed,equipment,combatExp
+  // 17: same as 18 without combatExp
+  // 16: same as 17 without equipment
 
   // Check for 18 fields first - new format with UUID, equipment, and combatExp
   const isNewFormatWithUUIDAndEquipmentAndCombatExp = row.length === 18;
@@ -82,8 +86,10 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   // Check for 12 fields - new format with all fields including peopleFighting (but not totalFights)
   const isNewFormatWithPeople = row.length === 12;
   // Check for 11 fields - need to distinguish between old new format and new format with combat
-  // Old new format: row[7] is gainedExp (number), row[8] is drops (string), row[9] is images, row[10] is links
-  // New format with combat: row[7] is monster (string, not a number), row[8] is location, row[9] is damageDealt, row[10] is damageReceived
+  // Old new format: row[7]=gainedExp (number), row[8]=drops,
+  //   row[9]=images, row[10]=links
+  // New format with combat: row[7]=monster (not a number),
+  //   row[8]=location, row[9]=damageDealt, row[10]=damageReceived
   const isNewFormatWithCombat = row.length === 11 && row[7] && !row[7].match(/^[\d,]+$/); // 8th field is monster (not a number)
   const isOldNewFormat =
     row.length === 11 && !isNewFormatWithCombat && row[7] && /^[\d,]+$/.test(row[7].replace(/,/g, '')); // 8th field is gainedExp (number)
@@ -94,12 +100,14 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   // For 7 fields, need to distinguish between old format and new format with HP
   // Old format: timestamp,skill,exp,speedText,addExp,images,links
   // New format with HP: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp
-  // Heuristic: if row[2] (3rd field) is a number and row[3] (4th field) is not empty and looks like expForNextLevel (number), it's new format
-  const isNewFormatWithHP = row.length === 7 && row[3] && /^\d+$/.test(row[3].replace(/,/g, '')); // expForNextLevel is a number
+  // Heuristic: if row[2] is a number and row[3] looks like
+  // expForNextLevel (number), it's new format
+  // expForNextLevel is a number
+  const isNewFormatWithHP = row.length === 7 && row[3] && /^\d+$/.test(row[3].replace(/,/g, ''));
   const isOldFormat = row.length === 7 && !isNewFormatWithHP;
 
   if (isNewFormatWithUUIDAndEquipmentAndCombatExp) {
-    // New format with UUID, equipment, and combatExp: timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed,equipment,combatExp
+    // 18 fields: UUID + equipment + combatExp
     return {
       timestamp: row[0] || '',
       uuid: row[1] || '',
@@ -121,7 +129,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       combatExp: row[17] || '',
     };
   } else if (isNewFormatWithUUIDAndEquipment) {
-    // New format with UUID and equipment: timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed,equipment
+    // 17 fields: UUID + equipment
     return {
       timestamp: row[0] || '',
       uuid: row[1] || '',
@@ -145,7 +153,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   }
 
   if (isNewFormatWithUUID) {
-    // New format with UUID: timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed
+    // 16 fields: UUID format
     return {
       timestamp: row[0] || '',
       uuid: row[1] || '',
@@ -169,7 +177,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   }
 
   if (isNewFormatWithHpFields) {
-    // New format with HP, combat, people, totalFights, totalInventoryHP, and hpUsed (no UUID): timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed
+    // 15 fields: HP fields, no UUID
     return {
       timestamp: row[0] || '',
       uuid: '', // Backward compatible: no UUID in old format
@@ -193,7 +201,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   }
 
   if (isNewFormatWithTotalFights) {
-    // New format with HP, combat, people, and totalFights: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights
+    // 13 fields: HP + combat + people + totalFights
     return {
       timestamp: row[0] || '',
       uuid: '', // Backward compatible: no UUID in old format
@@ -217,7 +225,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   }
 
   if (isNewFormatWithPeople) {
-    // New format with HP, combat, and people: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting
+    // 12 fields: HP + combat + people
     return {
       timestamp: row[0] || '',
       uuid: '', // Backward compatible: no UUID in old format
@@ -239,7 +247,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       combatExp: '', // Backward compatible: no combatExp in old format
     };
   } else if (isNewFormatWithCombat) {
-    // New format with HP and combat: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived
+    // 11 fields: HP + combat
     return {
       timestamp: row[0] || '',
       uuid: '', // Backward compatible: no UUID in old format
@@ -305,7 +313,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
       combatExp: '', // Backward compatible: no combatExp in old format
     };
   } else if (isOldNewFormat) {
-    // Old new format (11 fields): timestamp,skill,exp,speedText,addExp,skillLevel,expForNextLevel,gainedExp,drops,images,links
+    // Old new format (11 fields): legacy with gainedExp
     return {
       timestamp: row[0] || '',
       uuid: '', // Backward compatible: no UUID in old format

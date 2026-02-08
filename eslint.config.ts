@@ -51,6 +51,17 @@ export default defineConfig(
       },
     },
     rules: {
+      'max-len': [
+        'warn',
+        {
+          code: 120,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreRegExpLiterals: true,
+          ignoreComments: false,
+        },
+      ],
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'prefer-const': 'error',

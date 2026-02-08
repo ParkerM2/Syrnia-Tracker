@@ -21,7 +21,8 @@ export type StorageConfigType<D = string> = {
    */
   sessionAccessForContentScripts?: boolean;
   /**
-   * Keeps state live in sync between all instances of the extension. Like between popup, side panel and content scripts.
+   * Keeps state live in sync between all instances of the extension.
+   * Like between popup, side panel and content scripts.
    * To allow chrome background scripts to stay in sync as well, use {@link StorageEnum.Session} storage area with
    * {@link StorageConfigType.sessionAccessForContentScripts} potentially also set to true.
    * @see https://stackoverflow.com/a/75637138/2763239

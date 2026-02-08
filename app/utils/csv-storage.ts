@@ -138,7 +138,8 @@ export const getCSVRows = async (): Promise<CSVRow[]> => {
 
 /**
  * Download CSV file using Chrome Downloads API
- * @param saveAs - If true, shows file picker dialog to let user choose save location. If false, saves to default Downloads folder.
+ * @param saveAs - If true, shows file picker dialog to let user choose
+ * save location. If false, saves to default Downloads folder.
  */
 export const downloadCSV = async (saveAs: boolean = true): Promise<void> => {
   const csvContent = await getCSVFromStorage();
