@@ -13,7 +13,16 @@
       "Bash(pnpm --filter @extension/ui lint:*)",
       "Bash(pnpm --filter @extension/shared lint:*)",
       "Bash(pnpm --filter @extension/shared lint:fix:*)",
-      "Bash(pnpm --filter @extension/sidepanel lint:fix:*)"
+      "Bash(pnpm --filter @extension/sidepanel lint:fix:*)",
+      "Bash(xargs sed -i \"s|from ''@extension/shared/lib/utils/csv-tracker''|from ''@app/utils/csv-tracker''|g; s|from ''@extension/shared/lib/utils/storage-service''|from ''@app/utils/storage-service''|g; s|from ''@extension/shared/lib/utils/weekly-stats-storage''|from ''@app/utils/weekly-stats-storage''|g; s|from ''@extension/shared/lib/utils/user-stats-storage''|from ''@app/utils/user-stats-storage''|g; s|from ''@extension/shared/lib/utils/types''|from ''@app/types''|g; s|from ''@extension/shared/lib/hooks/useTrackedDataQuery''|from ''@app/hooks/useTrackedDataQuery''|g; s|from ''@extension/shared/lib/hooks/useUserStatsQuery''|from ''@app/hooks/useUserStatsQuery''|g; s|from ''@extension/shared/lib/hooks/useWeeklyStatsQuery''|from ''@app/hooks/useWeeklyStatsQuery''|g; s|from ''@extension/shared/lib/hooks/useFormatting''|from ''@app/hooks/useFormatting''|g; s|from ''@extension/shared/lib/hooks/useHourlyExp''|from ''@app/hooks/useHourlyExp''|g; s|from ''@extension/shared/lib/hooks/useScreenData''|from ''@app/hooks/useScreenData''|g; s|from ''@extension/shared/lib/hooks/useTrackedData''|from ''@app/hooks/useTrackedData''|g; s|from ''@extension/shared/lib/hooks/useUserStats''|from ''@app/hooks/useUserStats''|g; s|from ''@extension/shared/lib/hooks/useHourStats''|from ''@app/hooks/useHourStats''|g; s|from ''@extension/shared/lib/hooks/usePeriodStats''|from ''@app/hooks/usePeriodStats''|g; s|from ''@extension/shared/lib/hooks/useDataExport''|from ''@app/hooks/useDataExport''|g; s|from ''@extension/shared/lib/hooks/useItemValuesQuery''|from ''@app/hooks/useItemValuesQuery''|g; s|import\\(''@extension/shared/lib/utils/weekly-stats-storage''\\)|import\\(''@app/utils/weekly-stats-storage''\\)|g\")",
+      "Bash(xargs sed:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm format:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }
