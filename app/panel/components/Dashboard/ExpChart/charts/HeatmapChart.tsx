@@ -69,8 +69,8 @@ export const HeatmapChart = ({
   };
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent>

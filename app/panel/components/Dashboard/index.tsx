@@ -98,15 +98,15 @@ const Dashboard = memo(() => {
       {/* Top Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Main Skill Card */}
-        {/* {mainSkillCard && ( */}
-        <MetricCard
-          trend={trend}
-          title={mainSkillCard?.skill || 'Main Skill'}
-          value={mainSkillCard?.expPerHour || '0'}
-          subtitle={mainSkillCard?.subtitle || ''}
-          className="col-span-1"
-        />
-        {/* )} */}
+        {mainSkillCard && (
+          <MetricCard
+            trend={trend}
+            title={mainSkillCard?.skill || 'Main Skill'}
+            value={mainSkillCard?.expPerHour || '0'}
+            subtitle={mainSkillCard?.subtitle || ''}
+            className="col-span-1"
+          />
+        )}
 
         {/* Other Tracked Skills */}
         {otherSkillsCards.map(skillCard => (
