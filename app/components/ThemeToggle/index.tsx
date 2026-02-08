@@ -1,5 +1,5 @@
-import { Button } from './ui/button';
-import { cn } from '../utils';
+import { cn } from '../../utils';
+import { Button } from '../ui/button';
 import { useStorage } from '@app/hooks';
 import { exampleThemeStorage } from '@app/utils/storage';
 import { useEffect } from 'react';

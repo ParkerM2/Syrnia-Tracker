@@ -54,3 +54,23 @@ export type ThemeStorageType = BaseStorageType<ThemeStateType> & {
   toggle: () => Promise<void>;
   setThemeName: (themeName: string) => Promise<void>;
 };
+
+export interface CustomTheme {
+  id: string;
+  name: string;
+  createdAt: number;
+  variables: {
+    light: Record<string, string>;
+    dark: Record<string, string>;
+  };
+}
+
+export interface CustomThemesStateType {
+  themes: CustomTheme[];
+}
+
+export type CustomThemesStorageType = BaseStorageType<CustomThemesStateType> & {
+  addTheme: (theme: CustomTheme) => Promise<void>;
+  updateTheme: (id: string, updates: Partial<Pick<CustomTheme, 'name' | 'variables'>>) => Promise<void>;
+  deleteTheme: (id: string) => Promise<void>;
+};

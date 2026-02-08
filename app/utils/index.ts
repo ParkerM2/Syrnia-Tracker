@@ -10,3 +10,4 @@ export * from './user-stats-storage';
 export * from './weekly-stats-storage';
 export * from './storage-service';
 export * from './themes';
+export * from './parse-theme-css';

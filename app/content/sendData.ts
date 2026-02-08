@@ -145,7 +145,6 @@ const sendData = () => {
   // Scrape the data
   const data = scrapeScreenData();
   data.totalFights = 1;
-  lastSentData = data;
 
   safeSendMessage({ type: UPDATE_SCREEN_DATA, data }, () => {
     // After message sent, reset processing flag

@@ -106,7 +106,7 @@ const LootGrid = memo(
       <div className="flex flex-col gap-6">
         {groupedData.map((group, groupIndex) => (
           <div key={groupIndex} className="flex flex-col gap-4">
-            {group.header && <div className="rounded-md bg-muted/50 px-4 py-2 text-sm font-bold">{group.header}</div>}
+            {group.header && <div className="bg-muted/50 rounded-md px-4 py-2 text-sm font-bold">{group.header}</div>}
             <div className="grid gap-4" style={gridStyle}>
               {group.items.map(item => (
                 <LootGridCard key={item.name} item={item} zoomLevel={zoomLevel} />

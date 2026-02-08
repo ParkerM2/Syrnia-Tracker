@@ -14,7 +14,8 @@ import { cn, ErrorDisplay, LoadingSpinner, ThemeToggle } from '@app/components';
 import { withErrorBoundary, withSuspense } from '@app/hoc';
 import { useStorage } from '@app/hooks';
 import { exampleThemeStorage } from '@app/utils/storage';
-import { getTheme, applyTheme } from '@app/utils/themes';
+import { customThemesStorage } from '@app/utils/storage/custom-themes-storage';
+import { getTheme, applyTheme, applyCustomTheme, isCustomThemeName, getCustomThemeId } from '@app/utils/themes';
 import { useState, useEffect } from 'react';
 
 /**
@@ -22,6 +23,7 @@ import { useState, useEffect } from 'react';
  */
 const SidePanelContent = () => {
   const storageData = useStorage(exampleThemeStorage);
+  const customThemesState = useStorage(customThemesStorage);
   const isLight = storageData?.isLight ?? false;
   const [display, setDisplay] = useState(DISPLAY.DASHBOARD);
 
@@ -41,12 +43,21 @@ const SidePanelContent = () => {
 
     // Apply theme colors
     if (storageData?.themeName) {
-      const theme = getTheme(storageData.themeName);
-      if (theme) {
-        applyTheme(theme, shouldBeDark);
+      if (isCustomThemeName(storageData.themeName)) {
+        const themeId = getCustomThemeId(storageData.themeName);
+        const customThemes = customThemesState?.themes ?? [];
+        const custom = customThemes.find(t => t.id === themeId);
+        if (custom) {
+          applyCustomTheme(custom, shouldBeDark);
+        }
+      } else {
+        const theme = getTheme(storageData.themeName);
+        if (theme) {
+          applyTheme(theme, shouldBeDark);
+        }
       }
     }
-  }, [isLight, storageData]);
+  }, [isLight, storageData, customThemesState]);
 
   const renderComponent = (screen: string) => {
     switch (screen) {

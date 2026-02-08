@@ -22,12 +22,12 @@ const MetricCard = memo(({ title, value, subtitle, trend, lootItems }: MetricCar
     <CardHeader className="text-md flex h-fit flex-row items-center justify-between py-2 font-bold">
       <p className="text-left text-lg font-bold">{title}</p>
       <div className="flex flex-row items-end gap-1">
-        <div className="flex flex-row items-center gap-1 rounded-md border border-foreground/20 bg-green-500/20 px-2 py-1 dark:border-foreground/40 dark:bg-teal-500/20">
+        <div className="border-foreground/20 dark:border-foreground/40 flex flex-row items-center gap-1 rounded-md border bg-green-500/20 px-2 py-1 dark:bg-teal-500/20">
           <TrendUpIcon className="h-4 w-4 text-green-400" />
           <p className="text-lg font-medium text-green-400">+{value}</p>
         </div>
         {trend && (
-          <div className="flex flex-col items-end gap-1 rounded-md border border-foreground/20 bg-green-500/20 px-2 py-1 dark:border-foreground/40 dark:bg-teal-500/20">
+          <div className="border-foreground/20 dark:border-foreground/40 flex flex-col items-end gap-1 rounded-md border bg-green-500/20 px-2 py-1 dark:bg-teal-500/20">
             <div
               className={cn(
                 'flex items-center gap-1 text-lg font-semibold',
@@ -51,7 +51,7 @@ const MetricCard = memo(({ title, value, subtitle, trend, lootItems }: MetricCar
         <CardDescription>
           <div className="mt-4 flex flex-wrap gap-2">
             {lootItems.map(item => (
-              <div key={item.name} className="relative flex h-10 w-10 items-center justify-center rounded bg-muted/40">
+              <div key={item.name} className="bg-muted/40 relative flex h-10 w-10 items-center justify-center rounded">
                 <img src={item.imageUrl} alt={item.name} className="h-8 w-8 object-contain" />
                 <span className="absolute left-0.5 top-0.5 text-[10px] font-semibold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                   {item.quantity.toLocaleString()}

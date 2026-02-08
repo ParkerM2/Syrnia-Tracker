@@ -1,4 +1,4 @@
-import { cn } from '../utils';
+import { cn } from '../../utils';
 import { useStorage } from '@app/hooks';
 import { exampleThemeStorage } from '@app/utils/storage';
 import type { ComponentPropsWithoutRef } from 'react';

@@ -1,5 +1,5 @@
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import type { FallbackProps } from 'react-error-boundary';
 
 export const ErrorDisplay = ({ error, resetErrorBoundary }: FallbackProps) => {
@@ -25,7 +25,7 @@ export const ErrorDisplay = ({ error, resetErrorBoundary }: FallbackProps) => {
             <p className="text-sm text-muted-foreground">
               Something went wrong. Don't worry, you can return to the dashboard to continue.
             </p>
-            {error && (
+            {error instanceof Error && (
               <details className="rounded-md border bg-muted p-2">
                 <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Error Details</summary>
                 <pre className="mt-2 overflow-auto text-xs text-destructive">{error.message || String(error)}</pre>

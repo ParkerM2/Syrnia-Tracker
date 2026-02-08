@@ -37,7 +37,7 @@ const SkillCardWrapper = memo(
     const expForNextLevel = formatExp(skillInfo.expForNextLevel || '0');
 
     return (
-      <Card className={cn(isCurrentSkill && 'border-primary bg-primary/10', 'min-w-[200px] flex-1')}>
+      <Card className={cn(isCurrentSkill && 'bg-primary/10 border-primary', 'min-w-[200px] flex-1')}>
         <CardContent className="p-4">
           <div className="mb-2 flex items-center gap-2">
             <div className="flex items-center gap-2">

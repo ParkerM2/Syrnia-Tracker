@@ -147,7 +147,7 @@ const LootMap = memo(() => {
                 label="Table View"
                 className={cn(
                   'flex-shrink-0',
-                  viewMode === 'table' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : '',
+                  viewMode === 'table' ? 'hover:bg-accent/80 bg-accent text-accent-foreground' : '',
                 )}
                 Icon={TableViewIcon}
               />
@@ -158,7 +158,7 @@ const LootMap = memo(() => {
                 label="Grid View"
                 className={cn(
                   'flex-shrink-0',
-                  viewMode === 'grid' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : '',
+                  viewMode === 'grid' ? 'hover:bg-accent/80 bg-accent text-accent-foreground' : '',
                 )}
                 Icon={GridViewIcon}
               />

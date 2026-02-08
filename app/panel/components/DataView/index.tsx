@@ -318,7 +318,7 @@ const DataView = memo(() => {
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card/50 p-3">
+          <div className="bg-card/50 flex items-center justify-between gap-4 rounded-lg border border-border p-3">
             <div className="flex flex-1 flex-col gap-1">
               <Label htmlFor="view-mode" className="cursor-pointer text-base font-medium">
                 View Mode

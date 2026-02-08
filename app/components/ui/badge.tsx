@@ -28,9 +28,9 @@ function Badge({ className, isActive = false, as: Component = 'div', ...props }:
         'cursor-pointer hover:scale-105 active:scale-95',
         // Active/Selected state: filled with primary color, subtle ring (persists on hover)
         isActive
-          ? 'border-transparent bg-primary text-primary-foreground shadow-sm ring-2 ring-primary hover:bg-primary/90 hover:ring-primary/30'
+          ? 'hover:bg-primary/90 hover:ring-primary/30 border-transparent bg-primary text-primary-foreground shadow-sm ring-2 ring-primary'
           : // Inactive state: border and ring visible
-            'border-border bg-transparent text-foreground ring-1 ring-border/50 hover:border-border hover:ring-border',
+            'ring-border/50 border-border bg-transparent text-foreground ring-1 hover:border-border hover:ring-border',
         className,
       )}
       {...(props as Record<string, unknown>)}

@@ -8,8 +8,8 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "bash bash-scripts/set_global_env.sh && pnpm clean && tsx build/build.ts && vite build",
-    "dev": "bash bash-scripts/set_global_env.sh CLI_CEB_DEV=true && pnpm clean && tsx build/build.ts & vite build --mode development",
+    "build": "bash bash-scripts/set_global_env.sh && pnpm clean && tsx build/build.ts",
+    "dev": "bash bash-scripts/set_global_env.sh CLI_CEB_DEV=true && pnpm clean && tsx build/build.ts",
     "lint": "eslint app/ vite.config.ts",
     "lint:fix": "pnpm lint --fix",
     "format": "prettier --write --cache --cache-location node_modules/.cache/.prettiercache \"app/**/*.{ts,tsx,css}\" \"build/**/*.ts\" \"*.{ts,json}\"",

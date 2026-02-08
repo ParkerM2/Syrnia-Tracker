@@ -22,7 +22,15 @@
       "Bash(pnpm format:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(git push:*)",
+      "Bash(pnpm type-check:*)",
+      "Bash(pnpm dev)",
+      "Bash(npx vite:*)",
+      "Bash(taskkill:*)",
+      "Bash(ls:*)",
+      "Bash(python3 -c \" import sys, json for line in sys.stdin: try: obj = json.loads\\(line.strip\\(\\)\\) if obj.get\\(''type''\\) == ''human'': msg = obj.get\\(''message'', {}\\) if isinstance\\(msg, dict\\): content = msg.get\\(''content'', ''''\\) if isinstance\\(content, str\\): print\\(''HUMAN:'', content[:300]\\) elif isinstance\\(content, list\\): for c in content: if isinstance\\(c, dict\\) and c.get\\(''type''\\) == ''text'': print\\(''HUMAN:'', c.get\\(''text'', ''''\\)[:300]\\) elif obj.get\\(''type''\\) == ''assistant'': msg = obj.get\\(''message'', {}\\) if isinstance\\(msg, dict\\): content = msg.get\\(''content'', ''''\\) if isinstance\\(content, list\\): for c in content: if isinstance\\(c, dict\\) and c.get\\(''type''\\) == ''text'': print\\(''ASSISTANT:'', c.get\\(''text'', ''''\\)[:200]\\) except: pass \")",
+      "Bash(node -e:*)"
     ]
   }
 }

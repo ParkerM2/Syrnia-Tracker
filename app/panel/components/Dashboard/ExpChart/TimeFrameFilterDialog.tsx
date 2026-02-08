@@ -30,7 +30,7 @@ const TimeFrameFilterDialog = memo(
                 key={option.value}
                 onClick={() => handleSelect(option.value)}
                 className={`w-full rounded-md border border-border bg-card p-3 text-left transition-colors ${
-                  currentTimeFrame === option.value ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-accent'
+                  currentTimeFrame === option.value ? 'bg-primary/10 border-primary text-primary' : 'hover:bg-accent'
                 }`}>
                 <div className="font-medium">{option.label}</div>
               </button>

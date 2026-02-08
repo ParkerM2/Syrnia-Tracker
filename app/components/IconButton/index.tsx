@@ -1,7 +1,7 @@
-import { Button } from './ui/button';
-import { cn } from '../utils';
+import { cn } from '../../utils';
+import { Button } from '../ui/button';
 import * as React from 'react';
-import type { ButtonProps } from './ui/button';
+import type { ButtonProps } from '../ui/button';
 
 type IconButtonProps = {
   onClick: React.ButtonHTMLAttributes<HTMLButtonElement>['onClick'];

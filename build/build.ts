@@ -2,9 +2,12 @@ import { readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { makeEntryPointPlugin } from './hmr/dist/lib/plugins/make-entry-point-plugin.js';
 import env, { IS_DEV, IS_PROD } from './env';
+import { watchPublicPlugin } from './hmr/dist/lib/plugins/watch-public-plugin.js';
 import { watchRebuildPlugin } from './hmr/dist/lib/plugins/watch-rebuild-plugin.js';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import makeManifestPlugin from './plugins/make-manifest-plugin';
+import react from '@vitejs/plugin-react-swc';
 import { build } from 'vite';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 const rootDir = resolve(import.meta.dirname, '..');
 const appDir = resolve(rootDir, 'app');
@@ -66,6 +69,7 @@ const buildContentScripts = async () => {
         },
       },
       plugins: [IS_DEV && makeEntryPointPlugin(), nodePolyfills()],
+      publicDir: false,
       build: {
         lib: {
           name: name,
@@ -123,6 +127,50 @@ const buildBackground = async () => {
   });
 };
 
-// Run content scripts and background builds
+/**
+ * Build side panel (React app with manifest generation)
+ */
+const buildSidePanel = async () => {
+  await build({
+    root: resolve(appDir, 'panel'),
+    configFile: false,
+    define: {
+      'process.env': env,
+    },
+    base: '',
+    resolve: {
+      alias: {
+        '@app': appDir,
+      },
+    },
+    plugins: [
+      react(),
+      IS_DEV && watchRebuildPlugin({ refresh: true }),
+      watchPublicPlugin(),
+      makeManifestPlugin({ outDir }),
+      nodePolyfills(),
+    ],
+    publicDir: resolve(rootDir, 'public', 'panel'),
+    build: {
+      outDir: resolve(outDir, 'side-panel'),
+      sourcemap: IS_DEV,
+      minify: IS_PROD,
+      reportCompressedSize: IS_PROD,
+      emptyOutDir: IS_PROD,
+      watch: watchOption,
+      rollupOptions: {
+        external: ['chrome'],
+      },
+    },
+  });
+};
+
+// Start HMR reload server in dev mode (before builds so plugins can connect)
+if (IS_DEV) {
+  await import('./hmr/dist/lib/initializers/init-reload-server.js');
+}
+
+// Run all builds sequentially to ensure proper ordering
 await buildContentScripts();
 await buildBackground();
+await buildSidePanel();
