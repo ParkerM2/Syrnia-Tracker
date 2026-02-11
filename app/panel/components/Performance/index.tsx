@@ -1,6 +1,6 @@
-import { EquipmentDisplay } from './EquipmentDisplay';
-import { useStatTable } from './StatTable/useStatTable';
-import { usePerformance } from './usePerformance';
+import { EquipmentDisplay } from "./EquipmentDisplay";
+import { useStatTable } from "./StatTable/useStatTable";
+import { usePerformance } from "./usePerformance";
 import {
   cn,
   Card,
@@ -16,10 +16,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@app/components';
-import { formatLocation } from '@app/utils/helpers';
-import { memo, Fragment } from 'react';
-import type { StatRow } from './StatTable';
+} from "@app/components";
+import { formatLocation } from "@app/utils/helpers";
+import { memo, Fragment } from "react";
+import type { StatRow } from "./StatTable";
 
 /**
  * Monster Stat Table Component
@@ -53,7 +53,7 @@ const MonsterStatTable = memo(({ title, rows }: { title: string; rows: StatRow[]
             <TableRow>
               {hitStats.map((row, index) => {
                 const displayValue = formatRowValue(row);
-                const cellClassName = cn('text-right font-medium', row.className);
+                const cellClassName = cn("text-right font-medium", row.className);
                 return (
                   <TableCell key={`hit-${index}`} className={cellClassName}>
                     {displayValue}
@@ -68,28 +68,18 @@ const MonsterStatTable = memo(({ title, rows }: { title: string; rows: StatRow[]
   );
 });
 
-MonsterStatTable.displayName = 'MonsterStatTable';
+MonsterStatTable.displayName = "MonsterStatTable";
 
 /**
  * Performance Component
  * Pure JSX component - all logic is in usePerformance hook
  */
 const Performance = memo(() => {
-  const {
-    selectedLocation,
-    setSelectedLocation,
-    selectedMonster,
-    setSelectedMonster,
-    loading,
-    userStats,
-    locations,
-    monsters,
-    performanceStats,
-    locationStats,
-  } = usePerformance();
+  const { selectedLocation, setSelectedLocation, loading, userStats, locations, performanceStats, locationStats } =
+    usePerformance();
 
   if (loading) {
-    return <div className={cn('p-4 text-lg font-semibold')}>Loading tracked data...</div>;
+    return <div className={cn("p-4 text-lg font-semibold")}>Loading tracked data...</div>;
   }
 
   // Helper to create simplified stat rows (Max, Average, Mean, Mode for hits only)
@@ -100,97 +90,67 @@ const Performance = memo(() => {
     modeHit: number,
     isDamageReceived: boolean = false,
   ): StatRow[] => {
-    const className = isDamageReceived && maxHit > 0 ? 'text-red-500' : undefined;
+    const className = isDamageReceived && maxHit > 0 ? "text-red-500" : undefined;
     return [
-      { label: 'Max', value: maxHit, className },
+      { label: "Max", value: maxHit, className },
       {
-        label: 'Average',
+        label: "Average",
         value: avgHit,
-        format: (v: number | string) => (typeof v === 'number' ? Math.round(v).toLocaleString() : v.toString()),
+        format: (v: number | string) => (typeof v === "number" ? Math.round(v).toLocaleString() : v.toString()),
         className,
       },
       {
-        label: 'Mean',
+        label: "Mean",
         value: meanHit,
-        format: (v: number | string) => (typeof v === 'number' ? Math.round(v).toLocaleString() : v.toString()),
+        format: (v: number | string) => (typeof v === "number" ? Math.round(v).toLocaleString() : v.toString()),
         className,
       },
-      { label: 'Mode', value: modeHit, className },
+      { label: "Mode", value: modeHit, className },
     ];
   };
 
   return (
-    <div className={cn('flex flex-col gap-4')}>
+    <div className={cn("flex flex-col gap-4")}>
       {/* Location Tabs */}
-      <Card>
-        <CardContent className="p-4">
-          <Tabs value={selectedLocation} onValueChange={setSelectedLocation}>
-            <TabsList className="w-full flex-wrap justify-start">
-              {locations.map(location => (
-                <TabsTrigger key={location} value={location}>
-                  {location === 'all' ? 'All Locations' : formatLocation(location)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Monster Filter */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="monster-filter" className="text-sm font-medium text-muted-foreground">
-              Filter by Monster
-            </label>
-            <select
-              id="monster-filter"
-              value={selectedMonster}
-              onChange={e => setSelectedMonster(e.target.value)}
-              className={cn(
-                'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[hsl(var(--secondary))]',
-              )}>
-              {monsters.map(monster => (
-                <option key={monster} value={monster}>
-                  {monster === 'all' ? 'All Monsters' : monster}
-                </option>
-              ))}
-            </select>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={selectedLocation} onValueChange={setSelectedLocation}>
+        <TabsList className="w-full flex-wrap gap-2">
+          {locations.map(location => (
+            <TabsTrigger key={location} value={location}>
+              {location === "all" ? "All Locations" : formatLocation(location)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* Location Stats Card (only for specific locations) */}
-      {selectedLocation !== 'all' && locationStats.totalFights > 0 && (
+      {selectedLocation !== "all" && locationStats.totalFights > 0 && (
         <Card>
           <CardContent className="p-6">
-            <div className="flex flex-col gap-6 sm:flex-row">
+            <div className="flex flex-col justify-center gap-6 sm:flex-row sm:justify-start">
               {/* Left Column - Stats */}
-              <div className="flex flex-1 flex-col gap-4">
-                <h3 className="text-left text-lg font-semibold">{formatLocation(selectedLocation)}</h3>
-                <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-center text-lg font-semibold sm:text-left">{formatLocation(selectedLocation)}</h3>
+                <div className="flex flex-col">
+                  <span className="text-sm text-muted-foreground">Total Fights Tracked</span>
+                  <span className="text-2xl font-bold">{locationStats.totalFights.toLocaleString()}</span>
+                </div>
+                {locationStats.avgHitsToKill > 0 && (
                   <div className="flex flex-col">
-                    <span className="text-sm text-muted-foreground">Total Fights Tracked</span>
-                    <span className="text-2xl font-bold">{locationStats.totalFights.toLocaleString()}</span>
+                    <span className="text-sm text-muted-foreground">Avg Hits to Kill</span>
+                    <span className="text-2xl font-bold">{locationStats.avgHitsToKill.toFixed(1)}</span>
                   </div>
-                  {locationStats.avgHitsToKill > 0 && (
-                    <div className="flex flex-col">
-                      <span className="text-sm text-muted-foreground">Avg Hits to Kill</span>
-                      <span className="text-2xl font-bold">{locationStats.avgHitsToKill.toFixed(1)}</span>
-                    </div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className="text-sm text-muted-foreground">Avg Damage per 15 Min</span>
-                    <span className="text-2xl font-bold text-red-500">
-                      {Math.round(locationStats.avgDamagePer15Min).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm text-muted-foreground">Max Damage per 15 Min</span>
-                    <span className="text-2xl font-bold text-red-500">
-                      {Math.round(locationStats.maxDamagePer15Min).toLocaleString()}
-                    </span>
-                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-sm text-muted-foreground">Avg Damage per 15 Min</span>
+                  <span className="text-2xl font-bold text-red-500">
+                    {Math.round(locationStats.avgDamagePer15Min).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm text-muted-foreground">Max Damage per 15 Min</span>
+                  <span className="text-2xl font-bold text-red-500">
+                    {Math.round(locationStats.maxDamagePer15Min).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
@@ -223,7 +183,7 @@ const Performance = memo(() => {
                 <TableBody>
                   {/* User Stats Row */}
                   <TableRow>
-                    <TableCell className="text-left font-medium">{userStats?.username || 'User'}</TableCell>
+                    <TableCell className="text-left font-medium">{userStats?.username || "User"}</TableCell>
                     {createHitStats(
                       performanceStats.maxHit,
                       performanceStats.avgHit,
@@ -233,10 +193,10 @@ const Performance = memo(() => {
                     ).map((stat, index) => {
                       const displayValue = stat.format
                         ? stat.format(stat.value)
-                        : typeof stat.value === 'number'
+                        : typeof stat.value === "number"
                           ? stat.value.toLocaleString()
                           : stat.value.toString();
-                      const cellClassName = cn('text-right font-medium', stat.className);
+                      const cellClassName = cn("text-right font-medium", stat.className);
                       return (
                         <TableCell key={`user-${index}`} className={cellClassName}>
                           {displayValue}
@@ -244,7 +204,7 @@ const Performance = memo(() => {
                       );
                     })}
                     <TableCell className="text-right font-medium">
-                      {performanceStats.avgHitsToKill > 0 ? performanceStats.avgHitsToKill.toFixed(1) : '-'}
+                      {performanceStats.avgHitsToKill > 0 ? performanceStats.avgHitsToKill.toFixed(1) : "-"}
                     </TableCell>
                   </TableRow>
 
@@ -280,10 +240,10 @@ const Performance = memo(() => {
                             {monsterStats.map((stat, index) => {
                               const displayValue = stat.format
                                 ? stat.format(stat.value)
-                                : typeof stat.value === 'number'
+                                : typeof stat.value === "number"
                                   ? stat.value.toLocaleString()
                                   : stat.value.toString();
-                              const cellClassName = cn('text-right font-medium', stat.className);
+                              const cellClassName = cn("text-right font-medium", stat.className);
                               return (
                                 <TableCell key={`monster-${monster}-${index}`} className={cellClassName}>
                                   {displayValue}
@@ -291,7 +251,7 @@ const Performance = memo(() => {
                               );
                             })}
                             <TableCell className="text-right font-medium">
-                              {avgHitsToKill > 0 ? avgHitsToKill.toFixed(1) : '-'}
+                              {avgHitsToKill > 0 ? avgHitsToKill.toFixed(1) : "-"}
                             </TableCell>
                           </TableRow>
                         </Fragment>
@@ -307,6 +267,6 @@ const Performance = memo(() => {
   );
 });
 
-Performance.displayName = 'Performance';
+Performance.displayName = "Performance";
 
 export default Performance;

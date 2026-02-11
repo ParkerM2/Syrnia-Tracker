@@ -1,16 +1,16 @@
-import { cn } from '@app/utils/cn';
-import * as React from 'react';
+import { cn } from "@app/utils/cn";
+import * as React from "react";
 
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({ className, children, ...props }, ref) => (
   <select
     className={cn(
-      'border-input text-foreground ring-offset-background focus-visible:ring-ring',
-      'flex h-10 w-full rounded-md border px-3 py-2 text-sm',
-      'bg-background dark:bg-secondary',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-      'disabled:cursor-not-allowed disabled:opacity-50',
+      "border-input text-foreground ring-offset-background focus-visible:ring-ring",
+      "flex h-10 w-full rounded-md border px-3 py-2 text-sm",
+      "bg-transparent",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+      "disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}
     ref={ref}
@@ -18,7 +18,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({ className, ch
     {children}
   </select>
 ));
-Select.displayName = 'Select';
+Select.displayName = "Select";
 
 export type { SelectProps };
 export { Select };

@@ -1,8 +1,8 @@
-import { parseDrops, parseDropAmount } from './formatting';
-import type { CSVRow } from './csv-tracker';
-import type { UserStats } from '@app/types';
+import { parseDrops, parseDropAmount } from "./formatting";
+import type { CSVRow } from "./csv-tracker";
+import type { UserStats } from "@app/types";
 
-const WEEKLY_STATS_STORAGE_KEY = 'weekly_stats_csv';
+const WEEKLY_STATS_STORAGE_KEY = "weekly_stats_csv";
 
 interface WeeklyStatsRow {
   weekKey: string; // Format: YYYY-WW (year-week number)
@@ -23,28 +23,28 @@ interface WeeklyStatsRow {
 const getESTComponents = (
   date: Date,
 ): { year: number; month: number; day: number; hour: number; minute: number; second: number; dayOfWeek: number } => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    weekday: 'short',
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    weekday: "short",
     hour12: false,
   });
 
   const parts = formatter.formatToParts(date);
 
   return {
-    year: parseInt(parts.find(p => p.type === 'year')!.value),
-    month: parseInt(parts.find(p => p.type === 'month')!.value) - 1,
-    day: parseInt(parts.find(p => p.type === 'day')!.value),
-    hour: parseInt(parts.find(p => p.type === 'hour')!.value),
-    minute: parseInt(parts.find(p => p.type === 'minute')!.value),
-    second: parseInt(parts.find(p => p.type === 'second')!.value),
-    dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.find(p => p.type === 'weekday')!.value),
+    year: parseInt(parts.find(p => p.type === "year")!.value),
+    month: parseInt(parts.find(p => p.type === "month")!.value) - 1,
+    day: parseInt(parts.find(p => p.type === "day")!.value),
+    hour: parseInt(parts.find(p => p.type === "hour")!.value),
+    minute: parseInt(parts.find(p => p.type === "minute")!.value),
+    second: parseInt(parts.find(p => p.type === "second")!.value),
+    dayOfWeek: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.find(p => p.type === "weekday")!.value),
   };
 };
 
@@ -128,8 +128,8 @@ const getWeekKey = (date: Date = new Date()): string => {
 
   // Return as YYYY-MM-DD format
   const year = weekStartDate.getFullYear();
-  const month = String(weekStartDate.getMonth() + 1).padStart(2, '0');
-  const day = String(weekStartDate.getDate()).padStart(2, '0');
+  const month = String(weekStartDate.getMonth() + 1).padStart(2, "0");
+  const day = String(weekStartDate.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 };
@@ -140,7 +140,7 @@ const getWeekKey = (date: Date = new Date()): string => {
  */
 const getWeekDates = (weekKey: string): { weekStart: Date; weekEnd: Date } => {
   // Parse YYYY-MM-DD format
-  const [year, month, day] = weekKey.split('-').map(Number);
+  const [year, month, day] = weekKey.split("-").map(Number);
 
   // Calculate week start (Sunday 6pm EST/EDT converted to UTC)
   const weekStart = createESTDate(year, month - 1, day, 18, 0, 0);
@@ -157,7 +157,7 @@ const getWeekDates = (weekKey: string): { weekStart: Date; weekEnd: Date } => {
  * Get CSV header for weekly stats
  */
 const getWeeklyStatsHeader = (): string =>
-  'weekKey,weekStart,weekEnd,totalExp,expBySkill,totalDrops,dropsByItem,hpUsed,totalEntries,lastUpdated';
+  "weekKey,weekStart,weekEnd,totalExp,expBySkill,totalDrops,dropsByItem,hpUsed,totalEntries,lastUpdated";
 
 /**
  * Convert weekly stats row to CSV string
@@ -174,7 +174,7 @@ const weeklyStatsRowToString = (row: WeeklyStatsRow): string =>
     row.hpUsed,
     row.totalEntries,
     row.lastUpdated,
-  ].join(',');
+  ].join(",");
 
 /**
  * Parse CSV row to weekly stats row
@@ -183,16 +183,16 @@ const parseWeeklyStatsRow = (row: string[]): WeeklyStatsRow | null => {
   if (row.length < 10) return null;
 
   return {
-    weekKey: row[0] || '',
-    weekStart: row[1] || '',
-    weekEnd: row[2] || '',
-    totalExp: row[3] || '0',
-    expBySkill: row[4] || '{}',
-    totalDrops: row[5] || '0',
-    dropsByItem: row[6] || '{}',
-    hpUsed: row[7] || '0',
-    totalEntries: row[8] || '0',
-    lastUpdated: row[9] || '',
+    weekKey: row[0] || "",
+    weekStart: row[1] || "",
+    weekEnd: row[2] || "",
+    totalExp: row[3] || "0",
+    expBySkill: row[4] || "{}",
+    totalDrops: row[5] || "0",
+    dropsByItem: row[6] || "{}",
+    hpUsed: row[7] || "0",
+    totalEntries: row[8] || "0",
+    lastUpdated: row[9] || "",
   };
 };
 
@@ -204,13 +204,13 @@ const getWeeklyStatsFromStorage = async (): Promise<WeeklyStatsRow[]> => {
     const result = await chrome.storage.local.get(WEEKLY_STATS_STORAGE_KEY);
     const csvContent = result[WEEKLY_STATS_STORAGE_KEY] || getWeeklyStatsHeader();
 
-    const lines = csvContent.split('\n').filter((line: string) => line.trim());
+    const lines = csvContent.split("\n").filter((line: string) => line.trim());
     if (lines.length <= 1) return []; // Only header or empty
 
     return lines
       .slice(1)
       .map((line: string) => {
-        const row = line.split(',');
+        const row = line.split(",");
         return parseWeeklyStatsRow(row);
       })
       .filter((row: WeeklyStatsRow | null): row is WeeklyStatsRow => row !== null);
@@ -265,13 +265,13 @@ const updateWeeklyStats = async (allRows: CSVRow[]): Promise<void> => {
         uniqueEntriesMap.set(key, { ...row });
       } else {
         // Merge drops from both rows
-        const existingDrops = existing.drops || '';
-        const currentDrops = row.drops || '';
-        const mergedDrops = [existingDrops, currentDrops].filter(d => d && d.trim() !== '').join(';');
+        const existingDrops = existing.drops || "";
+        const currentDrops = row.drops || "";
+        const mergedDrops = [existingDrops, currentDrops].filter(d => d && d.trim() !== "").join(";");
 
         // Keep the one with higher gainedExp or more complete data, but preserve merged drops
-        const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
-        const currentGainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+        const existingGainedExp = parseInt(existing.gainedExp || "0", 10) || 0;
+        const currentGainedExp = parseInt(row.gainedExp || "0", 10) || 0;
 
         if (currentGainedExp > existingGainedExp || (currentGainedExp === existingGainedExp && row.skillLevel)) {
           uniqueEntriesMap.set(key, { ...row, drops: mergedDrops });
@@ -285,17 +285,17 @@ const updateWeeklyStats = async (allRows: CSVRow[]): Promise<void> => {
 
     // Calculate exp
     uniqueEntries.forEach(row => {
-      const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+      const gainedExp = parseInt(row.gainedExp || "0", 10) || 0;
       if (gainedExp > 0) {
         totalExp += gainedExp;
-        const skill = row.skill || '';
+        const skill = row.skill || "";
         if (skill) {
           expBySkill[skill] = (expBySkill[skill] || 0) + gainedExp;
         }
       }
 
       // Calculate drops
-      const drops = parseDrops(row.drops || '');
+      const drops = parseDrops(row.drops || "");
       drops.forEach(drop => {
         const { amount, name } = parseDropAmount(drop);
         if (!dropsByItem[name]) {
@@ -309,9 +309,9 @@ const updateWeeklyStats = async (allRows: CSVRow[]): Promise<void> => {
 
     // Calculate HP used
     const hpEntries = uniqueEntries
-      .filter(row => row.hp && row.hp.trim() !== '')
+      .filter(row => row.hp && row.hp.trim() !== "")
       .map(row => {
-        const hpValue = parseInt(row.hp.replace(/,/g, ''), 10);
+        const hpValue = parseInt(row.hp.replace(/,/g, ""), 10);
         return {
           timestamp: row.timestamp,
           hp: isNaN(hpValue) ? null : hpValue,
@@ -347,7 +347,7 @@ const updateWeeklyStats = async (allRows: CSVRow[]): Promise<void> => {
     // Save to storage
     const header = getWeeklyStatsHeader();
     const lines = updatedStats.map(weeklyStatsRowToString);
-    const csvContent = `${header}\n${lines.join('\n')}`;
+    const csvContent = `${header}\n${lines.join("\n")}`;
 
     await chrome.storage.local.set({ [WEEKLY_STATS_STORAGE_KEY]: csvContent });
   } catch {
@@ -386,7 +386,7 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
 
       // Primary: Use gainedThisWeek from stats URL
       if (skillStat.gainedThisWeek) {
-        gainedExp = parseInt(skillStat.gainedThisWeek.replace(/,/g, ''), 10) || 0;
+        gainedExp = parseInt(skillStat.gainedThisWeek.replace(/,/g, ""), 10) || 0;
       }
 
       // Fallback: Calculate from tracked data if gainedThisWeek is not available
@@ -400,7 +400,7 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
 
         // Sum up exp from tracked data for this skill
         weekRows.forEach(row => {
-          const rowExp = parseInt(row.gainedExp || '0', 10) || 0;
+          const rowExp = parseInt(row.gainedExp || "0", 10) || 0;
           gainedExp += rowExp;
         });
       }
@@ -420,11 +420,11 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
     if (existingWeekStats) {
       // Preserve drops and HP from existing stats
       try {
-        const existingDrops = JSON.parse(existingWeekStats.dropsByItem || '{}');
+        const existingDrops = JSON.parse(existingWeekStats.dropsByItem || "{}");
         Object.assign(dropsByItem, existingDrops);
-        totalDrops = parseInt(existingWeekStats.totalDrops || '0', 10) || 0;
-        hpUsed = parseInt(existingWeekStats.hpUsed || '0', 10) || 0;
-        totalEntries = parseInt(existingWeekStats.totalEntries || '0', 10) || 0;
+        totalDrops = parseInt(existingWeekStats.totalDrops || "0", 10) || 0;
+        hpUsed = parseInt(existingWeekStats.hpUsed || "0", 10) || 0;
+        totalEntries = parseInt(existingWeekStats.totalEntries || "0", 10) || 0;
       } catch {
         // If parsing fails, calculate from tracked data
       }
@@ -448,9 +448,9 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
         if (!existing) {
           uniqueEntriesMap.set(key, { ...row });
         } else {
-          const existingDrops = existing.drops || '';
-          const currentDrops = row.drops || '';
-          const mergedDrops = [existingDrops, currentDrops].filter(d => d && d.trim() !== '').join(';');
+          const existingDrops = existing.drops || "";
+          const currentDrops = row.drops || "";
+          const mergedDrops = [existingDrops, currentDrops].filter(d => d && d.trim() !== "").join(";");
 
           uniqueEntriesMap.set(key, { ...existing, drops: mergedDrops });
         }
@@ -461,7 +461,7 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
 
       // Calculate drops
       uniqueEntries.forEach(row => {
-        const drops = parseDrops(row.drops || '');
+        const drops = parseDrops(row.drops || "");
         drops.forEach(drop => {
           const { amount, name } = parseDropAmount(drop);
           if (!dropsByItem[name]) {
@@ -475,9 +475,9 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
 
       // Calculate HP used
       const hpEntries = uniqueEntries
-        .filter(row => row.hp && row.hp.trim() !== '')
+        .filter(row => row.hp && row.hp.trim() !== "")
         .map(row => {
-          const hpValue = parseInt(row.hp.replace(/,/g, ''), 10);
+          const hpValue = parseInt(row.hp.replace(/,/g, ""), 10);
           return {
             timestamp: row.timestamp,
             hp: isNaN(hpValue) ? null : hpValue,
@@ -515,7 +515,7 @@ const updateWeeklyStatsFromStatsURL = async (userStats: UserStats, allRows: CSVR
     // Save to storage
     const header = getWeeklyStatsHeader();
     const lines = updatedStats.map(weeklyStatsRowToString);
-    const csvContent = `${header}\n${lines.join('\n')}`;
+    const csvContent = `${header}\n${lines.join("\n")}`;
 
     await chrome.storage.local.set({ [WEEKLY_STATS_STORAGE_KEY]: csvContent });
   } catch {

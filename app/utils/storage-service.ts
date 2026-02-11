@@ -11,20 +11,20 @@
  * - CSV export is unified and consistent
  */
 
-import { parseCSV, csvRowToString, getCSVHeader } from './csv-tracker';
-import { getUserStatsCSVHeader } from './user-stats-storage';
-import { getWeeklyStatsHeader, weeklyStatsRowToString, parseWeeklyStatsRow } from './weekly-stats-storage';
-import type { CSVRow } from './csv-tracker';
-import type { WeeklyStatsRow } from './weekly-stats-storage';
-import type { UserStats } from '@app/types';
+import { parseCSV, csvRowToString, getCSVHeader } from "./csv-tracker";
+import { getUserStatsCSVHeader } from "./user-stats-storage";
+import { getWeeklyStatsHeader, weeklyStatsRowToString, parseWeeklyStatsRow } from "./weekly-stats-storage";
+import type { CSVRow } from "./csv-tracker";
+import type { WeeklyStatsRow } from "./weekly-stats-storage";
+import type { UserStats } from "@app/types";
 
 // Storage keys
 const STORAGE_KEYS = {
-  TRACKED_DATA: 'tracked_data_csv',
-  USER_STATS: 'user_stats_csv',
-  WEEKLY_STATS: 'weekly_stats_csv',
-  LAST_EXP_BY_SKILL: 'last_exp_by_skill',
-  ITEM_VALUES: 'drop_gp_values',
+  TRACKED_DATA: "tracked_data_csv",
+  USER_STATS: "user_stats_csv",
+  WEEKLY_STATS: "weekly_stats_csv",
+  LAST_EXP_BY_SKILL: "last_exp_by_skill",
+  ITEM_VALUES: "drop_gp_values",
 } as const;
 
 /**
@@ -68,8 +68,8 @@ const appendTrackedData = async (rows: CSVRow[]): Promise<void> => {
 
   const updatedCSV =
     existingCSV === getCSVHeader()
-      ? `${existingCSV}\n${newLines.join('\n')}`
-      : `${existingCSV}\n${newLines.join('\n')}`;
+      ? `${existingCSV}\n${newLines.join("\n")}`
+      : `${existingCSV}\n${newLines.join("\n")}`;
 
   await setInStorage(STORAGE_KEYS.TRACKED_DATA, updatedCSV);
 };
@@ -103,7 +103,7 @@ const clearTrackedDataByHour = async (hour: number, date?: Date): Promise<void> 
   } else {
     const header = getCSVHeader();
     const lines = filteredRows.map(row => csvRowToString(row));
-    const updatedCSV = `${header}\n${lines.join('\n')}`;
+    const updatedCSV = `${header}\n${lines.join("\n")}`;
     await setInStorage(STORAGE_KEYS.TRACKED_DATA, updatedCSV);
   }
 };
@@ -124,7 +124,7 @@ const getUserStats = async (): Promise<UserStats | null> => {
   const csvContent = await getFromStorage(STORAGE_KEYS.USER_STATS, getUserStatsCSVHeader());
 
   // Parse CSV content
-  const lines = csvContent.trim().split('\n');
+  const lines = csvContent.trim().split("\n");
   if (lines.length <= 1) return null;
 
   const header = getUserStatsCSVHeader();
@@ -150,7 +150,7 @@ const getUserStats = async (): Promise<UserStats | null> => {
 
   dataLines.forEach(line => {
     const row: string[] = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
 
     for (let i = 0; i < line.length; i++) {
@@ -164,9 +164,9 @@ const getUserStats = async (): Promise<UserStats | null> => {
         } else {
           inQuotes = !inQuotes;
         }
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === "," && !inQuotes) {
         row.push(current);
-        current = '';
+        current = "";
       } else {
         current += char;
       }
@@ -175,17 +175,17 @@ const getUserStats = async (): Promise<UserStats | null> => {
 
     if (row.length >= 11) {
       rows.push({
-        timestamp: row[0] || '',
-        username: row[1] || '',
-        skill: row[2] || '',
-        level: row[3] || '',
-        totalExp: row[4] || '',
-        expForNextLevel: row[5] || '',
-        percentToNext: row[6] || '0',
-        expLeft: row[7] || '',
-        gainedThisHour: row[8] || '',
-        gainedThisWeek: row[9] || '',
-        levelGainedThisWeek: row[10] || '',
+        timestamp: row[0] || "",
+        username: row[1] || "",
+        skill: row[2] || "",
+        level: row[3] || "",
+        totalExp: row[4] || "",
+        expForNextLevel: row[5] || "",
+        percentToNext: row[6] || "0",
+        expLeft: row[7] || "",
+        gainedThisHour: row[8] || "",
+        gainedThisWeek: row[9] || "",
+        levelGainedThisWeek: row[10] || "",
       });
     }
   });
@@ -252,14 +252,14 @@ const saveUserStats = async (stats: UserStats): Promise<void> => {
       escapeCSVField(skillStat.expForNextLevel),
       escapeCSVField(skillStat.percentToNext.toString()),
       escapeCSVField(skillStat.expLeft),
-      escapeCSVField(skillStat.gainedThisHour || ''),
-      escapeCSVField(skillStat.gainedThisWeek || ''),
-      escapeCSVField(skillStat.levelGainedThisWeek || ''),
-    ].join(',');
+      escapeCSVField(skillStat.gainedThisHour || ""),
+      escapeCSVField(skillStat.gainedThisWeek || ""),
+      escapeCSVField(skillStat.levelGainedThisWeek || ""),
+    ].join(",");
     lines.push(line);
   });
 
-  const csvContent = `${getUserStatsCSVHeader()}\n${lines.join('\n')}`;
+  const csvContent = `${getUserStatsCSVHeader()}\n${lines.join("\n")}`;
   await setInStorage(STORAGE_KEYS.USER_STATS, csvContent);
 };
 
@@ -279,13 +279,13 @@ const getUserStatsCSV = async (): Promise<string> =>
 const getWeeklyStats = async (): Promise<WeeklyStatsRow[]> => {
   const csvContent = await getFromStorage(STORAGE_KEYS.WEEKLY_STATS, getWeeklyStatsHeader());
 
-  const lines = csvContent.split('\n').filter((line: string) => line.trim());
+  const lines = csvContent.split("\n").filter((line: string) => line.trim());
   if (lines.length <= 1) return [];
 
   return lines
     .slice(1)
     .map((line: string) => {
-      const row = line.split(',');
+      const row = line.split(",");
       return parseWeeklyStatsRow(row);
     })
     .filter((row: WeeklyStatsRow | null): row is WeeklyStatsRow => row !== null);
@@ -297,7 +297,7 @@ const getWeeklyStats = async (): Promise<WeeklyStatsRow[]> => {
 const saveWeeklyStats = async (stats: WeeklyStatsRow[]): Promise<void> => {
   const header = getWeeklyStatsHeader();
   const lines = stats.map(weeklyStatsRowToString);
-  const csvContent = `${header}\n${lines.join('\n')}`;
+  const csvContent = `${header}\n${lines.join("\n")}`;
   await setInStorage(STORAGE_KEYS.WEEKLY_STATS, csvContent);
 };
 
@@ -313,14 +313,29 @@ const getWeeklyStatsCSV = async (): Promise<string> =>
 
 /**
  * Get last exp by skill
+ * Handles backwards compatibility: old format stored plain numbers, new format stores { exp, ts }.
  */
-const getLastExpBySkill = async (): Promise<Record<string, number>> =>
-  await getFromStorage(STORAGE_KEYS.LAST_EXP_BY_SKILL, {});
+const getLastExpBySkill = async (): Promise<Record<string, { exp: number; ts: number }>> => {
+  const raw: Record<string, number | { exp: number; ts: number }> = await getFromStorage(
+    STORAGE_KEYS.LAST_EXP_BY_SKILL,
+    {},
+  );
+  const result: Record<string, { exp: number; ts: number }> = {};
+  for (const [skill, value] of Object.entries(raw)) {
+    if (typeof value === "number") {
+      // Old format — migrate with ts: 0 so it's treated as stale on first use
+      result[skill] = { exp: value, ts: 0 };
+    } else {
+      result[skill] = value;
+    }
+  }
+  return result;
+};
 
 /**
  * Save last exp by skill
  */
-const saveLastExpBySkill = async (lastExp: Record<string, number>): Promise<void> => {
+const saveLastExpBySkill = async (lastExp: Record<string, { exp: number; ts: number }>): Promise<void> => {
   await setInStorage(STORAGE_KEYS.LAST_EXP_BY_SKILL, lastExp);
 };
 
@@ -348,7 +363,7 @@ const saveItemValues = async (values: Record<string, string>): Promise<void> => 
  * Generic CSV download helper
  */
 const downloadCSV = async (csvContent: string, filename: string, saveAs: boolean): Promise<void> => {
-  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const blob = new Blob([csvContent], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
 
   await chrome.downloads.download({
@@ -365,7 +380,7 @@ const downloadCSV = async (csvContent: string, filename: string, saveAs: boolean
  */
 const downloadTrackedDataCSV = async (saveAs: boolean = true): Promise<void> => {
   const csvContent = await getTrackedDataCSV();
-  const date = new Date().toISOString().split('T')[0];
+  const date = new Date().toISOString().split("T")[0];
   await downloadCSV(csvContent, `tracked_data_${date}.csv`, saveAs);
 };
 
@@ -374,7 +389,7 @@ const downloadTrackedDataCSV = async (saveAs: boolean = true): Promise<void> => 
  */
 const downloadUserStatsCSV = async (saveAs: boolean = true): Promise<void> => {
   const csvContent = await getUserStatsCSV();
-  const date = new Date().toISOString().split('T')[0];
+  const date = new Date().toISOString().split("T")[0];
   await downloadCSV(csvContent, `user_stats_${date}.csv`, saveAs);
 };
 
@@ -383,7 +398,7 @@ const downloadUserStatsCSV = async (saveAs: boolean = true): Promise<void> => {
  */
 const downloadWeeklyStatsCSV = async (saveAs: boolean = true): Promise<void> => {
   const csvContent = await getWeeklyStatsCSV();
-  const date = new Date().toISOString().split('T')[0];
+  const date = new Date().toISOString().split("T")[0];
   await downloadCSV(csvContent, `weekly_stats_${date}.csv`, saveAs);
 };
 
@@ -402,8 +417,8 @@ const downloadAllDataCSV = async (saveAs: boolean = true): Promise<void> => {
  * Escape CSV field
  */
 const escapeCSVField = (field: string | undefined | null): string => {
-  const safeField = field || '';
-  if (safeField.includes(',') || safeField.includes('"') || safeField.includes('\n')) {
+  const safeField = field || "";
+  if (safeField.includes(",") || safeField.includes('"') || safeField.includes("\n")) {
     return `"${safeField.replace(/"/g, '""')}"`;
   }
   return safeField;

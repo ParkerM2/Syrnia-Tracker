@@ -1,5 +1,5 @@
-import { scrapeScreenData } from './scrapeScreenData';
-import { UPDATE_SCREEN_DATA } from '@app/constants';
+import { scrapeScreenData } from "./scrapeScreenData";
+import { UPDATE_SCREEN_DATA } from "@app/constants";
 
 /**
  * Content script for screen data scraping
@@ -20,7 +20,7 @@ let periodicCheckInterval: number | null = null;
 const isExtensionContextValid = (): boolean => {
   try {
     // Try to access chrome.runtime.id - if it throws, context is invalidated
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
       return true;
     }
     return false;
@@ -40,7 +40,7 @@ const safeSendMessage = (message: { type: string; data?: unknown }, callback?: (
     chrome.runtime.sendMessage(message, response => {
       if (chrome.runtime.lastError) {
         const error = chrome.runtime.lastError;
-        if (error.message && error.message.includes('Extension context invalidated')) {
+        if (error.message && error.message.includes("Extension context invalidated")) {
           extensionContextValid = false;
           if (periodicCheckInterval) {
             clearTimeout(periodicCheckInterval);
@@ -70,10 +70,10 @@ const lastSeenExpBySkill: Map<string, number> = new Map();
  * Returns array of {skill, totalExp, level, expForNext}
  */
 const parseSkillLevels = (): Array<{ skill: string; totalExp: number; level: number; expForNext: number }> => {
-  const centerContent = document.querySelector('#centerContent');
+  const centerContent = document.querySelector("#centerContent");
   if (!centerContent) return [];
 
-  const text = centerContent.textContent || '';
+  const text = centerContent.textContent || "";
   const results: Array<{ skill: string; totalExp: number; level: number; expForNext: number }> = [];
 
   // Pattern: "SkillName level: X (Y exp, Z for next level)"
@@ -144,7 +144,9 @@ const sendData = () => {
 
   // Scrape the data
   const data = scrapeScreenData();
-  data.totalFights = 1;
+  if (data.actionType === "combat") {
+    data.totalFights = 1;
+  }
 
   safeSendMessage({ type: UPDATE_SCREEN_DATA, data }, () => {
     // After message sent, reset processing flag
@@ -189,14 +191,14 @@ const startPeriodicCheck = () => {
 };
 
 // Start periodic checking when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startPeriodicCheck);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startPeriodicCheck);
 } else {
   startPeriodicCheck();
 }
 
 // Cleanup timeout on page unload
-window.addEventListener('unload', () => {
+window.addEventListener("unload", () => {
   if (periodicCheckInterval) {
     clearTimeout(periodicCheckInterval);
     periodicCheckInterval = null;

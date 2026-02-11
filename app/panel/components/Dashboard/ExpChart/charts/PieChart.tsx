@@ -1,9 +1,9 @@
-import { ChartTooltip, ChartTooltipContent } from '@app/components';
-import { memo, useMemo } from 'react';
+import { ChartTooltip, ChartTooltipContent } from "@app/components";
+import { memo, useMemo } from "react";
 // eslint-disable-next-line import-x/no-deprecated
-import { Pie, PieChart as RechartsPieChart, Cell, Legend } from 'recharts';
-import type { ChartDataPoint } from '../types';
-import type { ChartConfig } from '@app/components';
+import { Pie, PieChart as RechartsPieChart, Cell, Legend } from "recharts";
+import type { ChartConfig } from "@app/components";
+import type { ChartDataPoint } from "@app/types";
 
 interface PieChartProps {
   chartData: ChartDataPoint[];
@@ -28,8 +28,7 @@ const PieChart = memo(({ chartData, chartConfig, skills }: PieChartProps) => {
       skills.map(skill => {
         const total = chartData.reduce((sum, point) => sum + (Number(point[skill]) || 0), 0);
         const skillConfig = chartConfig[skill];
-        const color =
-          typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
+        const color = typeof skillConfig === "object" && "color" in skillConfig ? skillConfig.color : "var(--primary)";
         return {
           name: skill,
           value: total,
@@ -60,6 +59,6 @@ const PieChart = memo(({ chartData, chartConfig, skills }: PieChartProps) => {
   );
 });
 
-PieChart.displayName = 'PieChart';
+PieChart.displayName = "PieChart";
 
 export { PieChart };

@@ -1,6 +1,6 @@
-import { ImportIcon } from '@app/assets/icons';
-import { CardHeader, CardTitle, Button, IconButton } from '@app/components';
-import { memo } from 'react';
+import { ImportIcon } from "@app/assets/icons";
+import { CardHeader, CardTitle, Button, IconButton } from "@app/components";
+import { memo } from "react";
 
 interface ChartHeaderProps {
   userName: string;
@@ -51,6 +51,6 @@ const ChartHeader = memo(
   ),
 );
 
-ChartHeader.displayName = 'ChartHeader';
+ChartHeader.displayName = "ChartHeader";
 
 export { ChartHeader };

@@ -1,5 +1,5 @@
-import { SKILLS_ARRAY } from '@app/constants';
-import type { ExcludeValuesFromBaseArrayType } from '@app/types';
+import { SKILLS_ARRAY } from "@app/constants";
+import type { ExcludeValuesFromBaseArrayType } from "@app/types";
 
 export const excludeValuesFromBaseArray = <B extends string[], E extends (string | number)[]>(
   baseArray: B,
@@ -21,7 +21,7 @@ export interface SkillInfo {
 }
 
 export const matchText = (text: string): SkillInfo => {
-  const result: SkillInfo = { skill: '', exp: '', level: '', expForNextLevel: '' };
+  const result: SkillInfo = { skill: "", exp: "", level: "", expForNextLevel: "" };
   const skillList = SKILLS_ARRAY.filter((item: string) => text.includes(item));
 
   skillList?.forEach((item: string) => {
@@ -47,8 +47,8 @@ export const matchText = (text: string): SkillInfo => {
 export const formatLocation = (location: string): string => {
   const normalized = location.toLowerCase().trim();
   // Only shorten "Rima City - Barracks" to "Barracks"
-  if (normalized === 'rima city - barracks') {
-    return 'Barracks';
+  if (normalized === "rima city - barracks") {
+    return "Barracks";
   }
   // Return the original location name for all other cases
   return location;

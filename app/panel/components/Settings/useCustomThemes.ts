@@ -1,8 +1,8 @@
-import { useStorage } from '@app/hooks';
-import { parseThemeCss, reconstructCss, validateParsedTheme } from '@app/utils/parse-theme-css';
-import { customThemesStorage } from '@app/utils/storage/custom-themes-storage';
-import { useCallback, useState } from 'react';
-import type { CustomTheme } from '@app/utils/storage/types';
+import { useStorage } from "@app/hooks";
+import { parseThemeCss, reconstructCss, validateParsedTheme } from "@app/utils/parse-theme-css";
+import { customThemesStorage } from "@app/utils/storage/custom-themes-storage";
+import { useCallback, useState } from "react";
+import type { CustomTheme } from "@app/utils/storage/types";
 
 interface DialogState {
   open: boolean;
@@ -15,8 +15,8 @@ interface DialogState {
 const initialDialogState: DialogState = {
   open: false,
   editingId: null,
-  name: '',
-  css: '',
+  name: "",
+  css: "",
   error: null,
 };
 
@@ -26,7 +26,7 @@ export const useCustomThemes = () => {
   const [dialog, setDialog] = useState<DialogState>(initialDialogState);
 
   const openAddDialog = useCallback(() => {
-    setDialog({ open: true, editingId: null, name: '', css: '', error: null });
+    setDialog({ open: true, editingId: null, name: "", css: "", error: null });
   }, []);
 
   const openEditDialog = useCallback((theme: CustomTheme) => {
@@ -54,7 +54,7 @@ export const useCustomThemes = () => {
   const save = useCallback(async () => {
     const trimmedName = dialog.name.trim();
     if (!trimmedName) {
-      setDialog(prev => ({ ...prev, error: 'Theme name is required.' }));
+      setDialog(prev => ({ ...prev, error: "Theme name is required." }));
       return;
     }
 

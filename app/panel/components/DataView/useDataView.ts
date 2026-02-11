@@ -1,12 +1,12 @@
-import { useTrackedDataQuery } from '@app/hooks';
-import { useState, useMemo } from 'react';
+import { useTrackedDataQuery } from "@app/hooks";
+import { useState, useMemo } from "react";
 
-export type FilterType = 'all' | 'loot' | 'exp';
-export type ViewMode = 'table' | 'json';
+export type FilterType = "all" | "loot" | "exp" | "skilling";
+export type ViewMode = "table" | "json";
 
 export const useDataView = () => {
-  const [filterType, setFilterType] = useState<FilterType>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [filterType, setFilterType] = useState<FilterType>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
 
   // Use shared tracked data query - benefits from automatic cache updates
   // and listeners for storage changes
@@ -14,21 +14,25 @@ export const useDataView = () => {
 
   // Filter data based on selected filter
   const filteredRows = useMemo(() => {
-    if (filterType === 'all') {
+    if (filterType === "all") {
       return allRows;
     }
 
-    if (filterType === 'loot') {
+    if (filterType === "loot") {
       // Show rows that have drops (loot from monsters)
-      return allRows.filter(row => row.drops && row.drops.trim() !== '');
+      return allRows.filter(row => row.drops && row.drops.trim() !== "");
     }
 
-    if (filterType === 'exp') {
+    if (filterType === "exp") {
       // Show rows with gained exp > 0
       return allRows.filter(row => {
-        const gainedExp = parseInt(row.gainedExp || '0', 10);
+        const gainedExp = parseInt(row.gainedExp || "0", 10);
         return gainedExp > 0;
       });
+    }
+
+    if (filterType === "skilling") {
+      return allRows.filter(row => row.actionType === "skilling");
     }
 
     return allRows;

@@ -2,16 +2,16 @@
  * Get day suffix (st, nd, rd, th)
  */
 export const getDaySuffix = (day: number): string => {
-  if (day > 3 && day < 21) return 'th';
+  if (day > 3 && day < 21) return "th";
   switch (day % 10) {
     case 1:
-      return 'st';
+      return "st";
     case 2:
-      return 'nd';
+      return "nd";
     case 3:
-      return 'rd';
+      return "rd";
     default:
-      return 'th';
+      return "th";
   }
 };
 
@@ -20,12 +20,12 @@ export const getDaySuffix = (day: number): string => {
  */
 export const formatHumanDate = (timestamp: string): string => {
   const date = new Date(timestamp);
-  const month = date.toLocaleString('en-US', { month: 'long' });
+  const month = date.toLocaleString("en-US", { month: "long" });
   const day = date.getDate();
   const daySuffix = getDaySuffix(day);
-  const time = date.toLocaleString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
+  const time = date.toLocaleString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
     hour12: true,
   });
   return `${month} ${day}${daySuffix}, ${time}`;
@@ -36,7 +36,7 @@ export const formatHumanDate = (timestamp: string): string => {
  */
 export const formatDayHeader = (timestamp: string): string => {
   const date = new Date(timestamp);
-  const month = date.toLocaleString('en-US', { month: 'long' });
+  const month = date.toLocaleString("en-US", { month: "long" });
   const day = date.getDate();
   const daySuffix = getDaySuffix(day);
   const year = date.getFullYear();
@@ -51,7 +51,7 @@ export const formatWeekHeader = (timestamp: string): string => {
   // Get the start of the week (Sunday)
   const weekStart = new Date(date);
   weekStart.setDate(date.getDate() - date.getDay());
-  const month = weekStart.toLocaleString('en-US', { month: 'long' });
+  const month = weekStart.toLocaleString("en-US", { month: "long" });
   const day = weekStart.getDate();
   const daySuffix = getDaySuffix(day);
   const year = weekStart.getFullYear();
@@ -63,13 +63,13 @@ export const formatWeekHeader = (timestamp: string): string => {
  */
 export const formatHourHeader = (timestamp: string): string => {
   const date = new Date(timestamp);
-  const month = date.toLocaleString('en-US', { month: 'long' });
+  const month = date.toLocaleString("en-US", { month: "long" });
   const day = date.getDate();
   const daySuffix = getDaySuffix(day);
   const year = date.getFullYear();
   const hour = date.getHours();
   const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const ampm = hour >= 12 ? "PM" : "AM";
   return `${month} ${day}${daySuffix}, ${year} - ${hour12}:00 ${ampm}`;
 };
 
@@ -99,4 +99,55 @@ export const getHourStart = (timestamp: string): string => {
   const date = new Date(timestamp);
   date.setMinutes(0, 0, 0);
   return date.toISOString();
+};
+
+/**
+ * Get start of month for a timestamp
+ */
+export const getMonthStart = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  date.setDate(1);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+};
+
+/**
+ * Get start of year for a timestamp
+ */
+export const getYearStart = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  date.setMonth(0, 1);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+};
+
+/**
+ * Format date for month header (e.g., "July 2024")
+ */
+export const formatMonthHeader = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const month = date.toLocaleString("en-US", { month: "long" });
+  return `${month} ${date.getFullYear()}`;
+};
+
+/**
+ * Format date for year header (e.g., "2024")
+ */
+export const formatYearHeader = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}`;
+};
+
+/**
+ * Format timestamp for the loot table based on the active time filter.
+ * - "hour" filter → "h:mm AM/PM" (e.g. "11:38 AM")
+ * - All others → "MMM D" (e.g. "Feb 8")
+ */
+export const formatTimestamp = (timestamp: string, timeFilter: string): string => {
+  const date = new Date(timestamp);
+  if (timeFilter === "hour") {
+    return date.toLocaleString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  }
+  const month = date.toLocaleString("en-US", { month: "short" });
+  return `${month} ${date.getDate()}`;
 };

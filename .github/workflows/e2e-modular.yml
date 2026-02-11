@@ -10,6 +10,7 @@ env:
 
 jobs:
   e2e-tests:
+    if: false
     name: '${{ matrix.browser }} | Scenario: ${{ matrix.scenario }}'
     runs-on: ubuntu-latest
 

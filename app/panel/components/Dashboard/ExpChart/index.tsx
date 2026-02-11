@@ -1,7 +1,7 @@
-import { HeatmapVisualization } from './HeatmapVisualization';
-import { useExpChart } from './useExpChart';
-import { Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from '@app/components';
-import { memo } from 'react';
+import { HeatmapVisualization } from "./charts/HeatmapVisualization";
+import { useExpChart } from "./hooks/useExpChart";
+import { Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from "@app/components";
+import { memo } from "react";
 
 const ExpChart = memo(() => {
   const { userName, periodBreakdown, selectedPeriod, handlePeriodChange, showLoading } = useExpChart();
@@ -42,6 +42,6 @@ const ExpChart = memo(() => {
   );
 });
 
-ExpChart.displayName = 'ExpChart';
+ExpChart.displayName = "ExpChart";
 
 export default ExpChart;

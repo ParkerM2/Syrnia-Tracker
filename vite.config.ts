@@ -1,15 +1,15 @@
-import env, { IS_DEV, IS_PROD } from './build/env';
-import { watchPublicPlugin } from './build/hmr/dist/lib/plugins/watch-public-plugin.js';
-import { watchRebuildPlugin } from './build/hmr/dist/lib/plugins/watch-rebuild-plugin.js';
-import makeManifestPlugin from './build/plugins/make-manifest-plugin';
-import react from '@vitejs/plugin-react-swc';
-import { defineConfig } from 'vite';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
-import { resolve } from 'node:path';
+import env, { IS_DEV, IS_PROD } from "./build/env";
+import { watchPublicPlugin } from "./build/hmr/dist/lib/plugins/watch-public-plugin.js";
+import { watchRebuildPlugin } from "./build/hmr/dist/lib/plugins/watch-rebuild-plugin.js";
+import makeManifestPlugin from "./build/plugins/make-manifest-plugin";
+import react from "@vitejs/plugin-react-swc";
+import { defineConfig } from "vite";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+import { resolve } from "node:path";
 
 const rootDir = resolve(import.meta.dirname);
-const appDir = resolve(rootDir, 'app');
-const outDir = resolve(rootDir, 'dist');
+const appDir = resolve(rootDir, "app");
+const outDir = resolve(rootDir, "dist");
 
 const watchOption = IS_DEV
   ? {
@@ -20,14 +20,14 @@ const watchOption = IS_DEV
   : undefined;
 
 export default defineConfig({
-  root: resolve(appDir, 'panel'),
+  root: resolve(appDir, "panel"),
   define: {
-    'process.env': env,
+    "process.env": env,
   },
-  base: '',
+  base: "",
   resolve: {
     alias: {
-      '@app': appDir,
+      "@app": appDir,
     },
   },
   plugins: [
@@ -37,16 +37,16 @@ export default defineConfig({
     makeManifestPlugin({ outDir }),
     nodePolyfills(),
   ],
-  publicDir: resolve(rootDir, 'public', 'panel'),
+  publicDir: resolve(rootDir, "public", "panel"),
   build: {
-    outDir: resolve(outDir, 'side-panel'),
+    outDir: resolve(outDir, "side-panel"),
     sourcemap: IS_DEV,
     minify: IS_PROD,
     reportCompressedSize: IS_PROD,
     emptyOutDir: IS_PROD,
     watch: watchOption,
     rollupOptions: {
-      external: ['chrome'],
+      external: ["chrome"],
     },
   },
 });

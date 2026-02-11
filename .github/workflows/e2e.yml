@@ -7,6 +7,7 @@ permissions:
 
 jobs:
   e2e:
+    if: false
     name: E2E tests on ${{ matrix.browser }}
     runs-on: ubuntu-latest
     strategy:

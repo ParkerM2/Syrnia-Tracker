@@ -1,0 +1,871 @@
+{
+  "version": "1.0.0",
+  "project": "Syrnia Tracker",
+  "lastUpdated": "2026-02-10",
+  "dataFlowSummary": "DOM → sendData.ts → scrapeScreenData.ts → chrome.runtime.sendMessage → background/index.ts → chrome.storage (via storage-service) → useTrackedDataQuery → useDashboard/usePeriodStats/useHourStats → UI components",
+  "domains": {
+    "contentScripts": {
+      "description": "Content scripts injected into syrnia.com pages. Scrape DOM for game data and send to background.",
+      "modules": [
+        "content/scrapeScreenData",
+        "content/sendData",
+        "content/scrapeUserStats",
+        "content/matches/all",
+        "content/matches/stats"
+      ]
+    },
+    "background": {
+      "description": "Chrome service worker. Receives messages from content scripts, processes data, saves to storage.",
+      "modules": ["background"]
+    },
+    "hooks": {
+      "description": "React hooks organized by concern: data fetching, stats calculation, utilities.",
+      "modules": [
+        "hooks/data/useTrackedDataQuery",
+        "hooks/data/useScreenData",
+        "hooks/data/useUserStatsQuery",
+        "hooks/data/useWeeklyStatsQuery",
+        "hooks/data/useItemValuesQuery",
+        "hooks/data/useDataExport",
+        "hooks/stats/useHourStats",
+        "hooks/stats/usePeriodStats",
+        "hooks/stats/useHourlyExp",
+        "hooks/utils/useStorage",
+        "hooks/utils/useFormatting"
+      ]
+    },
+    "utils": {
+      "description": "Utility functions: CSV tracking, storage, formatting, theming.",
+      "modules": [
+        "utils/csv-tracker",
+        "utils/csv-storage",
+        "utils/storage-service",
+        "utils/user-stats-storage",
+        "utils/weekly-stats-storage",
+        "utils/formatting",
+        "utils/helpers",
+        "utils/cn",
+        "utils/themes",
+        "utils/parse-theme-css",
+        "utils/colorful-logger",
+        "utils/const",
+        "utils/storage/base",
+        "utils/storage/enums",
+        "utils/storage/types",
+        "utils/storage/theme-storage",
+        "utils/storage/custom-themes-storage"
+      ]
+    },
+    "panel": {
+      "description": "React side panel UI. Tab-based screens with presentational components and hook-driven logic.",
+      "modules": [
+        "panel/SidePanel",
+        "panel/hooks/useSidePanel",
+        "panel/hooks/useGlobalDataSync",
+        "panel/providers/QueryProvider",
+        "panel/components/Dashboard",
+        "panel/components/Dashboard/HourCard",
+        "panel/components/Dashboard/ExpChart",
+        "panel/components/Dashboard/ExpChart/hooks/useExpChart",
+        "panel/components/Dashboard/ExpChart/hooks/useChartData",
+        "panel/components/Profile",
+        "panel/components/ProfileCard",
+        "panel/components/Performance",
+        "panel/components/LootMap",
+        "panel/components/TrackedHistory",
+        "panel/components/DataView",
+        "panel/components/Settings",
+        "panel/components/Header"
+      ]
+    },
+    "sharedComponents": {
+      "description": "Shared React components used across the panel.",
+      "modules": [
+        "components/ErrorDisplay",
+        "components/IconButton",
+        "components/LoadingSpinner",
+        "components/ThemeToggle",
+        "components/ToggleButton",
+        "components/ItemImage"
+      ]
+    },
+    "uiPrimitives": {
+      "description": "Radix UI-based primitives (shadcn/ui pattern). Composed in panel components.",
+      "modules": [
+        "components/ui/button",
+        "components/ui/card",
+        "components/ui/badge",
+        "components/ui/dialog",
+        "components/ui/chart",
+        "components/ui/dropdown-menu",
+        "components/ui/input",
+        "components/ui/label",
+        "components/ui/popover",
+        "components/ui/progress",
+        "components/ui/select",
+        "components/ui/switch",
+        "components/ui/table",
+        "components/ui/tabs",
+        "components/ui/tooltip"
+      ]
+    },
+    "types": {
+      "description": "Shared TypeScript types and interfaces.",
+      "modules": ["types"]
+    },
+    "constants": {
+      "description": "App-wide constants (skills, message types, chart config).",
+      "modules": ["constants", "panel/constants/Tabs", "panel/constants/FightingLocations"]
+    },
+    "hoc": {
+      "description": "Higher-order components for error boundaries and suspense.",
+      "modules": ["hoc/with-error-boundary", "hoc/with-suspense"]
+    },
+    "build": {
+      "description": "Build tooling: Vite orchestration, HMR, manifest generation, environment config.",
+      "modules": ["build/build", "build/env", "build/plugins/make-manifest-plugin"]
+    }
+  },
+  "modules": {
+    "content/scrapeScreenData": {
+      "path": "app/content/scrapeScreenData.ts",
+      "purpose": "Parses DOM to extract combat data (exp, monster, location, damage, drops, equipment) from game pages",
+      "exports": ["scrapeScreenData"],
+      "dependencies": ["@app/utils/helpers", "@app/types", "uuid"],
+      "dataFlow": "DOM (#LocationContent, #fightLogTop, #inventoryStats, #wearDisplayTD) → ScreenData object"
+    },
+    "content/sendData": {
+      "path": "app/content/sendData.ts",
+      "purpose": "Polls for skill exp changes (1.5-2.5s interval), triggers scrape on increase, sends to background",
+      "exports": ["sendData"],
+      "dependencies": ["./scrapeScreenData", "@app/constants"],
+      "dataFlow": "parseSkillLevels() detects exp increase → scrapeScreenData() → chrome.runtime.sendMessage(UPDATE_SCREEN_DATA)"
+    },
+    "content/scrapeUserStats": {
+      "path": "app/content/scrapeUserStats.ts",
+      "purpose": "Scrapes the Syrnia stats page for user skill levels, exp, and weekly/hourly gains",
+      "exports": ["scrapeUserStats"],
+      "dependencies": ["@app/types"],
+      "dataFlow": "Stats page DOM → UserStats object → chrome.runtime.sendMessage(UPDATE_USER_STATS)"
+    },
+    "content/matches/all": {
+      "path": "app/content/matches/all/index.ts",
+      "purpose": "Entry point for 'all pages' content script — starts sendData polling",
+      "exports": [],
+      "dependencies": ["../../sendData"],
+      "dataFlow": "Invokes sendData() on page load"
+    },
+    "content/matches/stats": {
+      "path": "app/content/matches/stats/index.ts",
+      "purpose": "Entry point for stats page content script — scrapes and sends user stats with deduplication",
+      "exports": [],
+      "dependencies": ["../../scrapeUserStats", "@app/constants"],
+      "dataFlow": "DOMContentLoaded/MutationObserver → scrapeUserStats() → chrome.runtime.sendMessage"
+    },
+    "background": {
+      "path": "app/background/index.ts",
+      "purpose": "Service worker: processes screen data (exp delta calculation, deduplication, save), forwards to panel",
+      "exports": [],
+      "dependencies": [
+        "@app/constants",
+        "@app/utils/csv-tracker",
+        "@app/utils/storage-service",
+        "@app/utils/weekly-stats-storage",
+        "@app/types"
+      ],
+      "dataFlow": "chrome.runtime.onMessage → processScreenData() → appendTrackedData() → chrome.storage.local → forward to panel"
+    },
+    "hooks/data/useTrackedDataQuery": {
+      "path": "app/hooks/data/useTrackedDataQuery.ts",
+      "purpose": "Primary hook for tracked CSV data access via React Query with filtering and cache sync",
+      "exports": ["useTrackedDataQuery", "TRACKED_DATA_QUERY_KEY"],
+      "dependencies": [
+        "@app/utils/csv-tracker",
+        "@app/utils/storage-service",
+        "@app/constants",
+        "@tanstack/react-query"
+      ],
+      "dataFlow": "chrome.storage → getTrackedData() → React Query cache → { allData, dataByHour, dataByDay, loading }"
+    },
+    "hooks/data/useScreenData": {
+      "path": "app/hooks/data/useScreenData.ts",
+      "purpose": "Listens for UPDATE_SCREEN_DATA messages from background, maintains current ScreenData state",
+      "exports": ["useScreenData"],
+      "dependencies": ["@app/constants", "@app/types"],
+      "dataFlow": "chrome.runtime.onMessage(UPDATE_SCREEN_DATA) → useState<ScreenData>"
+    },
+    "hooks/data/useUserStatsQuery": {
+      "path": "app/hooks/data/useUserStatsQuery.ts",
+      "purpose": "User stats from stats page via React Query with storage sync",
+      "exports": ["useUserStatsQuery", "USER_STATS_QUERY_KEY"],
+      "dependencies": [
+        "@app/utils/storage-service",
+        "@app/utils/user-stats-storage",
+        "@app/constants",
+        "@tanstack/react-query"
+      ],
+      "dataFlow": "chrome.storage → getUserStats() → React Query cache → UserStats"
+    },
+    "hooks/data/useWeeklyStatsQuery": {
+      "path": "app/hooks/data/useWeeklyStatsQuery.ts",
+      "purpose": "Weekly stats via React Query",
+      "exports": ["useWeeklyStatsQuery"],
+      "dependencies": ["@app/utils/storage-service", "@tanstack/react-query"],
+      "dataFlow": "chrome.storage → getWeeklyStats() → React Query cache → WeeklyStatsRow[]"
+    },
+    "hooks/data/useItemValuesQuery": {
+      "path": "app/hooks/data/useItemValuesQuery.ts",
+      "purpose": "Item GP value mappings with React Query and Chrome storage sync",
+      "exports": ["useItemValuesQuery", "ITEM_VALUES_QUERY_KEY"],
+      "dependencies": ["@app/utils/storage-service", "@tanstack/react-query"],
+      "dataFlow": "chrome.storage → getItemValues() → { itemValues: Record<string, string>, saveItemValue }"
+    },
+    "hooks/data/useDataExport": {
+      "path": "app/hooks/data/useDataExport.ts",
+      "purpose": "CSV export functionality for tracked data, user stats, weekly stats",
+      "exports": ["useDataExport"],
+      "dependencies": ["@app/utils/storage-service"],
+      "dataFlow": "User action → downloadTrackedDataCSV/downloadUserStatsCSV/downloadAllDataCSV → file download"
+    },
+    "hooks/stats/useHourStats": {
+      "path": "app/hooks/stats/useHourStats.ts",
+      "purpose": "Calculates statistics for a specific UTC hour (exp, drops, HP, damage, fights, loot values)",
+      "exports": ["useHourStats", "HourStats", "HourLootItem"],
+      "dependencies": ["@app/utils/formatting", "hooks/data/useItemValuesQuery", "hooks/data/useTrackedDataQuery"],
+      "dataFlow": "useTrackedDataQuery().dataByHour(hour) → deduplicate → aggregate exp/drops/damage/fights → HourStats"
+    },
+    "hooks/stats/usePeriodStats": {
+      "path": "app/hooks/stats/usePeriodStats.ts",
+      "purpose": "Calculates statistics grouped by time periods (hour/day/week/month) with loot value analysis",
+      "exports": ["usePeriodStats", "PeriodStats", "PeriodLootItem"],
+      "dependencies": ["hooks/data/useItemValuesQuery", "hooks/data/useTrackedDataQuery", "hooks/utils/useFormatting"],
+      "dataFlow": "useTrackedDataQuery().allData → group by period → aggregate per bucket → PeriodStats[]"
+    },
+    "hooks/stats/useHourlyExp": {
+      "path": "app/hooks/stats/useHourlyExp.ts",
+      "purpose": "Calculates current hour exp gains, auto-resets on hour change",
+      "exports": ["useHourlyExp", "HourlyExpStats"],
+      "dependencies": ["@app/utils/csv-tracker", "hooks/data/useTrackedDataQuery"],
+      "dataFlow": "useTrackedDataQuery() → filterByHour(currentHour) → { totalExp, expBySkill, combatExpGains }"
+    },
+    "hooks/utils/useStorage": {
+      "path": "app/hooks/utils/use-storage.tsx",
+      "purpose": "Suspense-compatible access to Chrome storage using useSyncExternalStore",
+      "exports": ["useStorage"],
+      "dependencies": ["@app/utils/storage"],
+      "dataFlow": "BaseStorageType.subscribe → useSyncExternalStore → current value"
+    },
+    "hooks/utils/useFormatting": {
+      "path": "app/hooks/utils/useFormatting.ts",
+      "purpose": "Memoized formatting utilities (formatExp, formatTime, parseDrops, parseDropAmount)",
+      "exports": ["useFormatting"],
+      "dependencies": ["@app/utils/formatting"],
+      "dataFlow": "Wraps formatting functions in useMemo for stable references"
+    },
+    "utils/csv-tracker": {
+      "path": "app/utils/csv-tracker.ts",
+      "purpose": "CSV row definition, conversion, parsing, filtering, and aggregation. Handles 10+ backward-compatible format versions.",
+      "exports": [
+        "CSVRow",
+        "TrackedStats",
+        "TimePeriod",
+        "screenDataToCSVRows",
+        "csvRowToObject",
+        "csvRowToString",
+        "getCSVHeader",
+        "parseCSV",
+        "filterByTimePeriod",
+        "filterByHour",
+        "filterByDay",
+        "aggregateStats"
+      ],
+      "dependencies": ["@app/types"],
+      "dataFlow": "ScreenData → CSVRow[] (screenDataToCSVRows) | CSV string ↔ CSVRow[] (parseCSV, csvRowToString)"
+    },
+    "utils/csv-storage": {
+      "path": "app/utils/csv-storage.ts",
+      "purpose": "Chrome storage operations for CSV data: get, append, download, clear, with schema migration",
+      "exports": [
+        "getCSVFromStorage",
+        "appendToCSV",
+        "getCSVRows",
+        "downloadCSV",
+        "clearCSVData",
+        "clearCSVDataByHour",
+        "getCSVFilename"
+      ],
+      "dependencies": ["@app/utils/csv-tracker", "@app/utils/weekly-stats-storage", "@app/types"],
+      "dataFlow": "chrome.storage.local('tracked_data_csv') ↔ CSV string ↔ CSVRow[]"
+    },
+    "utils/storage-service": {
+      "path": "app/utils/storage-service.ts",
+      "purpose": "Unified storage interface for all data types (tracked data, user stats, weekly stats, item values)",
+      "exports": [
+        "getTrackedData",
+        "appendTrackedData",
+        "clearTrackedData",
+        "clearTrackedDataByHour",
+        "getTrackedDataCSV",
+        "getUserStats",
+        "saveUserStats",
+        "getUserStatsCSV",
+        "getWeeklyStats",
+        "saveWeeklyStats",
+        "getWeeklyStatsCSV",
+        "getLastExpBySkill",
+        "saveLastExpBySkill",
+        "getItemValues",
+        "saveItemValues",
+        "downloadTrackedDataCSV",
+        "downloadUserStatsCSV",
+        "downloadWeeklyStatsCSV",
+        "downloadAllDataCSV"
+      ],
+      "dependencies": [
+        "@app/utils/csv-tracker",
+        "@app/utils/user-stats-storage",
+        "@app/utils/weekly-stats-storage",
+        "@app/types"
+      ],
+      "dataFlow": "Central facade: all hooks call this → delegates to csv-storage, user-stats-storage, weekly-stats-storage"
+    },
+    "utils/user-stats-storage": {
+      "path": "app/utils/user-stats-storage.ts",
+      "purpose": "Storage and CSV serialization for player stats page data",
+      "exports": [
+        "getUserStatsCSVHeader",
+        "getUserStatsCSVFromStorage",
+        "saveUserStatsToCSV",
+        "getUserStatsFromStorage"
+      ],
+      "dependencies": ["@app/types"],
+      "dataFlow": "UserStats → CSV string → chrome.storage.local('user_stats_csv')"
+    },
+    "utils/weekly-stats-storage": {
+      "path": "app/utils/weekly-stats-storage.ts",
+      "purpose": "Weekly stats tracking with EST/EDT timezone awareness (week boundary: Sunday 6pm EST)",
+      "exports": [
+        "WeeklyStatsRow",
+        "getWeekKey",
+        "getWeekDates",
+        "getWeeklyStatsHeader",
+        "weeklyStatsRowToString",
+        "parseWeeklyStatsRow",
+        "getWeeklyStatsFromStorage",
+        "getCurrentWeekStats",
+        "updateWeeklyStats",
+        "updateWeeklyStatsFromStatsURL"
+      ],
+      "dependencies": ["@app/utils/formatting", "@app/types"],
+      "dataFlow": "CSVRow[] + UserStats → WeeklyStatsRow → chrome.storage.local('weekly_stats_csv')"
+    },
+    "utils/formatting": {
+      "path": "app/utils/formatting.ts",
+      "purpose": "Text formatting: exp display (1.2M), timestamps, drop string parsing (name + amount extraction)",
+      "exports": ["formatExp", "formatTime", "parseDrops", "parseDropAmount"],
+      "dependencies": [],
+      "dataFlow": "Pure functions: string/number → formatted string"
+    },
+    "utils/helpers": {
+      "path": "app/utils/helpers.ts",
+      "purpose": "General helpers: skill exp regex builder, text matching, array filtering, location normalization",
+      "exports": ["excludeValuesFromBaseArray", "sleep", "skillExpRegex", "matchText", "formatLocation"],
+      "dependencies": ["@app/constants", "@app/types"],
+      "dataFlow": "Pure functions used by content scripts and components"
+    },
+    "utils/cn": {
+      "path": "app/utils/cn.ts",
+      "purpose": "Tailwind CSS class composition utility (clsx + tailwind-merge)",
+      "exports": ["cn"],
+      "dependencies": [],
+      "dataFlow": "(...classes) → merged className string"
+    },
+    "utils/themes": {
+      "path": "app/utils/themes.ts",
+      "purpose": "Theme definitions and injection for shadcn/ui themes (built-in + custom)",
+      "exports": [
+        "perpetuityTheme",
+        "defaultTheme",
+        "themes",
+        "getTheme",
+        "isCustomThemeName",
+        "getCustomThemeId",
+        "makeCustomThemeName",
+        "toThemeClass",
+        "injectThemeStylesheet",
+        "setActiveTheme"
+      ],
+      "dependencies": ["@app/utils/storage/types"],
+      "dataFlow": "Theme name → CSS class injection → DOM <style> element"
+    },
+    "utils/parse-theme-css": {
+      "path": "app/utils/parse-theme-css.ts",
+      "purpose": "Parses CSS variable blocks from custom theme CSS input",
+      "exports": ["parseThemeCss", "validateParsedTheme", "reconstructCss"],
+      "dependencies": [],
+      "dataFlow": "CSS string → ParsedTheme object → validated CSS string"
+    },
+    "utils/colorful-logger": {
+      "path": "app/utils/colorful-logger.ts",
+      "purpose": "No-op logging utility (production build)",
+      "exports": ["colorfulLog"],
+      "dependencies": ["@app/types"],
+      "dataFlow": "No-op in production"
+    },
+    "utils/const": {
+      "path": "app/utils/const.ts",
+      "purpose": "ANSI terminal color constants for console logging",
+      "exports": ["COLORS"],
+      "dependencies": [],
+      "dataFlow": "Static constants"
+    },
+    "utils/storage/base": {
+      "path": "app/utils/storage/base.ts",
+      "purpose": "Creates typed Chrome storage areas with caching, live updates, and serialization",
+      "exports": ["createStorage"],
+      "dependencies": ["@app/utils/storage/enums", "@app/utils/storage/types"],
+      "dataFlow": "createStorage(key, defaults) → BaseStorageType { get, set, subscribe, getSnapshot }"
+    },
+    "utils/storage/enums": {
+      "path": "app/utils/storage/enums.ts",
+      "purpose": "Chrome storage area enum (Local, Sync, Managed, Session) and access levels",
+      "exports": ["StorageEnum", "SessionAccessLevelEnum"],
+      "dependencies": [],
+      "dataFlow": "Static enums"
+    },
+    "utils/storage/types": {
+      "path": "app/utils/storage/types.ts",
+      "purpose": "Type definitions for storage abstraction layer and theme storage",
+      "exports": [
+        "ValueOrUpdateType",
+        "BaseStorageType",
+        "StorageConfigType",
+        "ThemeStateType",
+        "ThemeStorageType",
+        "CustomThemesStateType",
+        "CustomThemesStorageType",
+        "CustomTheme"
+      ],
+      "dependencies": ["@app/utils/storage/enums"],
+      "dataFlow": "Type-only module"
+    },
+    "utils/storage/theme-storage": {
+      "path": "app/utils/storage/theme-storage.ts",
+      "purpose": "Theme state storage instance with toggle and setThemeName methods",
+      "exports": ["exampleThemeStorage"],
+      "dependencies": ["@app/utils/storage/base", "@app/utils/storage/enums", "@app/utils/storage/types"],
+      "dataFlow": "chrome.storage.local('theme-storage-key') ↔ ThemeStateType { darkMode, themeName }"
+    },
+    "utils/storage/custom-themes-storage": {
+      "path": "app/utils/storage/custom-themes-storage.ts",
+      "purpose": "Custom themes CRUD storage with add/update/delete methods",
+      "exports": ["customThemesStorage"],
+      "dependencies": ["@app/utils/storage/base", "@app/utils/storage/enums", "@app/utils/storage/types"],
+      "dataFlow": "chrome.storage.local('custom-themes-storage-key') ↔ CustomTheme[]"
+    },
+    "panel/SidePanel": {
+      "path": "app/panel/SidePanel.tsx",
+      "purpose": "Root panel component: wraps content with ErrorBoundary, Suspense, QueryProvider, and theme",
+      "exports": ["default (SidePanel)"],
+      "dependencies": [
+        "@app/components",
+        "@app/hoc",
+        "panel/hooks/useSidePanel",
+        "panel/components/Header",
+        "panel/providers/QueryProvider"
+      ],
+      "dataFlow": "useSidePanel() → { ActiveScreen, display, setDisplay } → renders Header + ActiveScreen"
+    },
+    "panel/hooks/useSidePanel": {
+      "path": "app/panel/hooks/useSidePanel.ts",
+      "purpose": "Panel orchestrator: manages screen routing, theme injection, global data sync",
+      "exports": ["useSidePanel"],
+      "dependencies": [
+        "panel/hooks/useGlobalDataSync",
+        "panel/components/*",
+        "panel/constants/Tabs",
+        "@app/hooks",
+        "@app/utils/storage",
+        "@app/utils/themes"
+      ],
+      "dataFlow": "DISPLAY key → memoized screen map → ActiveScreen component"
+    },
+    "panel/hooks/useGlobalDataSync": {
+      "path": "app/panel/hooks/useGlobalDataSync.ts",
+      "purpose": "Global listener for data updates from background: invalidates React Query cache on new data",
+      "exports": ["useGlobalDataSync"],
+      "dependencies": ["@app/constants", "@app/hooks", "@app/utils/storage-service", "@tanstack/react-query"],
+      "dataFlow": "chrome.runtime.onMessage + chrome.storage.onChanged → queryClient.setQueryData/invalidateQueries"
+    },
+    "panel/providers/QueryProvider": {
+      "path": "app/panel/providers/QueryProvider.tsx",
+      "purpose": "React Query client setup (staleTime: 1s, gcTime: 5m, retry: 1)",
+      "exports": ["QueryProvider"],
+      "dependencies": ["@tanstack/react-query"],
+      "dataFlow": "Wraps children with QueryClientProvider"
+    },
+    "panel/components/Dashboard": {
+      "path": "app/panel/components/Dashboard/index.tsx",
+      "purpose": "Main dashboard screen: current/previous hour stats cards and exp chart",
+      "exports": ["default (Dashboard)"],
+      "dependencies": [
+        "@app/components",
+        "panel/components/Dashboard/useDashboard",
+        "panel/components/Dashboard/HourCard",
+        "panel/components/Dashboard/ExpChart"
+      ],
+      "dataFlow": "useDashboard() → { currentHourData, previousHourData } → HourCard + ExpChart"
+    },
+    "panel/components/Dashboard/HourCard": {
+      "path": "app/panel/components/Dashboard/HourCard.tsx",
+      "purpose": "Displays one hour's stats: skill badges, loot items (with images), fights, profit/loss",
+      "exports": ["HourCard"],
+      "dependencies": ["@app/assets/icons", "@app/components"],
+      "dataFlow": "HourCardData props → skill badges + loot grid + summary footer"
+    },
+    "panel/components/Dashboard/ExpChart": {
+      "path": "app/panel/components/Dashboard/ExpChart/index.tsx",
+      "purpose": "Tabbed exp/loot visualization with multiple chart types and heatmap",
+      "exports": ["default (ExpChart)"],
+      "dependencies": ["@app/components", "ExpChart/hooks/useExpChart", "ExpChart/charts/*", "ExpChart/filters/*"],
+      "dataFlow": "useExpChart() → { periodBreakdown, selectedPeriod } → chart components"
+    },
+    "panel/components/Dashboard/ExpChart/hooks/useExpChart": {
+      "path": "app/panel/components/Dashboard/ExpChart/hooks/useExpChart.ts",
+      "purpose": "Fetches period breakdown data for chart visualization",
+      "exports": ["useExpChart"],
+      "dependencies": ["@app/hooks"],
+      "dataFlow": "useUserStatsQuery + usePeriodStats → { userName, periodBreakdown, selectedPeriod }"
+    },
+    "panel/components/Dashboard/ExpChart/hooks/useChartData": {
+      "path": "app/panel/components/Dashboard/ExpChart/hooks/useChartData.ts",
+      "purpose": "Transforms tracked data into chart-compatible format with time intervals and skill grouping",
+      "exports": ["useChartData"],
+      "dependencies": ["@app/constants", "@app/hooks", "@app/types"],
+      "dataFlow": "useTrackedDataQuery().allData → group by time interval × skill → ChartDataResult"
+    },
+    "panel/components/Profile": {
+      "path": "app/panel/components/Profile/index.tsx",
+      "purpose": "Displays tracked skill gains for current hour with skill cards and profile overview",
+      "exports": ["default (Profile)"],
+      "dependencies": ["@app/hooks", "@app/components", "panel/components/ProfileCard"],
+      "dataFlow": "useTrackedDataQuery + useScreenData + useHourlyExp → skill cards with levels and exp"
+    },
+    "panel/components/ProfileCard": {
+      "path": "app/panel/components/ProfileCard/index.tsx",
+      "purpose": "User stats from stats page: all skills, levels, exp-to-next, hour/week gains",
+      "exports": ["default (ProfileCard)"],
+      "dependencies": ["@app/hooks", "@app/components"],
+      "dataFlow": "useUserStatsQuery + useHourStats + useHourlyExp → SkillCard grid"
+    },
+    "panel/components/Performance": {
+      "path": "app/panel/components/Performance/index.tsx",
+      "purpose": "Combat performance analysis: hit stats, damage dealt/received, equipment display per location",
+      "exports": ["default (Performance)"],
+      "dependencies": [
+        "@app/components",
+        "@app/utils/helpers",
+        "Performance/usePerformance",
+        "Performance/StatTable",
+        "Performance/EquipmentDisplay"
+      ],
+      "dataFlow": "usePerformance() → per-location stats tabs → MonsterStatTable + EquipmentDisplay"
+    },
+    "panel/components/LootMap": {
+      "path": "app/panel/components/LootMap/index.tsx",
+      "purpose": "Loot/drops viewer with grid/table view, filtering, sorting, zoom, and item value settings",
+      "exports": ["default (LootMap)"],
+      "dependencies": [
+        "@app/components",
+        "@app/assets/icons",
+        "LootMap/useLootMap",
+        "LootMap/LootGrid",
+        "LootMap/LootTable"
+      ],
+      "dataFlow": "useLootMap() → { lootGroups, sortedEntries } → LootGrid | LootTable"
+    },
+    "panel/components/TrackedHistory": {
+      "path": "app/panel/components/TrackedHistory/index.tsx",
+      "purpose": "Period-based breakdown of tracked data (hour/day/week/month) with skills, drops, HP, profit",
+      "exports": ["default (TrackedHistory)"],
+      "dependencies": ["@app/hooks", "@app/assets/icons", "@app/components"],
+      "dataFlow": "useTrackedDataQuery + usePeriodStats → expandable period rows with breakdowns"
+    },
+    "panel/components/DataView": {
+      "path": "app/panel/components/DataView/index.tsx",
+      "purpose": "Raw data viewer with table/JSON toggle and filtering (all/loot/exp)",
+      "exports": ["default (DataView)"],
+      "dependencies": ["@app/components", "DataView/useDataView"],
+      "dataFlow": "useDataView() → { rows, filterType, viewMode } → TableView | JSONView"
+    },
+    "panel/components/Settings": {
+      "path": "app/panel/components/Settings/index.tsx",
+      "purpose": "Theme management: built-in theme selector, custom theme add/edit/delete with CSS variable editor",
+      "exports": ["default (Settings)"],
+      "dependencies": [
+        "@app/hooks",
+        "@app/utils/storage",
+        "@app/utils/themes",
+        "Settings/useCustomThemes",
+        "Settings/CustomThemeDialog"
+      ],
+      "dataFlow": "useStorage(themeStorage) + useCustomThemes() → theme picker + CustomThemeDialog"
+    },
+    "panel/components/Header": {
+      "path": "app/panel/components/Header/index.tsx",
+      "purpose": "Navigation header with responsive tab badges and settings dropdown",
+      "exports": ["default (Header)"],
+      "dependencies": ["@app/components", "@radix-ui/react-icons", "panel/constants/Tabs"],
+      "dataFlow": "{ display, setDisplay } props → tab navigation"
+    },
+    "components/ErrorDisplay": {
+      "path": "app/components/ErrorDisplay/index.tsx",
+      "purpose": "Error boundary fallback component with error message and dashboard return button",
+      "exports": ["ErrorDisplay"],
+      "dependencies": ["@app/components/ui/button", "@app/components/ui/card"],
+      "dataFlow": "FallbackProps (from react-error-boundary) → error card UI"
+    },
+    "components/IconButton": {
+      "path": "app/components/IconButton/index.tsx",
+      "purpose": "Reusable icon button with label and accessibility support",
+      "exports": ["IconButton", "IconButtonProps"],
+      "dependencies": ["@app/utils/cn", "@app/components/ui/button"],
+      "dataFlow": "Props → Button with icon + optional label"
+    },
+    "components/LoadingSpinner": {
+      "path": "app/components/LoadingSpinner/index.tsx",
+      "purpose": "Loading spinner using RingLoader",
+      "exports": ["LoadingSpinner"],
+      "dependencies": ["react-spinners"],
+      "dataFlow": "Renders RingLoader"
+    },
+    "components/ThemeToggle": {
+      "path": "app/components/ThemeToggle/index.tsx",
+      "purpose": "Light/dark mode toggle button",
+      "exports": ["ThemeToggle"],
+      "dependencies": ["@app/utils/cn", "@app/components/ui/button", "@app/hooks", "@app/utils/storage"],
+      "dataFlow": "useStorage(themeStorage) → toggle button → themeStorage.toggle()"
+    },
+    "components/ToggleButton": {
+      "path": "app/components/ToggleButton/index.tsx",
+      "purpose": "Theme-aware toggle button component",
+      "exports": ["ToggleButton"],
+      "dependencies": ["@app/utils/cn", "@app/hooks", "@app/utils/storage"],
+      "dataFlow": "Props → styled button with theme awareness"
+    },
+    "components/ItemImage": {
+      "path": "app/components/ItemImage/index.tsx",
+      "purpose": "Item image with quantity badge, error fallback, and lazy loading",
+      "exports": ["ItemImage"],
+      "dependencies": ["@app/utils/cn"],
+      "dataFlow": "{ src, name, quantity } props → img with badge overlay"
+    },
+    "types": {
+      "path": "app/types/index.ts",
+      "purpose": "Central TypeScript types: ScreenData, CSVRow, UserStats, CombatExpGain, EquipmentData, chart types",
+      "exports": [
+        "CombatExpGain",
+        "EquipmentItem",
+        "EquipmentData",
+        "ScreenData",
+        "SkillStat",
+        "UserStats",
+        "ColorType",
+        "ExcludeValuesFromBaseArrayType",
+        "ManifestType",
+        "CSVRow (re-export)",
+        "TimePeriod (re-export)",
+        "PeriodStats (re-export)",
+        "TimeFrame",
+        "ChartType",
+        "TimeFrameOption",
+        "ChartDataPoint",
+        "ChartDataResult"
+      ],
+      "dependencies": ["@app/utils/const", "type-fest", "@app/utils/csv-tracker", "@app/hooks"],
+      "dataFlow": "Type-only module"
+    },
+    "constants": {
+      "path": "app/constants/index.ts",
+      "purpose": "App-wide constants: SKILLS_ARRAY, message types (UPDATE_SCREEN_DATA, etc.), SKILL_COLORS",
+      "exports": [
+        "SKILLS_ARRAY",
+        "UPDATE_SCREEN_DATA",
+        "REQUEST_SCREEN_DATA",
+        "UPDATE_USER_STATS",
+        "TIME_FRAME_OPTIONS",
+        "SKILL_COLORS"
+      ],
+      "dependencies": ["@app/types"],
+      "dataFlow": "Static constants consumed across all domains"
+    },
+    "panel/constants/Tabs": {
+      "path": "app/panel/constants/Tabs/index.js",
+      "purpose": "Screen display key constants (DASHBOARD, PROFILE, STATS, LOOT, HISTORY, SETTINGS, DATA_VIEW)",
+      "exports": ["DISPLAY"],
+      "dependencies": [],
+      "dataFlow": "Static constants for panel routing"
+    },
+    "panel/constants/FightingLocations": {
+      "path": "app/panel/constants/FightingLocations/index.js",
+      "purpose": "Fighting location definitions (archCaves6, barracks, catacombs, highlands)",
+      "exports": ["default (location data)"],
+      "dependencies": [],
+      "dataFlow": "Static game data for location matching"
+    },
+    "hoc/with-error-boundary": {
+      "path": "app/hoc/with-error-boundary.tsx",
+      "purpose": "HOC that wraps a component with React ErrorBoundary",
+      "exports": ["withErrorBoundary"],
+      "dependencies": ["react-error-boundary"],
+      "dataFlow": "Component → ErrorBoundary-wrapped Component"
+    },
+    "hoc/with-suspense": {
+      "path": "app/hoc/with-suspense.tsx",
+      "purpose": "HOC that wraps a component with React Suspense",
+      "exports": ["withSuspense"],
+      "dependencies": [],
+      "dataFlow": "Component → Suspense-wrapped Component"
+    },
+    "build/build": {
+      "path": "build/build.ts",
+      "purpose": "Orchestrates three Vite builds: content scripts (IIFE), background (ES module), side panel (HTML)",
+      "exports": [],
+      "dependencies": ["vite", "@vitejs/plugin-react-swc", "build/plugins/*", "build/env"],
+      "dataFlow": "Entry point: tsx build/build.ts → 3 sequential Vite builds → dist/"
+    },
+    "build/env": {
+      "path": "build/env.ts",
+      "purpose": "Environment variable management and feature flags (IS_DEV, IS_PROD, IS_FIREFOX, IS_CI)",
+      "exports": ["baseEnv", "IS_DEV", "IS_PROD", "IS_FIREFOX", "IS_CI", "dynamicEnvValues"],
+      "dependencies": ["@dotenvx/dotenvx"],
+      "dataFlow": ".env → parsed flags → consumed by build scripts and plugins"
+    },
+    "build/plugins/make-manifest-plugin": {
+      "path": "build/plugins/make-manifest-plugin.ts",
+      "purpose": "Vite plugin: generates manifest.json from manifest.js, adds HMR refresh script in dev",
+      "exports": ["default (plugin factory)"],
+      "dependencies": ["@app/utils/colorful-logger", "build/env", "build/dev-utils/lib/manifest-parser"],
+      "dataFlow": "manifest.js → transform → dist/manifest.json"
+    },
+    "components/ui/button": {
+      "path": "app/components/ui/button.tsx",
+      "purpose": "Button primitive with variants (default, destructive, outline, secondary, ghost, link) and sizes",
+      "exports": ["Button", "ButtonProps", "buttonVariants"],
+      "dependencies": ["@radix-ui/react-slot", "class-variance-authority", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/card": {
+      "path": "app/components/ui/card.tsx",
+      "purpose": "Card container with Header, Title, Description, Content, Footer sub-components",
+      "exports": ["Card", "CardHeader", "CardTitle", "CardDescription", "CardContent", "CardFooter"],
+      "dependencies": ["@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/badge": {
+      "path": "app/components/ui/badge.tsx",
+      "purpose": "Multi-element badge with active state styling",
+      "exports": ["Badge", "BadgeProps"],
+      "dependencies": ["@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/dialog": {
+      "path": "app/components/ui/dialog.tsx",
+      "purpose": "Modal dialog with overlay, content, header, footer, title, description",
+      "exports": [
+        "Dialog",
+        "DialogOverlay",
+        "DialogContent",
+        "DialogHeader",
+        "DialogFooter",
+        "DialogTitle",
+        "DialogDescription"
+      ],
+      "dependencies": ["@radix-ui/react-dialog", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/chart": {
+      "path": "app/components/ui/chart.tsx",
+      "purpose": "Chart component abstractions for recharts integration",
+      "exports": ["ChartContainer", "ChartTooltip", "ChartTooltipContent", "ChartLegend", "ChartLegendContent"],
+      "dependencies": ["recharts", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/dropdown-menu": {
+      "path": "app/components/ui/dropdown-menu.tsx",
+      "purpose": "Dropdown menu with trigger, content, items, separators",
+      "exports": [
+        "DropdownMenu",
+        "DropdownMenuTrigger",
+        "DropdownMenuContent",
+        "DropdownMenuItem",
+        "DropdownMenuSeparator"
+      ],
+      "dependencies": ["@radix-ui/react-dropdown-menu", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/input": {
+      "path": "app/components/ui/input.tsx",
+      "purpose": "Styled input field component",
+      "exports": ["Input"],
+      "dependencies": ["@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/label": {
+      "path": "app/components/ui/label.tsx",
+      "purpose": "Accessible label component",
+      "exports": ["Label"],
+      "dependencies": ["@radix-ui/react-label", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/popover": {
+      "path": "app/components/ui/popover.tsx",
+      "purpose": "Popover with trigger and content",
+      "exports": ["Popover", "PopoverTrigger", "PopoverContent"],
+      "dependencies": ["@radix-ui/react-popover", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/progress": {
+      "path": "app/components/ui/progress.tsx",
+      "purpose": "Progress bar component",
+      "exports": ["Progress"],
+      "dependencies": ["@radix-ui/react-progress", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/select": {
+      "path": "app/components/ui/select.tsx",
+      "purpose": "Select dropdown with trigger, content, items",
+      "exports": ["Select", "SelectTrigger", "SelectContent", "SelectItem", "SelectValue"],
+      "dependencies": ["@radix-ui/react-select", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/switch": {
+      "path": "app/components/ui/switch.tsx",
+      "purpose": "Toggle switch component",
+      "exports": ["Switch"],
+      "dependencies": ["@radix-ui/react-switch", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/table": {
+      "path": "app/components/ui/table.tsx",
+      "purpose": "Table with Header, Body, Row, Head, Cell sub-components",
+      "exports": ["Table", "TableHeader", "TableBody", "TableRow", "TableHead", "TableCell"],
+      "dependencies": ["@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/tabs": {
+      "path": "app/components/ui/tabs.tsx",
+      "purpose": "Tabbed interface with list, trigger, content",
+      "exports": ["Tabs", "TabsList", "TabsTrigger", "TabsContent"],
+      "dependencies": ["@radix-ui/react-tabs", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    },
+    "components/ui/tooltip": {
+      "path": "app/components/ui/tooltip.tsx",
+      "purpose": "Tooltip with trigger and content",
+      "exports": ["Tooltip", "TooltipTrigger", "TooltipContent", "TooltipProvider"],
+      "dependencies": ["@radix-ui/react-tooltip", "@app/utils/cn"],
+      "dataFlow": "Radix UI primitive"
+    }
+  }
+}

@@ -1,9 +1,9 @@
-import { ChartTooltip, ChartTooltipContent } from '@app/components';
-import { memo, useMemo } from 'react';
+import { ChartTooltip, ChartTooltipContent } from "@app/components";
+import { memo, useMemo } from "react";
 // eslint-disable-next-line import-x/no-deprecated
-import { RadialBar, RadialBarChart as RechartsRadialBarChart, Cell, Legend } from 'recharts';
-import type { ChartDataPoint } from '../types';
-import type { ChartConfig } from '@app/components';
+import { RadialBar, RadialBarChart as RechartsRadialBarChart, Cell, Legend } from "recharts";
+import type { ChartConfig } from "@app/components";
+import type { ChartDataPoint } from "@app/types";
 
 interface RadialChartProps {
   chartData: ChartDataPoint[];
@@ -28,8 +28,7 @@ const RadialChart = memo(({ chartData, chartConfig, skills }: RadialChartProps) 
       skills.map(skill => {
         const total = chartData.reduce((sum, point) => sum + (Number(point[skill]) || 0), 0);
         const skillConfig = chartConfig[skill];
-        const color =
-          typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
+        const color = typeof skillConfig === "object" && "color" in skillConfig ? skillConfig.color : "var(--primary)";
         return {
           name: skill,
           value: total,
@@ -52,6 +51,6 @@ const RadialChart = memo(({ chartData, chartConfig, skills }: RadialChartProps) 
   );
 });
 
-RadialChart.displayName = 'RadialChart';
+RadialChart.displayName = "RadialChart";
 
 export { RadialChart };

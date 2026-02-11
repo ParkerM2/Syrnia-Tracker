@@ -1,3 +1,3 @@
-import { sendData } from '../../sendData';
+import { sendData } from "../../sendData";
 
 void sendData();

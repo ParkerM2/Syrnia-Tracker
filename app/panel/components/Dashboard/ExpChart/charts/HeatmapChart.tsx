@@ -8,8 +8,9 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@app/components';
-import type { PeriodStats, TimePeriod } from '@app/types';
+} from "@app/components";
+import type { PeriodStats, TimePeriod } from "@app/types";
+import type { CSSProperties } from "react";
 
 interface HeatmapChartProps {
   data: PeriodStats[];
@@ -29,42 +30,41 @@ export const HeatmapChart = ({
   // Sort data chronologically (oldest first)
   const sortedData = [...data].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const maxValue = Math.max(...sortedData.map(d => Number(d[valueKey]) || 0), 1);
+  const values = sortedData.map(d => Number(d[valueKey]) || 0);
+  const maxValue = Math.max(...values, 0);
+  const minValue = Math.min(...values, 0);
 
-  const getIntensityClass = (value: number) => {
-    const ratio = value / maxValue;
+  const getIntensityStyle = (value: number): CSSProperties => {
+    if (value === 0) return {};
 
-    if (value <= 0 || maxValue <= 0) {
-      if (ratio <= 0.25) return 'bg-red-500/20';
-      if (ratio <= 0.5) return 'bg-red-500/40';
-      if (ratio <= 0.75) return 'bg-red-500/60';
-      return 'bg-red-500';
-    }
+    const isNegative = value < 0;
+    const cssVar = isNegative ? "var(--destructive)" : "var(--primary)";
+    const absValue = Math.abs(value);
+    const referenceMax = isNegative ? Math.abs(minValue) : maxValue;
+    const ratio = referenceMax > 0 ? absValue / referenceMax : 0;
+    const percent = Math.round(20 + ratio * 80);
 
-    if (ratio <= 0.25) return 'bg-emerald-500/20';
-    if (ratio <= 0.5) return 'bg-emerald-500/40';
-    if (ratio <= 0.75) return 'bg-emerald-500/60';
-    return 'bg-emerald-500';
+    return { backgroundColor: `color-mix(in srgb, ${cssVar} ${percent}%, transparent)` };
   };
 
   const getLabel = (date: Date) => {
-    if (selectedPeriod === 'hour') {
+    if (selectedPeriod === "hour") {
       return date.toLocaleString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
       });
-    } else if (selectedPeriod === 'day') {
+    } else if (selectedPeriod === "day") {
       return date.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        weekday: 'short',
+        month: "short",
+        day: "numeric",
+        weekday: "short",
       });
-    } else if (selectedPeriod === 'week') {
-      return `Week of ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+    } else if (selectedPeriod === "week") {
+      return `Week of ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
     } else {
-      return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
     }
   };
 
@@ -83,23 +83,21 @@ export const HeatmapChart = ({
             <TooltipProvider>
               {sortedData.map(item => {
                 const value = Number(item[valueKey]) || 0;
-                const hasValue = value > 0;
-                const intensityClass = hasValue ? getIntensityClass(value) : '';
                 return (
                   <Tooltip key={item.periodKey}>
                     <TooltipTrigger asChild>
                       <div
                         className={cn(
-                          'flex h-6 w-6 items-center justify-center rounded-sm border text-[10px] font-semibold shadow-sm transition-all hover:scale-110',
-                          !hasValue && 'bg-muted/50',
-                          hasValue && intensityClass,
-                        )}></div>
+                          "flex h-6 w-6 items-center justify-center rounded-sm border text-[10px] font-semibold shadow-sm transition-all hover:scale-110",
+                          value === 0 && "bg-muted",
+                        )}
+                        style={getIntensityStyle(value)}></div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="text-xs font-bold">{getLabel(item.date)}</div>
                       <div className="text-xs">{formatter(value)}</div>
                       {/* Add extra details if needed */}
-                      {valueKey === 'netProfit' && (
+                      {valueKey === "netProfit" && (
                         <div className="text-[10px] text-muted-foreground">Drops: {item.totalDrops}</div>
                       )}
                     </TooltipContent>

@@ -1,9 +1,9 @@
-import { useHourlyExp, useTrackedDataQuery, useFormatting, useUserStatsQuery } from '@app/hooks';
-import { useMemo, useState, useEffect } from 'react';
-import type { CSVRow, EquipmentData, EquipmentItem } from '@app/types';
+import { useHourlyExp, useTrackedDataQuery, useFormatting, useUserStatsQuery } from "@app/hooks";
+import { useMemo, useState, useEffect } from "react";
+import type { CSVRow, EquipmentData, EquipmentItem } from "@app/types";
 
 // Combat skills list
-const COMBAT_SKILLS = ['Attack', 'Defence', 'Strength', 'Health'];
+const COMBAT_SKILLS = ["Attack", "Defence", "Strength", "Health"];
 
 export interface PerformanceStats {
   maxHit: number;
@@ -37,8 +37,8 @@ export const usePerformance = () => {
   const { allData, clearByHour, loading } = useTrackedDataQuery();
   const { formatExp } = useFormatting();
   const { userStats } = useUserStatsQuery();
-  const [selectedLocation, setSelectedLocation] = useState<string>('all');
-  const [selectedMonster, setSelectedMonster] = useState<string>('all');
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [selectedMonster, setSelectedMonster] = useState<string>("all");
 
   // Group all data by location
   const dataByLocation = useMemo(() => {
@@ -47,7 +47,7 @@ export const usePerformance = () => {
 
     allData.forEach(row => {
       allLocations.push(row);
-      const location = row.location?.trim() || 'Unknown';
+      const location = row.location?.trim() || "Unknown";
       if (!locationMap.has(location)) {
         locationMap.set(location, []);
       }
@@ -56,11 +56,11 @@ export const usePerformance = () => {
 
     // Add "All" location with all data
     const result = new Map<string, CSVRow[]>();
-    result.set('all', allLocations);
+    result.set("all", allLocations);
 
     // Sort locations by name (excluding 'all')
     const sortedLocations = Array.from(locationMap.entries())
-      .filter(([loc]) => loc !== 'all')
+      .filter(([loc]) => loc !== "all")
       .sort(([a], [b]) => a.localeCompare(b));
 
     sortedLocations.forEach(([location, rows]) => {
@@ -76,7 +76,7 @@ export const usePerformance = () => {
   // Set default selected location to first available (or 'all')
   useEffect(() => {
     if (locations.length > 0) {
-      if (selectedLocation === 'all' && !locations.includes('all')) {
+      if (selectedLocation === "all" && !locations.includes("all")) {
         setSelectedLocation(locations[0]);
       } else if (!locations.includes(selectedLocation)) {
         setSelectedLocation(locations[0]);
@@ -91,7 +91,7 @@ export const usePerformance = () => {
 
     allData.forEach(row => {
       allMonsters.push(row);
-      const monster = row.monster?.trim() || 'Unknown';
+      const monster = row.monster?.trim() || "Unknown";
       if (!monsterMap.has(monster)) {
         monsterMap.set(monster, []);
       }
@@ -100,11 +100,11 @@ export const usePerformance = () => {
 
     // Add "All" monster with all data
     const result = new Map<string, CSVRow[]>();
-    result.set('all', allMonsters);
+    result.set("all", allMonsters);
 
     // Sort monsters by name (excluding 'all')
     const sortedMonsters = Array.from(monsterMap.entries())
-      .filter(([mon]) => mon !== 'all')
+      .filter(([mon]) => mon !== "all")
       .sort(([a], [b]) => a.localeCompare(b));
 
     sortedMonsters.forEach(([monster, rows]) => {
@@ -120,7 +120,7 @@ export const usePerformance = () => {
   // Set default selected monster to first available (or 'all')
   useEffect(() => {
     if (monsters.length > 0) {
-      if (selectedMonster === 'all' && !monsters.includes('all')) {
+      if (selectedMonster === "all" && !monsters.includes("all")) {
         setSelectedMonster(monsters[0]);
       } else if (!monsters.includes(selectedMonster)) {
         setSelectedMonster(monsters[0]);
@@ -143,17 +143,17 @@ export const usePerformance = () => {
     const monsterData = selectedMonsterData;
 
     // If both are 'all', return all data
-    if (selectedLocation === 'all' && selectedMonster === 'all') {
+    if (selectedLocation === "all" && selectedMonster === "all") {
       return allData;
     }
 
     // If location is 'all', use monster data
-    if (selectedLocation === 'all') {
+    if (selectedLocation === "all") {
       return monsterData;
     }
 
     // If monster is 'all', use location data
-    if (selectedMonster === 'all') {
+    if (selectedMonster === "all") {
       return locationData;
     }
 
@@ -176,7 +176,7 @@ export const usePerformance = () => {
     const uniqueEntriesMap = new Map<string, CSVRow>();
 
     filteredData.forEach(row => {
-      const skill = row.skill || '';
+      const skill = row.skill || "";
       const key = `${row.timestamp}-${skill}`;
       const existing = uniqueEntriesMap.get(key);
 
@@ -184,8 +184,8 @@ export const usePerformance = () => {
         uniqueEntriesMap.set(key, row);
       } else {
         // Keep the one with higher gainedExp or more complete data
-        const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
-        const currentGainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+        const existingGainedExp = parseInt(existing.gainedExp || "0", 10) || 0;
+        const currentGainedExp = parseInt(row.gainedExp || "0", 10) || 0;
         if (currentGainedExp > existingGainedExp || (currentGainedExp === existingGainedExp && row.skillLevel)) {
           uniqueEntriesMap.set(key, row);
         }
@@ -194,35 +194,35 @@ export const usePerformance = () => {
 
     // Process unique entries only
     const uniqueEntries = Array.from(uniqueEntriesMap.values());
-    const result: Array<Omit<CSVRow, 'gainedExp'> & { gainedExp: number }> = [];
+    const result: Array<Omit<CSVRow, "gainedExp"> & { gainedExp: number }> = [];
 
     uniqueEntries.forEach(row => {
       try {
         // Use saved gainedExp directly (it's already calculated and saved)
-        const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+        const gainedExp = parseInt(row.gainedExp || "0", 10) || 0;
 
         // Only include entries with gainedExp > 0 (matches aggregateStats logic)
         if (gainedExp > 0) {
           // Ensure all CSVRow fields are present with defaults
           result.push({
-            timestamp: row.timestamp || '',
-            skill: row.skill || '',
-            skillLevel: row.skillLevel || '',
-            expForNextLevel: row.expForNextLevel || '',
-            drops: row.drops || '',
-            hp: row.hp || '',
-            monster: row.monster || '',
-            location: row.location || '',
-            damageDealt: row.damageDealt || '',
-            damageReceived: row.damageReceived || '',
-            peopleFighting: row.peopleFighting || '',
-            totalFights: row.totalFights || '',
-            totalInventoryHP: row.totalInventoryHP || '',
-            hpUsed: row.hpUsed || '',
-            equipment: row.equipment || '',
-            combatExp: row.combatExp || '',
+            timestamp: row.timestamp || "",
+            skill: row.skill || "",
+            skillLevel: row.skillLevel || "",
+            expForNextLevel: row.expForNextLevel || "",
+            drops: row.drops || "",
+            hp: row.hp || "",
+            monster: row.monster || "",
+            location: row.location || "",
+            damageDealt: row.damageDealt || "",
+            damageReceived: row.damageReceived || "",
+            peopleFighting: row.peopleFighting || "",
+            totalFights: row.totalFights || "",
+            totalInventoryHP: row.totalInventoryHP || "",
+            hpUsed: row.hpUsed || "",
+            equipment: row.equipment || "",
+            combatExp: row.combatExp || "",
             gainedExp,
-            uuid: row.uuid || '',
+            uuid: row.uuid || "",
           });
         }
       } catch {
@@ -255,7 +255,7 @@ export const usePerformance = () => {
     try {
       return formatExp(totalGainedExpThisHour);
     } catch {
-      return '0';
+      return "0";
     }
   }, [totalGainedExpThisHour, formatExp]);
 
@@ -291,7 +291,7 @@ export const usePerformance = () => {
       const uniqueEntriesMap = new Map<string, CSVRow>();
 
       filteredData.forEach(row => {
-        const skill = row.skill || '';
+        const skill = row.skill || "";
         const key = `${row.timestamp}-${skill}`;
         const existing = uniqueEntriesMap.get(key);
 
@@ -299,8 +299,8 @@ export const usePerformance = () => {
           uniqueEntriesMap.set(key, row);
         } else {
           // Keep the one with higher gainedExp or more complete data
-          const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
-          const currentGainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+          const existingGainedExp = parseInt(existing.gainedExp || "0", 10) || 0;
+          const currentGainedExp = parseInt(row.gainedExp || "0", 10) || 0;
           if (currentGainedExp > existingGainedExp || (currentGainedExp === existingGainedExp && row.skillLevel)) {
             uniqueEntriesMap.set(key, row);
           }
@@ -328,19 +328,19 @@ export const usePerformance = () => {
       uniqueEntries.forEach(row => {
         try {
           // Normalize monster name for consistent grouping (case-insensitive, trimmed)
-          const rawMonster = row.monster || 'Unknown';
+          const rawMonster = row.monster || "Unknown";
           const normalizedKey = rawMonster.trim().toLowerCase();
-          const displayName = rawMonster.trim() || 'Unknown';
+          const displayName = rawMonster.trim() || "Unknown";
 
           // Parse damage dealt
-          const damageDealtStr = row.damageDealt || '';
+          const damageDealtStr = row.damageDealt || "";
           if (damageDealtStr) {
             const damageValues = damageDealtStr
-              .split(';')
+              .split(";")
               .map(d => d.trim())
               .filter(d => d.length > 0);
             damageValues.forEach(damageStr => {
-              const damage = parseInt(String(damageStr).replace(/,/g, ''), 10);
+              const damage = parseInt(String(damageStr).replace(/,/g, ""), 10);
               if (!isNaN(damage) && damage >= 0) {
                 allDamageDealt.push(damage);
                 if (!monsterStats[normalizedKey]) {
@@ -352,14 +352,14 @@ export const usePerformance = () => {
           }
 
           // Parse damage received
-          const damageReceivedStr = row.damageReceived || '';
+          const damageReceivedStr = row.damageReceived || "";
           if (damageReceivedStr) {
             const receivedValues = damageReceivedStr
-              .split(';')
+              .split(";")
               .map(d => d.trim())
               .filter(d => d.length > 0);
             receivedValues.forEach(damageStr => {
-              const damage = parseInt(String(damageStr).replace(/,/g, ''), 10);
+              const damage = parseInt(String(damageStr).replace(/,/g, ""), 10);
               if (!isNaN(damage) && damage >= 0) {
                 allDamageReceived.push(damage);
                 if (!monsterStats[normalizedKey]) {
@@ -394,13 +394,13 @@ export const usePerformance = () => {
       // Each row with damageDealt represents a fight, count hits per fight
       const hitsPerFight: number[] = [];
       uniqueEntries.forEach(row => {
-        const damageDealtStr = row.damageDealt || '';
+        const damageDealtStr = row.damageDealt || "";
         if (damageDealtStr) {
           const damageValues = damageDealtStr
-            .split(';')
+            .split(";")
             .map(d => d.trim())
             .filter(d => d.length > 0)
-            .map(d => parseInt(String(d).replace(/,/g, ''), 10))
+            .map(d => parseInt(String(d).replace(/,/g, ""), 10))
             .filter(d => !isNaN(d) && d > 0);
 
           if (damageValues.length > 0) {
@@ -442,16 +442,16 @@ export const usePerformance = () => {
       // First pass: collect hits per fight for each monster
       uniqueEntries.forEach(row => {
         try {
-          const rawMonster = row.monster || 'Unknown';
-          const displayName = rawMonster.trim() || 'Unknown';
+          const rawMonster = row.monster || "Unknown";
+          const displayName = rawMonster.trim() || "Unknown";
 
-          const damageDealtStr = row.damageDealt || '';
+          const damageDealtStr = row.damageDealt || "";
           if (damageDealtStr) {
             const damageValues = damageDealtStr
-              .split(';')
+              .split(";")
               .map(d => d.trim())
               .filter(d => d.length > 0)
-              .map(d => parseInt(String(d).replace(/,/g, ''), 10))
+              .map(d => parseInt(String(d).replace(/,/g, ""), 10))
               .filter(d => !isNaN(d) && d >= 0);
 
             if (damageValues.length > 0) {
@@ -578,7 +578,7 @@ export const usePerformance = () => {
 
   // Calculate location-specific stats (only for specific locations, not 'all')
   const locationStats = useMemo(() => {
-    if (selectedLocation === 'all' || !Array.isArray(filteredData) || filteredData.length === 0) {
+    if (selectedLocation === "all" || !Array.isArray(filteredData) || filteredData.length === 0) {
       return {
         totalFights: 0,
         avgDamagePer15Min: 0,
@@ -590,15 +590,15 @@ export const usePerformance = () => {
     // Deduplicate entries
     const uniqueEntriesMap = new Map<string, CSVRow>();
     filteredData.forEach(row => {
-      const skill = row.skill || '';
+      const skill = row.skill || "";
       const key = `${row.timestamp}-${skill}`;
       const existing = uniqueEntriesMap.get(key);
 
       if (!existing) {
         uniqueEntriesMap.set(key, row);
       } else {
-        const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
-        const currentGainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+        const existingGainedExp = parseInt(existing.gainedExp || "0", 10) || 0;
+        const currentGainedExp = parseInt(row.gainedExp || "0", 10) || 0;
         if (currentGainedExp > existingGainedExp || (currentGainedExp === existingGainedExp && row.skillLevel)) {
           uniqueEntriesMap.set(key, row);
         }
@@ -638,13 +638,13 @@ export const usePerformance = () => {
 
     // Sum all damage received values and track per 15-minute interval
     uniqueEntries.forEach(row => {
-      const damageReceivedStr = row.damageReceived || '';
+      const damageReceivedStr = row.damageReceived || "";
       if (damageReceivedStr) {
         const receivedValues = damageReceivedStr
-          .split(';')
+          .split(";")
           .map(d => d.trim())
           .filter(d => d.length > 0)
-          .map(d => parseInt(String(d).replace(/,/g, ''), 10))
+          .map(d => parseInt(String(d).replace(/,/g, ""), 10))
           .filter(d => !isNaN(d) && d >= 0);
 
         if (receivedValues.length > 0) {
@@ -676,7 +676,7 @@ export const usePerformance = () => {
     // Note: Equipment data needs to be stored in CSVRow for this to work
     // For now, we'll try to parse equipment from a JSON string if it exists in CSVRow
     // This assumes equipment is stored as a JSON string in a future CSVRow field
-    let avgEquipment: { items: Record<string, EquipmentItem>; totals: EquipmentData['totals'] } | undefined = undefined;
+    let avgEquipment: { items: Record<string, EquipmentItem>; totals: EquipmentData["totals"] } | undefined = undefined;
 
     // Try to collect equipment data (if it exists in CSVRow)
     const equipmentEntries: EquipmentData[] = [];
@@ -684,7 +684,7 @@ export const usePerformance = () => {
       if (row.equipment && row.equipment.trim().length > 0) {
         try {
           const equipment = JSON.parse(row.equipment) as EquipmentData;
-          if (equipment && typeof equipment === 'object') {
+          if (equipment && typeof equipment === "object") {
             equipmentEntries.push(equipment);
           }
         } catch {
@@ -702,20 +702,20 @@ export const usePerformance = () => {
 
       equipmentEntries.forEach(eq => {
         // Count equipment items by slot (exclude 'totals' which is not an EquipmentItem)
-        const slots: Array<Exclude<keyof EquipmentData, 'totals'>> = [
-          'helm',
-          'shield',
-          'body',
-          'weapon',
-          'legs',
-          'gloves',
-          'boots',
-          'horse',
-          'trophy',
+        const slots: Array<Exclude<keyof EquipmentData, "totals">> = [
+          "helm",
+          "shield",
+          "body",
+          "weapon",
+          "legs",
+          "gloves",
+          "boots",
+          "horse",
+          "trophy",
         ];
         slots.forEach(slot => {
           const item = eq[slot];
-          if (item && 'name' in item) {
+          if (item && "name" in item) {
             // Type guard: ensure item is EquipmentItem (has 'name' property)
             if (!slotCounts[slot]) {
               slotCounts[slot] = 0;
@@ -757,7 +757,7 @@ export const usePerformance = () => {
       });
 
       // Calculate average totals
-      const avgTotals: EquipmentData['totals'] = {};
+      const avgTotals: EquipmentData["totals"] = {};
       if (totalsCount > 0) {
         if (totalsSum.armour > 0) avgTotals.armour = totalsSum.armour / totalsCount;
         if (totalsSum.aim > 0) avgTotals.aim = totalsSum.aim / totalsCount;
@@ -771,13 +771,13 @@ export const usePerformance = () => {
     // Calculate average hits to kill for this location
     const hitsPerFightForLocation: number[] = [];
     uniqueEntries.forEach(row => {
-      const damageDealtStr = row.damageDealt || '';
+      const damageDealtStr = row.damageDealt || "";
       if (damageDealtStr) {
         const damageValues = damageDealtStr
-          .split(';')
+          .split(";")
           .map(d => d.trim())
           .filter(d => d.length > 0)
-          .map(d => parseInt(String(d).replace(/,/g, ''), 10))
+          .map(d => parseInt(String(d).replace(/,/g, ""), 10))
           .filter(d => !isNaN(d) && d >= 0);
 
         if (damageValues.length > 0) {
@@ -810,7 +810,7 @@ export const usePerformance = () => {
         await clearByHour(currentHour);
         alert(`Data for hour ${currentHour}:00 cleared successfully!`);
       } catch {
-        alert('Error clearing data for current hour');
+        alert("Error clearing data for current hour");
       }
     }
   };

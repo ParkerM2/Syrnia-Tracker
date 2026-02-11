@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import type { StatRow } from '../StatTable/types';
+import { useMemo } from "react";
+import type { StatRow } from "../StatTable/types";
 
 /**
  * Hook for StatTable component
@@ -7,17 +7,17 @@ import type { StatRow } from '../StatTable/types';
  */
 export const useStatTable = (rows: StatRow[]) => {
   const defaultFormat = (value: number | string): string => {
-    if (typeof value === 'number') {
-      return value > 0 ? value.toLocaleString() : '—';
+    if (typeof value === "number") {
+      return value > 0 ? value.toLocaleString() : "—";
     }
-    return value || '—';
+    return value || "—";
   };
 
   // Filter and process rows
   const visibleRows = useMemo(
     () =>
       rows.filter(row => {
-        if (row.showIfZero === false && (row.value === 0 || row.value === '—' || row.value === '')) {
+        if (row.showIfZero === false && (row.value === 0 || row.value === "—" || row.value === "")) {
           return false;
         }
         return true;

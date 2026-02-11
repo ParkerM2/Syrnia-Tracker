@@ -1,7 +1,7 @@
-import DISPLAY from '../../constants/Tabs';
-import { Badge, cn, Popover, PopoverTrigger, PopoverContent } from '@app/components';
-import * as RadixIcons from '@radix-ui/react-icons';
-import { useState } from 'react';
+import DISPLAY from "../../constants/Tabs";
+import { Badge, cn, Popover, PopoverTrigger, PopoverContent } from "@app/components";
+import * as RadixIcons from "@radix-ui/react-icons";
+import { useState } from "react";
 
 interface HeaderProps {
   headerText?: string;
@@ -25,17 +25,17 @@ const Header: React.FC<HeaderProps> = ({ display, setDisplay }) => {
 
   // Main tabs (excluding settings)
   const mainTabs = [
-    { key: DISPLAY.DASHBOARD, label: 'Dashboard' },
-    { key: DISPLAY.PROFILE, label: 'Profile' },
-    { key: DISPLAY.STATS, label: 'Performance' },
-    { key: DISPLAY.LOOT, label: 'Loot' },
-    { key: DISPLAY.HISTORY, label: 'History' },
+    { key: DISPLAY.DASHBOARD, label: "Dashboard" },
+    { key: DISPLAY.PROFILE, label: "Profile" },
+    { key: DISPLAY.STATS, label: "Performance" },
+    { key: DISPLAY.LOOT, label: "Loot" },
+    { key: DISPLAY.HISTORY, label: "History" },
   ];
 
   // Settings dropdown items (only shown in dropdown)
   const settingsDropdownItems = [
-    { key: DISPLAY.DATA_VIEW, label: 'Data View' },
-    { key: DISPLAY.SETTINGS, label: 'Settings' },
+    { key: DISPLAY.DATA_VIEW, label: "Data View" },
+    { key: DISPLAY.SETTINGS, label: "Settings" },
   ];
 
   // All tabs including settings for popover menu
@@ -51,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({ display, setDisplay }) => {
   };
 
   return (
-    <div className={cn('flex w-full flex-row items-center pb-4 transition-all duration-300')}>
+    <div className={cn("flex w-full flex-row items-center pb-4 transition-all duration-300")}>
       {/* Tab Navigation - Responsive Badge Row */}
       {/* Above 700: normal layout with main tabs and settings dropdown */}
       <div className="hidden w-full flex-row flex-wrap items-center justify-center gap-2 min-[700px]:flex min-[700px]:gap-5">

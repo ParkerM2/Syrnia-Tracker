@@ -1,7 +1,7 @@
-import ProfileCard from '../ProfileCard';
-import { cn, Card, CardContent, Badge } from '@app/components';
-import { useTrackedDataQuery, useScreenData, useFormatting, useHourlyExp } from '@app/hooks';
-import { memo, useMemo, useState } from 'react';
+import ProfileCard from "../ProfileCard";
+import { cn, Card, CardContent, Badge } from "@app/components";
+import { useTrackedDataQuery, useScreenData, useFormatting, useHourlyExp } from "@app/hooks";
+import { memo, useMemo, useState } from "react";
 
 /**
  * Normalize skill name for image URL
@@ -34,22 +34,22 @@ const SkillCardWrapper = memo(
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
     const skillInfo = getSkillInfo(skill);
-    const expForNextLevel = formatExp(skillInfo.expForNextLevel || '0');
+    const expForNextLevel = formatExp(skillInfo.expForNextLevel || "0");
 
     return (
-      <Card className={cn(isCurrentSkill && 'bg-primary/10 border-primary', 'min-w-[200px] flex-1')}>
+      <Card className={cn(isCurrentSkill && "bg-primary/10 border-primary", "min-w-[200px] flex-1")}>
         <CardContent className="p-4">
           <div className="mb-2 flex items-center gap-2">
             <div className="flex items-center gap-2">
               <img
                 src={getSkillImageUrl(skill)}
-                alt={`${skill}${level > 0 ? ` - Level ${level}` : ''}`}
+                alt={`${skill}${level > 0 ? ` - Level ${level}` : ""}`}
                 className="h-10 w-10 rounded object-cover"
                 onLoad={() => setImageLoaded(true)}
                 onError={e => {
                   setImageError(true);
                   // Hide image if it fails to load
-                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
               {level > 0 && <span className="text-base font-bold">{level}</span>}
@@ -69,7 +69,7 @@ const SkillCardWrapper = memo(
               <span className="text-muted-foreground">Current Exp: </span>
               <span className="font-semibold text-green-500">+{formatExp(stats.gainedExp)}</span>
             </div>
-            {expForNextLevel !== '0' && (
+            {expForNextLevel !== "0" && (
               <div>
                 <span className="text-muted-foreground">Exp Left: </span>
                 <span className="font-semibold">{expForNextLevel}</span>
@@ -81,7 +81,7 @@ const SkillCardWrapper = memo(
     );
   },
 );
-SkillCardWrapper.displayName = 'SkillCardWrapper';
+SkillCardWrapper.displayName = "SkillCardWrapper";
 
 /**
  * Profile component - displays user profile information
@@ -127,17 +127,17 @@ const Profile = memo(() => {
     Object.entries(hourlyExp?.expBySkill || {}).forEach(([skill, exp]) => {
       stats[skill] = {
         gainedExp: exp || 0,
-        lastUpdate: '',
-        skillLevel: '',
-        expForNextLevel: '',
+        lastUpdate: "",
+        skillLevel: "",
+        expForNextLevel: "",
       };
     });
 
     // Get level and expForNextLevel from current hour data
     currentHourData.forEach(row => {
-      const skill = row.skill || 'Unknown';
-      const skillLevel = row.skillLevel || '';
-      const expForNextLevel = row.expForNextLevel || '';
+      const skill = row.skill || "Unknown";
+      const skillLevel = row.skillLevel || "";
+      const expForNextLevel = row.expForNextLevel || "";
 
       if (!stats[skill]) {
         stats[skill] = {
@@ -166,14 +166,14 @@ const Profile = memo(() => {
 
   // Determine the current skill
   const currentSkill = useMemo(() => {
-    const screenSkill = screenData?.actionText.currentActionText || '';
+    const screenSkill = screenData?.actionText.currentActionText || "";
     const mostRecentEntry = currentHourData
       .filter(row => {
-        const skill = row.skill || '';
+        const skill = row.skill || "";
         return (hourlyExp?.expBySkill[skill] || 0) > 0;
       })
       .sort((a, b) => new Date(b?.timestamp || 0).getTime() - new Date(a?.timestamp || 0).getTime())[0];
-    return screenSkill || mostRecentEntry?.skill || '';
+    return screenSkill || mostRecentEntry?.skill || "";
   }, [screenData, currentHourData, hourlyExp?.expBySkill]);
 
   // Get level and expForNextLevel from screen data if available, otherwise use tracked data
@@ -183,14 +183,14 @@ const Profile = memo(() => {
 
     if (isCurrentSkill && screenData?.actionText.currentActionText === skill) {
       return {
-        level: screenData?.actionText.skillLevel || trackedInfo?.skillLevel || '',
-        expForNextLevel: screenData?.actionText.expForNextLevel || trackedInfo?.expForNextLevel || '',
+        level: screenData?.actionText.skillLevel || trackedInfo?.skillLevel || "",
+        expForNextLevel: screenData?.actionText.expForNextLevel || trackedInfo?.expForNextLevel || "",
       };
     }
 
     return {
-      level: trackedInfo?.skillLevel || '',
-      expForNextLevel: trackedInfo?.expForNextLevel || '',
+      level: trackedInfo?.skillLevel || "",
+      expForNextLevel: trackedInfo?.expForNextLevel || "",
     };
   };
 
@@ -202,7 +202,7 @@ const Profile = memo(() => {
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
-        <div className={cn('p-4 text-lg font-semibold')}>Loading tracked data...</div>
+        <div className={cn("p-4 text-lg font-semibold")}>Loading tracked data...</div>
         <ProfileCard />
       </div>
     );
@@ -238,6 +238,6 @@ const Profile = memo(() => {
   );
 });
 
-Profile.displayName = 'Profile';
+Profile.displayName = "Profile";
 
 export default Profile;

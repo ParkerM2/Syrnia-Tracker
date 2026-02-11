@@ -1,4 +1,4 @@
-import type { StatRow } from '../StatTable';
+import type { StatRow } from "../StatTable";
 
 /**
  * Hook for PerformanceCard component

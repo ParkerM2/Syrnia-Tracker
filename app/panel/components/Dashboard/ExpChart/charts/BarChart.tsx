@@ -1,9 +1,9 @@
-import { formatChartDate, formatTooltipDate } from '../utils';
-import { ChartTooltip, ChartTooltipContent } from '@app/components';
-import { memo } from 'react';
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import type { ChartDataPoint, TimeFrame } from '../types';
-import type { ChartConfig } from '@app/components';
+import { formatChartDate, formatTooltipDate } from "../utils";
+import { ChartTooltip, ChartTooltipContent } from "@app/components";
+import { memo } from "react";
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import type { ChartConfig } from "@app/components";
+import type { ChartDataPoint, TimeFrame } from "@app/types";
 
 interface BarChartProps {
   chartData: ChartDataPoint[];
@@ -24,7 +24,7 @@ const commonProps = {
 
 const BarChart = memo(({ chartData, chartConfig, skills, timeFrame }: BarChartProps) => (
   <RechartsBarChart data={chartData} {...commonProps}>
-    <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+    <CartesianGrid vertical={false} stroke="var(--border)" />
     <XAxis
       dataKey="date"
       tickLine={false}
@@ -38,13 +38,12 @@ const BarChart = memo(({ chartData, chartConfig, skills, timeFrame }: BarChartPr
     <ChartTooltip content={<ChartTooltipContent labelFormatter={value => formatTooltipDate(value, timeFrame)} />} />
     {skills.map(skill => {
       const skillConfig = chartConfig[skill];
-      const color =
-        typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
+      const color = typeof skillConfig === "object" && "color" in skillConfig ? skillConfig.color : "var(--primary)";
       return <Bar key={skill} dataKey={skill} fill={color} />;
     })}
   </RechartsBarChart>
 ));
 
-BarChart.displayName = 'BarChart';
+BarChart.displayName = "BarChart";
 
 export { BarChart };

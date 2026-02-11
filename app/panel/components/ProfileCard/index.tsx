@@ -1,8 +1,8 @@
-import { cn, Card, CardContent, Button, Progress } from '@app/components';
-import { useUserStatsQuery, useFormatting, useHourStats, useHourlyExp } from '@app/hooks';
-import { useCallback, useMemo, useState } from 'react';
+import { cn, Card, CardContent, Button, Progress } from "@app/components";
+import { useUserStatsQuery, useFormatting, useHourStats, useHourlyExp } from "@app/hooks";
+import { useCallback, useMemo, useState } from "react";
 
-const STATS_PAGE_URL = 'https://www.syrnia.com/theGame/includes2/stats.php';
+const STATS_PAGE_URL = "https://www.syrnia.com/theGame/includes2/stats.php";
 
 /**
  * Normalize skill name for image URL
@@ -49,13 +49,13 @@ const SkillCard = ({
           <div className="flex items-center gap-2">
             <img
               src={getSkillImageUrl(skill)}
-              alt={`${skill}${level > 0 ? ` - Level ${level}` : ''}`}
+              alt={`${skill}${level > 0 ? ` - Level ${level}` : ""}`}
               className="h-10 w-10 flex-shrink-0 rounded object-cover"
               onLoad={() => setImageLoaded(true)}
               onError={e => {
                 setImageError(true);
                 // Hide image if it fails to load
-                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).style.display = "none";
               }}
             />
             {level > 0 && <span className="text-base font-bold">{level}</span>}
@@ -90,7 +90,7 @@ const SkillCard = ({
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="w-full text-left text-xs text-muted-foreground transition-colors hover:text-foreground">
-              {isExpanded ? '▼ Hide details' : '▶ Show details'}
+              {isExpanded ? "▼ Hide details" : "▶ Show details"}
             </button>
             {isExpanded && (
               <div className="mt-2 flex flex-col gap-1 text-left text-sm">
@@ -133,12 +133,12 @@ const ProfileCard = () => {
   }, []);
 
   if (loading) {
-    return <div className={cn('p-4 text-lg font-semibold')}>Loading profile data...</div>;
+    return <div className={cn("p-4 text-lg font-semibold")}>Loading profile data...</div>;
   }
 
   if (!userStats) {
     return (
-      <div className={cn('flex flex-col gap-4 p-4')}>
+      <div className={cn("flex flex-col gap-4 p-4")}>
         <p className="text-sm text-muted-foreground">
           Open player stats in new tab, after data displays feel free to close.
         </p>
@@ -151,24 +151,24 @@ const ProfileCard = () => {
 
   const skills = Object.values(userStats.skills);
   const sortedSkills = [...skills].sort((a, b) => {
-    const levelA = parseInt(a.level || '0', 10);
-    const levelB = parseInt(b.level || '0', 10);
+    const levelA = parseInt(a.level || "0", 10);
+    const levelB = parseInt(b.level || "0", 10);
     return levelB - levelA;
   });
 
   return (
-    <div className={cn('flex flex-col gap-4')}>
+    <div className={cn("flex flex-col gap-4")}>
       {/* Skills List */}
       <div className="flex flex-wrap gap-3">
         {sortedSkills.map(skill => {
-          const level = parseInt(skill.level || '0', 10);
-          const totalExp = parseInt(skill.totalExp || '0', 10);
-          const expForNext = parseInt(skill.expForNextLevel || '0', 10);
-          const expLeft = parseInt(skill.expLeft || '0', 10);
+          const level = parseInt(skill.level || "0", 10);
+          const totalExp = parseInt(skill.totalExp || "0", 10);
+          const expForNext = parseInt(skill.expForNextLevel || "0", 10);
+          const expLeft = parseInt(skill.expLeft || "0", 10);
           const percentToNext = skill.percentToNext || 0;
           const gainedThisHour = skill.gainedThisHour ? parseInt(skill.gainedThisHour, 10) : null;
           const gainedThisWeek = skill.gainedThisWeek ? parseInt(skill.gainedThisWeek, 10) : null;
-          const levelGainedThisWeek = skill.levelGainedThisWeek || '0';
+          const levelGainedThisWeek = skill.levelGainedThisWeek || "0";
 
           // Get tracked current hour exp
           const trackedHourExp = currentHourStats.expBySkill[skill.skill] || 0;

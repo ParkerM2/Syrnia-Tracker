@@ -1,12 +1,12 @@
-import { matchText, skillExpRegex } from '@app/utils/helpers';
-import { v4 as uuidv4 } from 'uuid';
-import type { ScreenData, CombatExpGain, EquipmentData, EquipmentItem } from '@app/types';
+import { matchText, skillExpRegex } from "@app/utils/helpers";
+import { v4 as uuidv4 } from "uuid";
+import type { ScreenData, CombatExpGain, EquipmentData, EquipmentItem } from "@app/types";
 
 // Track last processed fight to prevent duplicate wearDisplayTD collection
 let lastProcessedFightText: string | null = null;
 
 // Cache location - only parse once at fight end
-let cachedLocation: string = '';
+let cachedLocation: string = "";
 
 /**
  * Parse combat experience gains from fightLogTop element
@@ -19,35 +19,35 @@ const parseCombatExp = (fightLogElement: HTMLElement | null): CombatExpGain[] =>
   }
 
   const expGains: CombatExpGain[] = [];
-  const fullText = fightLogElement.textContent || '';
+  const fullText = fightLogElement.textContent || "";
 
   // Find all font elements with color attribute - red for experience, yellow for drops
-  const fontElements = fightLogElement.querySelectorAll('font[color]');
+  const fontElements = fightLogElement.querySelectorAll("font[color]");
 
   // Only check red font elements for experience (drops are in yellow)
   const redFontElements = Array.from(fontElements).filter(font => {
-    const color = font.getAttribute('color')?.toLowerCase();
-    return color === 'red';
+    const color = font.getAttribute("color")?.toLowerCase();
+    return color === "red";
   });
 
   // Skill name normalization map
   const skillMap: Record<string, string> = {
-    strength: 'Strength',
-    attack: 'Attack',
-    defence: 'Defence',
-    defense: 'Defence',
-    health: 'Health',
-    mining: 'Mining',
-    smithing: 'Smithing',
-    fishing: 'Fishing',
-    woodcutting: 'Woodcutting',
-    construction: 'Construction',
-    trading: 'Trading',
-    thieving: 'Thieving',
-    speed: 'Speed',
-    cooking: 'Cooking',
-    magic: 'Magic',
-    farming: 'Farming',
+    strength: "Strength",
+    attack: "Attack",
+    defence: "Defence",
+    defense: "Defence",
+    health: "Health",
+    mining: "Mining",
+    smithing: "Smithing",
+    fishing: "Fishing",
+    woodcutting: "Woodcutting",
+    construction: "Construction",
+    trading: "Trading",
+    thieving: "Thieving",
+    speed: "Speed",
+    cooking: "Cooking",
+    magic: "Magic",
+    farming: "Farming",
   };
 
   // Only process red font elements (experience values)
@@ -65,21 +65,21 @@ const parseCombatExp = (fightLogElement: HTMLElement | null): CombatExpGain[] =>
     // Pattern: " [number]" " [skill] experience" or [number] [skill] experience
     const patterns = [
       // Match: " [number]" " [skill] experience" (with quotes around number)
-      new RegExp(`"${expValue}"\\s+"?([a-z]+)\\s+experience`, 'i'),
+      new RegExp(`"${expValue}"\\s+"?([a-z]+)\\s+experience`, "i"),
       // Match: [number] " [skill] experience" (number followed by quote and skill)
-      new RegExp(`${expValue}"\\s+"?([a-z]+)\\s+experience`, 'i'),
+      new RegExp(`${expValue}"\\s+"?([a-z]+)\\s+experience`, "i"),
       // Match: [number] [skill] experience (without quotes, directly after font)
-      new RegExp(`${expValue}\\s+"?([a-z]+)\\s+experience`, 'i'),
+      new RegExp(`${expValue}\\s+"?([a-z]+)\\s+experience`, "i"),
       // Match: got [number] [skill] experience
-      new RegExp(`got\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, 'i'),
+      new RegExp(`got\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, "i"),
       // Match: You got [number] [skill] experience
-      new RegExp(`You\\s+got\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, 'i'),
+      new RegExp(`You\\s+got\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, "i"),
       // Match: also gained [number] [skill] experience (bonus exp from armor)
-      new RegExp(`also\\s+gained\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, 'i'),
+      new RegExp(`also\\s+gained\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, "i"),
       // Match: You also gained [number] [skill] experience (bonus exp from armor)
-      new RegExp(`You\\s+also\\s+gained\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, 'i'),
+      new RegExp(`You\\s+also\\s+gained\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience`, "i"),
       // Match: gained [number] [skill] experience from (bonus exp from armor)
-      new RegExp(`gained\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience\\s+from`, 'i'),
+      new RegExp(`gained\\s+"?${expValue}"?\\s+([a-z]+)\\s+experience\\s+from`, "i"),
     ];
 
     for (let i = 0; i < patterns.length; i++) {
@@ -132,7 +132,7 @@ const parseCombatExp = (fightLogElement: HTMLElement | null): CombatExpGain[] =>
 const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTMLElement | null): string => {
   // Try fightLogTop first - format: "You defeated {monster}." or "The {monster} died. You got"
   if (fightLogElement) {
-    const fightText = fightLogElement.textContent || '';
+    const fightText = fightLogElement.textContent || "";
 
     // Primary pattern: "You defeated {monster}."
     const defeatedPattern = /you\s+defeated\s+(.+?)(?:\.|$)/i;
@@ -140,14 +140,14 @@ const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTML
     if (defeatedMatch && defeatedMatch[1]) {
       let monster = defeatedMatch[1].trim();
       // Remove "the " prefix if present
-      monster = monster.replace(/^the\s+/i, '');
+      monster = monster.replace(/^the\s+/i, "");
       // Filter out common false positives
       if (
         monster.length > 2 &&
-        !monster.toLowerCase().includes('level') &&
-        !monster.toLowerCase().includes('exp') &&
-        !monster.toLowerCase().includes('damage') &&
-        !monster.toLowerCase().includes('you')
+        !monster.toLowerCase().includes("level") &&
+        !monster.toLowerCase().includes("exp") &&
+        !monster.toLowerCase().includes("damage") &&
+        !monster.toLowerCase().includes("you")
       ) {
         return monster;
       }
@@ -161,9 +161,9 @@ const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTML
       // Filter out common false positives
       if (
         monster.length > 2 &&
-        !monster.toLowerCase().includes('level') &&
-        !monster.toLowerCase().includes('exp') &&
-        !monster.toLowerCase().includes('damage')
+        !monster.toLowerCase().includes("level") &&
+        !monster.toLowerCase().includes("exp") &&
+        !monster.toLowerCase().includes("damage")
       ) {
         return monster;
       }
@@ -191,14 +191,14 @@ const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTML
       if (match && match[1]) {
         let monster = match[1].trim();
         // Remove "the " prefix if present
-        monster = monster.replace(/^the\s+/i, '');
+        monster = monster.replace(/^the\s+/i, "");
         // Filter out common false positives
         if (
           monster.length > 2 &&
-          !monster.toLowerCase().includes('level') &&
-          !monster.toLowerCase().includes('exp') &&
-          !monster.toLowerCase().includes('damage') &&
-          !monster.toLowerCase().includes('you')
+          !monster.toLowerCase().includes("level") &&
+          !monster.toLowerCase().includes("exp") &&
+          !monster.toLowerCase().includes("damage") &&
+          !monster.toLowerCase().includes("you")
         ) {
           return monster;
         }
@@ -209,7 +209,7 @@ const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTML
   // Try to find monster name in LocationContent as fallback
   // Format: "You are attacking a {monster} {level} at {location}."
   if (locationElement) {
-    const locationText = locationElement.textContent || '';
+    const locationText = locationElement.textContent || "";
 
     // Pattern: "You are attacking a {monster} {level} at {location}."
     // Extract monster (before the level number and "at")
@@ -218,14 +218,14 @@ const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTML
     if (attackingMatch && attackingMatch[1]) {
       let monster = attackingMatch[1].trim();
       // Remove "the " prefix if present (shouldn't be needed here, but just in case)
-      monster = monster.replace(/^the\s+/i, '');
+      monster = monster.replace(/^the\s+/i, "");
       if (monster.length > 2) {
         return monster;
       }
     }
   }
 
-  return '';
+  return "";
 };
 
 /**
@@ -234,13 +234,13 @@ const parseMonster = (locationElement: HTMLElement | null, fightLogElement: HTML
  */
 const parseLocation = (locationElement: HTMLElement | null): string => {
   if (!locationElement) {
-    return '';
+    return "";
   }
 
   // Try to find location in LocationContent
   // Format: "You are attacking a {monster} {level} at {location}."
   // Example: "You are attacking a Rima General (80) at Rima city - barracks."
-  const locationText = locationElement.textContent || '';
+  const locationText = locationElement.textContent || "";
 
   // Primary pattern: "...at {location}." - capture everything after "at" up to the period
   // This should match: "at Rima city - barracks." -> "Rima city - barracks"
@@ -250,17 +250,17 @@ const parseLocation = (locationElement: HTMLElement | null): string => {
     let location = atMatch[1].trim();
 
     // Clean up any trailing whitespace or punctuation
-    location = location.replace(/[.,;:]+$/, '').trim();
+    location = location.replace(/[.,;:]+$/, "").trim();
 
     // Filter out common false positives
     if (
       location.length > 2 &&
-      !location.toLowerCase().includes('level') &&
-      !location.toLowerCase().includes('exp') &&
-      !location.toLowerCase().includes('hp') &&
-      !location.toLowerCase().includes('fighting') &&
-      !location.toLowerCase().includes('attacking') &&
-      !location.toLowerCase().includes('you are') &&
+      !location.toLowerCase().includes("level") &&
+      !location.toLowerCase().includes("exp") &&
+      !location.toLowerCase().includes("hp") &&
+      !location.toLowerCase().includes("fighting") &&
+      !location.toLowerCase().includes("attacking") &&
+      !location.toLowerCase().includes("you are") &&
       !location.toLowerCase().includes("you're")
     ) {
       return location;
@@ -281,11 +281,11 @@ const parseLocation = (locationElement: HTMLElement | null): string => {
       // Filter out common false positives
       if (
         location.length > 2 &&
-        !location.toLowerCase().includes('level') &&
-        !location.toLowerCase().includes('exp') &&
-        !location.toLowerCase().includes('hp') &&
-        !location.toLowerCase().includes('fighting') &&
-        !location.toLowerCase().includes('attacking')
+        !location.toLowerCase().includes("level") &&
+        !location.toLowerCase().includes("exp") &&
+        !location.toLowerCase().includes("hp") &&
+        !location.toLowerCase().includes("fighting") &&
+        !location.toLowerCase().includes("attacking")
       ) {
         return location;
       }
@@ -293,15 +293,15 @@ const parseLocation = (locationElement: HTMLElement | null): string => {
   }
 
   // Try to find location in page heading or title
-  const heading = document.querySelector('h1, h2, .location, #location') as HTMLElement | null;
+  const heading = document.querySelector("h1, h2, .location, #location") as HTMLElement | null;
   if (heading) {
-    const headingText = heading.textContent || '';
+    const headingText = heading.textContent || "";
     if (headingText.trim().length > 0 && headingText.length < 100) {
       return headingText.trim();
     }
   }
 
-  return '';
+  return "";
 };
 
 /**
@@ -314,7 +314,7 @@ const parsePeopleFighting = (
 ): number | null => {
   // Check LocationContent first
   if (locationElement) {
-    const locationText = locationElement.textContent || '';
+    const locationText = locationElement.textContent || "";
     const peopleMatch = locationText.match(/there\s+are\s+(\d+)\s+people\s+fighting\s+here/i);
     if (peopleMatch && peopleMatch[1]) {
       const count = parseInt(peopleMatch[1], 10);
@@ -326,7 +326,7 @@ const parsePeopleFighting = (
 
   // Check fight log element
   if (fightLogElement) {
-    const fightText = fightLogElement.textContent || '';
+    const fightText = fightLogElement.textContent || "";
     const peopleMatch = fightText.match(/there\s+are\s+(\d+)\s+people\s+fighting\s+here/i);
     if (peopleMatch && peopleMatch[1]) {
       const count = parseInt(peopleMatch[1], 10);
@@ -344,9 +344,9 @@ const parsePeopleFighting = (
  * Collects text from all <td align="center"> elements in subsequent <tr> rows
  */
 const getAllFightText = (): string => {
-  const fightLogTopMarker = document.querySelector('#fightLogTop') as HTMLElement | null;
+  const fightLogTopMarker = document.querySelector("#fightLogTop") as HTMLElement | null;
   if (!fightLogTopMarker) {
-    return '';
+    return "";
   }
 
   // Get all following sibling <tr> elements
@@ -354,11 +354,11 @@ const getAllFightText = (): string => {
   let currentSibling = fightLogTopMarker.nextElementSibling;
 
   while (currentSibling) {
-    if (currentSibling.tagName === 'TR') {
+    if (currentSibling.tagName === "TR") {
       // Find all <td align="center"> elements in this row
       const centerCells = currentSibling.querySelectorAll('td[align="center"]');
       centerCells.forEach(cell => {
-        const text = cell.textContent?.trim() || '';
+        const text = cell.textContent?.trim() || "";
         if (text) {
           allFightText.push(text);
         }
@@ -367,7 +367,7 @@ const getAllFightText = (): string => {
     currentSibling = currentSibling.nextElementSibling;
   }
 
-  return allFightText.join(' ');
+  return allFightText.join(" ");
 };
 
 /**
@@ -405,7 +405,7 @@ const parseDamage = (): { dealt: string[]; received: string[] } => {
   const missMatches = [...fightText.matchAll(missPattern)];
 
   missMatches.forEach(() => {
-    damageDealt.push('0');
+    damageDealt.push("0");
   });
 
   // Pattern for damage received: "The [Monster] struck at you and did X damage"
@@ -432,10 +432,10 @@ const parseDrops = (fightLogElement: HTMLElement | null): string[] => {
   const drops: string[] = [];
 
   // Find all yellow font elements (drops)
-  const fontElements = fightLogElement.querySelectorAll('font[color]');
+  const fontElements = fightLogElement.querySelectorAll("font[color]");
   const yellowFontElements = Array.from(fontElements).filter(font => {
-    const color = font.getAttribute('color')?.toLowerCase();
-    return color === 'yellow';
+    const color = font.getAttribute("color")?.toLowerCase();
+    return color === "yellow";
   });
 
   // Extract drop text from yellow font elements
@@ -447,14 +447,14 @@ const parseDrops = (fightLogElement: HTMLElement | null): string[] => {
       // This allows us to track both the count of drops and their total amounts
       const cleanDrop = dropText.trim();
 
-      if (cleanDrop && !cleanDrop.toLowerCase().includes('experience')) {
+      if (cleanDrop && !cleanDrop.toLowerCase().includes("experience")) {
         drops.push(cleanDrop);
       }
     }
   });
 
   // Also check text patterns for drops (fallback)
-  const text = fightLogElement.textContent || '';
+  const text = fightLogElement.textContent || "";
   const dropPatterns = [/(?:got|received|obtained)\s+([^.!?]+?)(?:\.|$)/gi];
 
   dropPatterns.forEach(pattern => {
@@ -462,7 +462,7 @@ const parseDrops = (fightLogElement: HTMLElement | null): string[] => {
     for (const match of matches) {
       const drop = match[1]?.trim();
       // Filter out experience-related text and pure numbers
-      if (drop && !drop.toLowerCase().includes('experience') && !drop.match(/^\d+$/)) {
+      if (drop && !drop.toLowerCase().includes("experience") && !drop.match(/^\d+$/)) {
         // Check if it's not already in our drops list
         if (!drops.some(existing => existing.toLowerCase() === drop.toLowerCase())) {
           drops.push(drop);
@@ -479,7 +479,7 @@ const parseDrops = (fightLogElement: HTMLElement | null): string[] => {
  * Extracts armor pieces, weapon, stats, enchants, and image URLs
  */
 const parseEquipment = (): EquipmentData | undefined => {
-  const wearDisplayTD = document.querySelector('#wearDisplayTD') as HTMLElement | null;
+  const wearDisplayTD = document.querySelector("#wearDisplayTD") as HTMLElement | null;
   if (!wearDisplayTD) {
     return undefined;
   }
@@ -490,15 +490,15 @@ const parseEquipment = (): EquipmentData | undefined => {
 
   // Slot mapping: id -> slot name
   const slotMap: Record<string, keyof EquipmentData> = {
-    displayHelm: 'helm',
-    displayShield: 'shield',
-    displayBody: 'body',
-    displayHand: 'weapon',
-    displayLegs: 'legs',
-    displayGloves: 'gloves',
-    displayShoes: 'boots',
-    displayHorse: 'horse',
-    displayTrophy: 'trophy',
+    displayHelm: "helm",
+    displayShield: "shield",
+    displayBody: "body",
+    displayHand: "weapon",
+    displayLegs: "legs",
+    displayGloves: "gloves",
+    displayShoes: "boots",
+    displayHorse: "horse",
+    displayTrophy: "trophy",
   };
 
   // Parse each equipment slot
@@ -508,18 +508,18 @@ const parseEquipment = (): EquipmentData | undefined => {
 
     // Extract image URL from style attribute
     let imageUrl: string | undefined;
-    const style = element.getAttribute('style') || '';
+    const style = element.getAttribute("style") || "";
     const urlMatch = style.match(/url\(["']?([^"')]+)["']?\)/);
     if (urlMatch && urlMatch[1]) {
       imageUrl = urlMatch[1];
     }
 
     // Extract title (contains name and enchant/stats)
-    const title = element.getAttribute('title') || '';
+    const title = element.getAttribute("title") || "";
 
     // Extract text content (stats numbers like "40", "55", "167/160")
     // textContent property automatically excludes HTML tags, giving us just the text
-    const textContent = element.textContent?.trim() || '';
+    const textContent = element.textContent?.trim() || "";
 
     // Parse title format: "Dragon helm [4 Aim]" or "Novariet scimitar [0 Durability]"
     // Title format: "Item Name [Enchant/Stats]"
@@ -553,7 +553,7 @@ const parseEquipment = (): EquipmentData | undefined => {
         stats = statsMatch[1].trim();
       } else {
         // Fallback: extract all numbers and slashes
-        const cleanStats = textContent.replace(/[^\d/]/g, '').trim();
+        const cleanStats = textContent.replace(/[^\d/]/g, "").trim();
         if (cleanStats) {
           stats = cleanStats;
         }
@@ -575,7 +575,7 @@ const parseEquipment = (): EquipmentData | undefined => {
 
   // Calculate totals
   // Try to find totals in specific elements
-  const bodyText = document.body.textContent || '';
+  const bodyText = document.body.textContent || "";
 
   // Look for patterns like "Total Armour: 123" or "Armour: 123" or "Armour 123"
   const armourMatch = bodyText.match(/(?:total\s+)?armour[:\s]+(\d+)/i);
@@ -606,7 +606,7 @@ const parseEquipment = (): EquipmentData | undefined => {
   let totalTravelTime = 0;
 
   Object.values(equipment).forEach(item => {
-    if (item && typeof item === 'object' && 'enchant' in item && item.enchant) {
+    if (item && typeof item === "object" && "enchant" in item && item.enchant) {
       const enchant = item.enchant;
       const aimMatch = enchant.match(/(\d+)\s+Aim/i);
       const powerMatch = enchant.match(/(\d+)\s+Power/i);
@@ -629,35 +629,130 @@ const parseEquipment = (): EquipmentData | undefined => {
   return equipment;
 };
 
+/**
+ * Parse action output from skilling activities
+ * Extracts items produced from centerContent/LocationContent
+ * Phase 1: Mining, Fishing, Woodcutting, Cooking
+ */
+const parseActionOutput = (
+  locationElement: HTMLElement | null,
+  fightLogElement: HTMLElement | null,
+): Array<{ item: string; quantity: number }> => {
+  const items: Array<{ item: string; quantity: number }> = [];
+
+  // Check centerContent and LocationContent for skilling output text
+  const elements: (HTMLElement | null)[] = [
+    document.querySelector("#centerContent") as HTMLElement | null,
+    locationElement,
+  ];
+
+  for (const element of elements) {
+    if (!element) continue;
+    // Use innerText for proper line break handling (<br> → \n), so regex stops at line boundaries
+    const text = element.innerText || "";
+
+    let matched = false;
+
+    // Pattern 1: "[count] [item], you have" (Cooking, crafting — running total format)
+    // Example: "220 Cooked Salmon, you have 98 Salmon left. and 98 Wood"
+    // Must check BEFORE "You have" pattern to avoid matching the "you have 98 Salmon left" part
+    const countFirstMatch = text.match(/^(\d+) (.+?), you have/im);
+    if (countFirstMatch && countFirstMatch[1] && countFirstMatch[2]) {
+      const quantity = parseInt(countFirstMatch[1], 10);
+      const item = countFirstMatch[2].trim();
+      if (!isNaN(quantity) && quantity > 0 && item.length > 0) {
+        // Avoid duplicates (LocationContent is nested inside centerContent)
+        if (!items.some(i => i.item === item)) {
+          items.push({ item, quantity });
+        }
+        matched = true;
+      }
+    }
+
+    // Pattern 2: "You have X [item]" (Mining, Fishing, Woodcutting — simple format)
+    // Only if Pattern 1 didn't match, to avoid matching "you have 98 Salmon left" in cooking text
+    if (!matched) {
+      const haveMatch = text.match(/You have (\d+) ([^\n,.]+)/i);
+      if (haveMatch && haveMatch[1] && haveMatch[2]) {
+        const quantity = parseInt(haveMatch[1], 10);
+        const item = haveMatch[2].trim().replace(/[.!]+$/, "");
+        if (!isNaN(quantity) && quantity > 0 && item.length > 0) {
+          // Avoid duplicates (LocationContent is nested inside centerContent)
+          if (!items.some(i => i.item === item)) {
+            items.push({ item, quantity });
+          }
+        }
+      }
+    }
+
+    // Rare finds: "You found X [item]!" (any skill)
+    const foundPattern = /You found (\d+) (.+?)!/gi;
+    let foundMatch;
+    while ((foundMatch = foundPattern.exec(text)) !== null) {
+      if (foundMatch[1] && foundMatch[2]) {
+        const quantity = parseInt(foundMatch[1], 10);
+        const item = foundMatch[2].trim();
+        if (!isNaN(quantity) && quantity > 0 && item.length > 0) {
+          // Avoid duplicates
+          if (!items.some(i => i.item === item)) {
+            items.push({ item, quantity });
+          }
+        }
+      }
+    }
+  }
+
+  // Bonus items from fightLogElement (Fishing: "You also caught X [item]")
+  if (fightLogElement) {
+    // Use innerText for proper line break handling
+    const fightText = fightLogElement.innerText || "";
+    const caughtPattern = /You also caught (\d+) ([^\n.]+)/gi;
+    let caughtMatch;
+    while ((caughtMatch = caughtPattern.exec(fightText)) !== null) {
+      if (caughtMatch[1] && caughtMatch[2]) {
+        const quantity = parseInt(caughtMatch[1], 10);
+        const item = caughtMatch[2].trim().replace(/[.!]+$/, "");
+        if (!isNaN(quantity) && quantity > 0 && item.length > 0) {
+          if (!items.some(i => i.item === item)) {
+            items.push({ item, quantity });
+          }
+        }
+      }
+    }
+  }
+
+  return items;
+};
+
 export const scrapeScreenData = (): ScreenData => {
   const textContent = {
-    currentActionText: '',
-    exp: '',
-    speedText: '',
-    addExp: '',
-    skillLevel: '',
-    expForNextLevel: '',
+    currentActionText: "",
+    exp: "",
+    speedText: "",
+    addExp: "",
+    skillLevel: "",
+    expForNextLevel: "",
     inventory: {
-      hp: '',
-      farmingExp: '',
+      hp: "",
+      farmingExp: "",
     },
     combatExp: [] as CombatExpGain[],
     drops: [] as string[],
   };
 
   // const currentActionTextNode = document.body.querySelector('#centerContent')?.textContent;
-  const combatActionTextNode = document.body.querySelector('#LocationContent')?.textContent;
+  const combatActionTextNode = document.body.querySelector("#LocationContent")?.textContent;
   // const speedTextNode = document.body.querySelector('#SpeedDisplayTD')?.textContent;
 
   // Find fightLogTop - it's an empty <tr> that closes, and the actual content is in the NEXT <tr> sibling
   let addExpTextNode: HTMLElement | null = null;
-  const fightLogTopMarker = document.querySelector('#fightLogTop') as HTMLElement | null;
+  const fightLogTopMarker = document.querySelector("#fightLogTop") as HTMLElement | null;
 
   if (fightLogTopMarker) {
     // The content is in the next sibling <tr> element
     let nextSibling = fightLogTopMarker.nextElementSibling;
     while (nextSibling) {
-      if (nextSibling.tagName === 'TR') {
+      if (nextSibling.tagName === "TR") {
         addExpTextNode = nextSibling as HTMLElement;
         break;
       }
@@ -667,17 +762,17 @@ export const scrapeScreenData = (): ScreenData => {
 
   // Fallback: try finding it directly (in case structure is different)
   if (!addExpTextNode) {
-    addExpTextNode = document.querySelector('#fightLogTop') as HTMLElement | null;
+    addExpTextNode = document.querySelector("#fightLogTop") as HTMLElement | null;
   }
   if (!addExpTextNode) {
     // Try finding it in a table
-    const table = document.querySelector('table');
+    const table = document.querySelector("table");
     if (table) {
-      const marker = table.querySelector('#fightLogTop') as HTMLElement | null;
+      const marker = table.querySelector("#fightLogTop") as HTMLElement | null;
       if (marker) {
         let nextSibling = marker.nextElementSibling;
         while (nextSibling) {
-          if (nextSibling.tagName === 'TR') {
+          if (nextSibling.tagName === "TR") {
             addExpTextNode = nextSibling as HTMLElement;
             break;
           }
@@ -687,8 +782,8 @@ export const scrapeScreenData = (): ScreenData => {
     }
   }
 
-  const inventoryTextNode = document.body.querySelector('#inventoryStats')?.textContent;
-  const locationElement = document.body.querySelector('#LocationContent') as HTMLElement | null;
+  const inventoryTextNode = document.body.querySelector("#inventoryStats")?.textContent;
+  const locationElement = document.body.querySelector("#LocationContent") as HTMLElement | null;
 
   // Parse monster (always parse to detect new fights)
   const monster = parseMonster(locationElement, addExpTextNode);
@@ -708,15 +803,29 @@ export const scrapeScreenData = (): ScreenData => {
     textContent.currentActionText = skillInfo.skill;
     textContent.skillLevel = skillInfo.level;
     textContent.expForNextLevel = skillInfo.expForNextLevel;
-    // textContent.speedText = speedTextNode?.trim() || "";
 
     // Get addExp text but filter out timer text (numbers, colons, dashes in timer format)
-    let addExpText = addExpTextNode?.textContent || '';
+    let addExpText = addExpTextNode?.textContent || "";
     // Remove timer patterns (e.g., "00:05", "5s", countdown numbers)
-    addExpText = addExpText.replace(/\b[\d:]+[smh]?\b/g, '').trim();
+    addExpText = addExpText.replace(/\b[\d:]+[smh]?\b/g, "").trim();
     // Remove standalone number sequences that look like timers
-    addExpText = addExpText.replace(/^\d+[:]\d+$/gm, '').trim();
+    addExpText = addExpText.replace(/^\d+[:]\d+$/gm, "").trim();
     textContent.addExp = addExpText;
+  }
+
+  // Fallback: if #LocationContent didn't yield a skill name, try #centerContent
+  // This covers speed/travel and other skilling activities where text appears in centerContent
+  if (!textContent.currentActionText) {
+    const centerContentText = document.body.querySelector("#centerContent")?.textContent?.trim() || "";
+    if (centerContentText) {
+      const skillInfo = matchText(centerContentText);
+      if (skillInfo.skill) {
+        textContent.exp = skillInfo.exp;
+        textContent.currentActionText = skillInfo.skill;
+        textContent.skillLevel = skillInfo.level;
+        textContent.expForNextLevel = skillInfo.expForNextLevel;
+      }
+    }
   }
 
   // Parse inventory stats
@@ -745,7 +854,7 @@ export const scrapeScreenData = (): ScreenData => {
   // Check for skill level information pattern: "Skill level: 132 (28080364 exp, 86538 for next level)"
   // This pattern indicates a fight has ended and skill info is displayed
   // Pattern allows any skill name, level number, exp values, and exp for next level
-  let fightText = '';
+  let fightText = "";
   let hasSkillLevelInfo = false;
 
   // Regex pattern to match: "Skill level: number (number exp, number for next level)"
@@ -754,18 +863,27 @@ export const scrapeScreenData = (): ScreenData => {
   if (addExpTextNode) {
     textContent.combatExp = parseCombatExp(addExpTextNode);
     textContent.drops = parseDrops(addExpTextNode);
-    fightText = addExpTextNode.textContent || '';
+    fightText = addExpTextNode.textContent || "";
     hasSkillLevelInfo = skillLevelPattern.test(fightText);
+  }
+
+  // Fallback: if #LocationContent didn't yield a skill name, derive it from combat exp gains
+  if (!textContent.currentActionText && textContent.combatExp.length > 0) {
+    const primary = textContent.combatExp[0];
+    textContent.currentActionText = primary.skill;
+    if (primary.skillLevel) textContent.skillLevel = primary.skillLevel;
+    if (primary.totalExp) textContent.exp = primary.totalExp;
+    if (primary.expForNextLevel) textContent.expForNextLevel = primary.expForNextLevel;
   }
 
   // Also check all fight log rows for skill level info (in case addExpTextNode doesn't contain it)
   if (!hasSkillLevelInfo) {
-    const fightLogTopMarker = document.querySelector('#fightLogTop') as HTMLElement | null;
+    const fightLogTopMarker = document.querySelector("#fightLogTop") as HTMLElement | null;
     if (fightLogTopMarker) {
       let currentSibling: Element | null = fightLogTopMarker.nextElementSibling;
       while (currentSibling) {
-        if (currentSibling.tagName === 'TR') {
-          const siblingText = currentSibling.textContent || '';
+        if (currentSibling.tagName === "TR") {
+          const siblingText = currentSibling.textContent || "";
           if (skillLevelPattern.test(siblingText)) {
             fightText = siblingText;
             hasSkillLevelInfo = true;
@@ -808,6 +926,24 @@ export const scrapeScreenData = (): ScreenData => {
     }
   }
 
+  // Parse action output from skilling activities
+  const actionOutput = parseActionOutput(locationElement, addExpTextNode);
+
+  // Determine action type
+  // Combat skills that appear in combatExp: Attack, Defence, Strength, Health
+  const combatSkills = new Set(["Attack", "Defence", "Strength", "Health"]);
+  let actionType: "combat" | "skilling" | undefined;
+  if (monster) {
+    actionType = "combat";
+  } else if (textContent.combatExp.length > 0) {
+    actionType = "combat";
+  } else if (actionOutput.length > 0) {
+    actionType = "skilling";
+  } else if (textContent.currentActionText && !combatSkills.has(textContent.currentActionText)) {
+    // Non-combat skill detected (Speed, Mining, Fishing, etc.) without items — still skilling
+    actionType = "skilling";
+  }
+
   // Get all visible images
   // const equipment = document.body.querySelector("#wearDisplayTD");
 
@@ -825,5 +961,7 @@ export const scrapeScreenData = (): ScreenData => {
     totalInventoryHP: totalInventoryHP,
     hpUsed: hpUsed,
     equipment: equipment,
+    actionType: actionType,
+    actionOutput: actionOutput,
   };
 };

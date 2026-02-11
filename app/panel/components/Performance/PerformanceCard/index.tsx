@@ -1,8 +1,8 @@
-import { usePerformanceCard } from './usePerformanceCard';
-import { StatTable } from '../StatTable';
-import { Card, CardContent, CardHeader, CardTitle } from '@app/components';
-import { memo } from 'react';
-import type { StatRow } from '../StatTable';
+import { usePerformanceCard } from "./usePerformanceCard";
+import { StatTable } from "../StatTable";
+import { Card, CardContent, CardHeader, CardTitle } from "@app/components";
+import { memo } from "react";
+import type { StatRow } from "../StatTable";
 
 interface PerformanceCardProps {
   title: string;
@@ -29,6 +29,6 @@ const PerformanceCard = memo(({ title, rows, className }: PerformanceCardProps) 
   );
 });
 
-PerformanceCard.displayName = 'PerformanceCard';
+PerformanceCard.displayName = "PerformanceCard";
 
 export { PerformanceCard };

@@ -1,4 +1,4 @@
-import type { StatRow } from './StatTable';
+import type { StatRow } from "./StatTable";
 
 /**
  * Helper functions for building stat rows
@@ -33,7 +33,7 @@ export const createNumberStatRow = (
 ): StatRow => {
   const safeValue = value ?? 0;
   const format = (val: number | string) => {
-    if (typeof val === 'number') {
+    if (typeof val === "number") {
       if (val > 0) {
         if (options?.round) {
           return Math.round(val).toLocaleString();
@@ -43,9 +43,9 @@ export const createNumberStatRow = (
         }
         return val.toLocaleString();
       }
-      return '—';
+      return "—";
     }
-    return val || '—';
+    return val || "—";
   };
 
   return createStatRow(label, safeValue, {
@@ -64,7 +64,7 @@ export const createDamageStatRow = (
   },
 ): StatRow => {
   const safeValue = value ?? 0;
-  const className = safeValue > 0 ? 'text-red-500' : 'text-foreground';
+  const className = safeValue > 0 ? "text-red-500" : "text-foreground";
 
   return createNumberStatRow(label, safeValue, {
     round: options?.round,

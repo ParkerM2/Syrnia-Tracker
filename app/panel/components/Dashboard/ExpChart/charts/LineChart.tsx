@@ -1,10 +1,10 @@
-import { SKILL_COLORS } from '../constants';
-import { formatChartDate, formatTooltipDate } from '../utils';
-import { ChartTooltip, ChartTooltipContent } from '@app/components';
-import { memo } from 'react';
-import { Area, CartesianGrid, XAxis, YAxis, Line, ComposedChart } from 'recharts';
-import type { ChartDataPoint, TimeFrame } from '../types';
-import type { ChartConfig } from '@app/components';
+import { formatChartDate, formatTooltipDate } from "../utils";
+import { ChartTooltip, ChartTooltipContent } from "@app/components";
+import { SKILL_COLORS } from "@app/constants";
+import { memo } from "react";
+import { Area, CartesianGrid, XAxis, YAxis, Line, ComposedChart } from "recharts";
+import type { ChartConfig } from "@app/components";
+import type { ChartDataPoint, TimeFrame } from "@app/types";
 
 interface LineChartProps {
   chartData: ChartDataPoint[];
@@ -29,11 +29,11 @@ const LineChart = memo(({ chartData, chartConfig, skills, timeFrame }: LineChart
       {skills.map((skill, index) => {
         const skillConfig = chartConfig[skill];
         const color =
-          typeof skillConfig === 'object' && 'color' in skillConfig
+          typeof skillConfig === "object" && "color" in skillConfig
             ? skillConfig.color
             : SKILL_COLORS[index % SKILL_COLORS.length];
 
-        const gradientId = `gradient-${skill.replace(/\s+/g, '-')}`;
+        const gradientId = `gradient-${skill.replace(/\s+/g, "-")}`;
 
         // Gradient: lighter at top (higher opacity), darker at bottom (lower opacity)
         // Matching screenshot style with teal/cyan theme
@@ -46,7 +46,7 @@ const LineChart = memo(({ chartData, chartConfig, skills, timeFrame }: LineChart
         );
       })}
     </defs>
-    <CartesianGrid vertical={false} stroke="hsl(var(--border))" opacity={0.3} />
+    <CartesianGrid vertical={false} stroke="var(--border)" opacity={0.3} />
     <XAxis
       dataKey="date"
       tickLine={false}
@@ -61,10 +61,10 @@ const LineChart = memo(({ chartData, chartConfig, skills, timeFrame }: LineChart
     {skills.map((skill, index) => {
       const skillConfig = chartConfig[skill];
       const color =
-        typeof skillConfig === 'object' && 'color' in skillConfig
+        typeof skillConfig === "object" && "color" in skillConfig
           ? skillConfig.color
           : SKILL_COLORS[index % SKILL_COLORS.length];
-      const gradientId = `gradient-${skill.replace(/\s+/g, '-')}`;
+      const gradientId = `gradient-${skill.replace(/\s+/g, "-")}`;
       return (
         <g key={skill}>
           <Area dataKey={skill} type="monotone" fill={`url(#${gradientId})`} fillOpacity={1} stroke="none" />
@@ -83,6 +83,6 @@ const LineChart = memo(({ chartData, chartConfig, skills, timeFrame }: LineChart
   </ComposedChart>
 ));
 
-LineChart.displayName = 'LineChart';
+LineChart.displayName = "LineChart";
 
 export { LineChart };

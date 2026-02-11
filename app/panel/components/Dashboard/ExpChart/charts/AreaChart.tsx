@@ -1,9 +1,9 @@
-import { formatChartDate, formatTooltipDate } from '../utils';
-import { ChartTooltip, ChartTooltipContent } from '@app/components';
-import { memo } from 'react';
-import { Area, AreaChart as RechartsAreaChart, CartesianGrid, XAxis } from 'recharts';
-import type { ChartDataPoint, TimeFrame } from '../types';
-import type { ChartConfig } from '@app/components';
+import { formatChartDate, formatTooltipDate } from "../utils";
+import { ChartTooltip, ChartTooltipContent } from "@app/components";
+import { memo } from "react";
+import { Area, AreaChart as RechartsAreaChart, CartesianGrid, XAxis } from "recharts";
+import type { ChartConfig } from "@app/components";
+import type { ChartDataPoint, TimeFrame } from "@app/types";
 
 interface AreaChartProps {
   chartData: ChartDataPoint[];
@@ -27,10 +27,9 @@ const AreaChart = memo(({ chartData, chartConfig, skills, timeFrame }: AreaChart
     <defs>
       {skills.map(skill => {
         const skillConfig = chartConfig[skill];
-        const color =
-          typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
+        const color = typeof skillConfig === "object" && "color" in skillConfig ? skillConfig.color : "var(--primary)";
 
-        const gradientId = `gradient-${skill.replace(/\s+/g, '-')}`;
+        const gradientId = `gradient-${skill.replace(/\s+/g, "-")}`;
 
         return (
           <linearGradient key={gradientId} id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -40,7 +39,7 @@ const AreaChart = memo(({ chartData, chartConfig, skills, timeFrame }: AreaChart
         );
       })}
     </defs>
-    <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+    <CartesianGrid vertical={false} stroke="var(--border)" />
     <XAxis
       dataKey="date"
       tickLine={false}
@@ -53,9 +52,8 @@ const AreaChart = memo(({ chartData, chartConfig, skills, timeFrame }: AreaChart
     <ChartTooltip content={<ChartTooltipContent labelFormatter={value => formatTooltipDate(value, timeFrame)} />} />
     {skills.map(skill => {
       const skillConfig = chartConfig[skill];
-      const color =
-        typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
-      const gradientId = `gradient-${skill.replace(/\s+/g, '-')}`;
+      const color = typeof skillConfig === "object" && "color" in skillConfig ? skillConfig.color : "var(--primary)";
+      const gradientId = `gradient-${skill.replace(/\s+/g, "-")}`;
 
       return (
         <Area
@@ -72,6 +70,6 @@ const AreaChart = memo(({ chartData, chartConfig, skills, timeFrame }: AreaChart
   </RechartsAreaChart>
 ));
 
-AreaChart.displayName = 'AreaChart';
+AreaChart.displayName = "AreaChart";
 
 export { AreaChart };

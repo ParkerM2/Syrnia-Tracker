@@ -1,166 +1,118 @@
-import { formatHumanDate } from '../helpers/lootHelpers';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@app/components';
-import React, { memo, useState, useMemo } from 'react';
-import type { LootEntry, LootGroup } from '../useLootMap';
+import { formatTimestamp } from "../helpers/lootHelpers";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, ItemImage } from "@app/components";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { memo, useState } from "react";
+import type { LootEntry, TimeFilterOption } from "../useLootMap";
+import type { SortingState } from "@tanstack/react-table";
 
-/**
- * Loot table row component
- */
-const LootTableRow = memo(({ entry, index, zoomLevel }: { entry: LootEntry; index: number; zoomLevel: number }) => {
-  const [imageError, setImageError] = useState(false);
+const columnHelper = createColumnHelper<LootEntry>();
 
-  // Calculate sizes based on zoom level (1-20)
-  // zoomLevel 1 = smallest (compact for small screens), zoomLevel 20 = largest
-  // More dramatic scaling for better small-width viewing
-  const imageSize = useMemo(
-    () => 4 + Math.round((zoomLevel / 20) * 12), // 4px to 16px
-    [zoomLevel],
-  );
-
-  const fontSize = useMemo(
-    () => 8 + Math.round((zoomLevel / 20) * 8), // 8px to 16px
-    [zoomLevel],
-  );
-
-  const cellPadding = useMemo(
-    () => 4 + Math.round((zoomLevel / 20) * 8), // 4px to 12px
-    [zoomLevel],
-  );
-
-  return (
-    <TableRow key={`${entry.timestamp}-${entry.name}-${index}`}>
-      <TableCell style={{ fontSize: `${fontSize}px`, padding: `${cellPadding}px` }}>
-        {formatHumanDate(entry.timestamp)}
-      </TableCell>
-      <TableCell style={{ padding: `${cellPadding}px` }}>
-        {!imageError ? (
-          <img
-            src={entry.imageUrl}
-            alt={entry.name}
-            className="object-contain"
-            style={{ width: `${imageSize}px`, height: `${imageSize}px` }}
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <div
-            className="flex items-center justify-center rounded bg-muted"
-            style={{ width: `${imageSize}px`, height: `${imageSize}px` }}>
-            <span className="truncate font-medium" style={{ fontSize: `${Math.max(6, fontSize - 2)}px` }}>
-              {entry.name}
-            </span>
-          </div>
-        )}
-      </TableCell>
-      <TableCell style={{ fontSize: `${fontSize}px`, padding: `${cellPadding}px` }}>{entry.name}</TableCell>
-      <TableCell className="text-right" style={{ fontSize: `${fontSize}px`, padding: `${cellPadding}px` }}>
-        {entry.valuePerItem.toLocaleString(undefined, {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        })}{' '}
-        GP
-      </TableCell>
-      <TableCell className="text-right" style={{ fontSize: `${fontSize}px`, padding: `${cellPadding}px` }}>
-        {entry.quantity}x
-      </TableCell>
-      <TableCell
-        className="text-right font-semibold text-green-500"
-        style={{ fontSize: `${fontSize}px`, padding: `${cellPadding}px` }}>
-        +
-        {entry.totalValue.toLocaleString(undefined, {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        })}{' '}
-        GP
-      </TableCell>
-      <TableCell style={{ fontSize: `${fontSize}px`, padding: `${cellPadding}px` }}>{entry.location}</TableCell>
-      <TableCell style={{ fontSize: `${fontSize}px`, padding: `${cellPadding}px` }}>{entry.monster}</TableCell>
-    </TableRow>
-  );
-});
-
-LootTableRow.displayName = 'LootTableRow';
+const buildColumns = (timeFilter: TimeFilterOption) => [
+  columnHelper.accessor("timestamp", {
+    header: "Time",
+    cell: info => formatTimestamp(info.getValue(), timeFilter),
+    sortingFn: "datetime",
+  }),
+  columnHelper.display({
+    id: "image",
+    header: "Item",
+    enableSorting: false,
+    cell: ({ row }) => (
+      <ItemImage
+        src={row.original.imageUrl}
+        name={row.original.name}
+        quantity={row.original.quantity}
+        className="h-8 w-8"
+      />
+    ),
+  }),
+  columnHelper.accessor("name", {
+    header: "Name",
+    cell: info => (
+      <span className="block max-w-[120px] truncate" title={info.getValue()}>
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  columnHelper.accessor("totalValue", {
+    header: "Value",
+    cell: info =>
+      `${info.getValue().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} GP`,
+    meta: { align: "right" },
+  }),
+  columnHelper.accessor("source", {
+    header: "Source",
+    cell: info => (info.getValue() === "produced" ? "Produced" : "Drop"),
+  }),
+];
 
 interface LootTableProps {
-  sortedAndGroupedLoot: LootGroup[];
   filteredLootEntries: LootEntry[];
+  timeFilter: TimeFilterOption;
   zoomLevel: number;
 }
 
-/**
- * Loot Table Component
- * Pure JSX component - displays the loot table with grouping headers
- */
-const LootTable = memo(({ sortedAndGroupedLoot, zoomLevel }: LootTableProps) => {
-  // Calculate sizes based on zoom level (1-20)
-  // More dramatic scaling for better small-width viewing
-  const headerFontSize = useMemo(
-    () => 9 + Math.round((zoomLevel / 20) * 9), // 9px to 18px
-    [zoomLevel],
-  );
+const LootTable = memo(({ filteredLootEntries, timeFilter }: LootTableProps) => {
+  const [sorting, setSorting] = useState<SortingState>([{ id: "timestamp", desc: true }]);
 
-  const headerPadding = useMemo(
-    () => 4 + Math.round((zoomLevel / 20) * 8), // 4px to 12px
-    [zoomLevel],
-  );
+  const columns = buildColumns(timeFilter);
 
-  const groupHeaderPadding = useMemo(
-    () => 6 + Math.round((zoomLevel / 20) * 6), // 6px to 12px
-    [zoomLevel],
-  );
+  const table = useReactTable({
+    data: filteredLootEntries,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
-  if (sortedAndGroupedLoot.length === 0 || sortedAndGroupedLoot.every(group => group.entries.length === 0)) {
-    return null;
-  }
+  if (filteredLootEntries.length === 0) return null;
 
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>Timestamp</TableHead>
-            <TableHead style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>Image</TableHead>
-            <TableHead style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>Name</TableHead>
-            <TableHead
-              className="text-right"
-              style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>
-              Value per Item
-            </TableHead>
-            <TableHead
-              className="text-right"
-              style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>
-              Quantity
-            </TableHead>
-            <TableHead
-              className="text-right"
-              style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>
-              Drop Value
-            </TableHead>
-            <TableHead style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>Location</TableHead>
-            <TableHead style={{ fontSize: `${headerFontSize}px`, padding: `${headerPadding}px` }}>Monster</TableHead>
-          </TableRow>
+          {table.getHeaderGroups().map(headerGroup => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map(header => {
+                const align = (header.column.columnDef.meta as { align?: string } | undefined)?.align;
+                const canSort = header.column.getCanSort();
+                const sorted = header.column.getIsSorted();
+
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={`${align === "right" ? "text-right" : ""} ${canSort ? "cursor-pointer select-none" : ""}`}
+                    onClick={header.column.getToggleSortingHandler()}>
+                    <span className="inline-flex items-center gap-1">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {sorted === "asc" && <span aria-hidden="true">&uarr;</span>}
+                      {sorted === "desc" && <span aria-hidden="true">&darr;</span>}
+                    </span>
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
         </TableHeader>
         <TableBody>
-          {sortedAndGroupedLoot.map((group, groupIndex) => (
-            <React.Fragment key={groupIndex}>
-              {group.header && (
-                <TableRow className="bg-muted/50">
-                  <TableCell
-                    colSpan={8}
-                    className="font-bold"
-                    style={{ fontSize: `${headerFontSize}px`, padding: `${groupHeaderPadding}px` }}>
-                    {group.header}
+          {table.getRowModel().rows.map(row => (
+            <TableRow key={row.id}>
+              {row.getVisibleCells().map(cell => {
+                const align = (cell.column.columnDef.meta as { align?: string } | undefined)?.align;
+                return (
+                  <TableCell key={cell.id} className={`py-1 ${align === "right" ? "text-right" : ""}`}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
-                </TableRow>
-              )}
-              {group.entries.map((entry, entryIndex) => (
-                <LootTableRow
-                  key={`${entry.timestamp}-${entry.name}-${entryIndex}`}
-                  entry={entry}
-                  index={entryIndex}
-                  zoomLevel={zoomLevel}
-                />
-              ))}
-            </React.Fragment>
+                );
+              })}
+            </TableRow>
           ))}
         </TableBody>
       </Table>
@@ -168,6 +120,6 @@ const LootTable = memo(({ sortedAndGroupedLoot, zoomLevel }: LootTableProps) => 
   );
 });
 
-LootTable.displayName = 'LootTable';
+LootTable.displayName = "LootTable";
 
 export default LootTable;

@@ -1,9 +1,9 @@
-import { createStorage } from './base';
-import { StorageEnum } from './enums';
-import type { CustomTheme, CustomThemesStateType, CustomThemesStorageType } from './types';
+import { createStorage } from "./base";
+import { StorageEnum } from "./enums";
+import type { CustomTheme, CustomThemesStateType, CustomThemesStorageType } from "./types";
 
 const storage = createStorage<CustomThemesStateType>(
-  'custom-themes-storage-key',
+  "custom-themes-storage-key",
   { themes: [] },
   {
     storageEnum: StorageEnum.Local,
@@ -19,7 +19,7 @@ export const customThemesStorage: CustomThemesStorageType = {
       themes: [...state.themes, theme],
     }));
   },
-  updateTheme: async (id: string, updates: Partial<Pick<CustomTheme, 'name' | 'variables'>>) => {
+  updateTheme: async (id: string, updates: Partial<Pick<CustomTheme, "name" | "variables">>) => {
     await storage.set(state => ({
       ...state,
       themes: state.themes.map(t => (t.id === id ? { ...t, ...updates } : t)),

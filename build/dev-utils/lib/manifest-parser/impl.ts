@@ -1,4 +1,4 @@
-import type { IManifestParser } from './types';
+import type { IManifestParser } from "./types";
 
 type ManifestType = chrome.runtime.ManifestV3;
 
@@ -10,7 +10,7 @@ const convertToFirefoxCompatibleManifest = (manifest: ManifestType) => {
   if (manifest.background?.service_worker) {
     manifestCopy.background = {
       scripts: [manifest.background.service_worker],
-      type: 'module',
+      type: "module",
     };
   }
   if (manifest.options_page) {
@@ -22,7 +22,7 @@ const convertToFirefoxCompatibleManifest = (manifest: ManifestType) => {
   manifestCopy.content_security_policy = {
     extension_pages: "script-src 'self'; object-src 'self'",
   };
-  manifestCopy.permissions = (manifestCopy.permissions as string[]).filter(value => value !== 'sidePanel');
+  manifestCopy.permissions = (manifestCopy.permissions as string[]).filter(value => value !== "sidePanel");
 
   delete manifestCopy.options_page;
   delete manifestCopy.side_panel;

@@ -1,16 +1,16 @@
-import { ManifestParser } from '../dev-utils/lib/manifest-parser';
-import { IS_DEV, IS_FIREFOX } from '../env';
-import { colorfulLog } from '../../app/utils/colorful-logger';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { platform } from 'node:process';
-import { pathToFileURL } from 'node:url';
-import type { PluginOption } from 'vite';
+import { ManifestParser } from "../dev-utils/lib/manifest-parser";
+import { IS_DEV, IS_FIREFOX } from "../env";
+import { colorfulLog } from "../../app/utils/colorful-logger";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { platform } from "node:process";
+import { pathToFileURL } from "node:url";
+import type { PluginOption } from "vite";
 
 type ManifestType = chrome.runtime.ManifestV3;
 
-const manifestFile = resolve(import.meta.dirname, '..', '..', 'manifest.js');
-const refreshFilePath = resolve(import.meta.dirname, '..', 'hmr', 'dist', 'lib', 'injections', 'refresh.js');
+const manifestFile = resolve(import.meta.dirname, "..", "..", "manifest.js");
+const refreshFilePath = resolve(import.meta.dirname, "..", "hmr", "dist", "lib", "injections", "refresh.js");
 
 const withHMRId = (code: string) => `(function() {let __HMR_ID = 'chrome-extension-hmr';${code}\n})();`;
 
@@ -21,7 +21,7 @@ const getManifestWithCacheBurst = async () => {
    * In Windows, import() doesn't work without file:// protocol.
    * So, we need to convert path to file:// protocol. (url.pathToFileURL)
    */
-  if (platform === 'win32') {
+  if (platform === "win32") {
     return (await import(withCacheBurst(pathToFileURL(manifestFile).href))).default;
   } else {
     return (await import(withCacheBurst(manifestFile))).default;
@@ -31,8 +31,8 @@ const getManifestWithCacheBurst = async () => {
 const addRefreshContentScript = (manifest: ManifestType) => {
   manifest.content_scripts = manifest.content_scripts || [];
   manifest.content_scripts.push({
-    matches: ['http://*/*', 'https://*/*', '<all_urls>'],
-    js: ['refresh.js'], // for public's HMR(refresh) support
+    matches: ["http://*/*", "https://*/*", "<all_urls>"],
+    js: ["refresh.js"], // for public's HMR(refresh) support
   });
 };
 
@@ -42,7 +42,7 @@ export default (config: { outDir: string }): PluginOption => {
       mkdirSync(to);
     }
 
-    const manifestPath = resolve(to, 'manifest.json');
+    const manifestPath = resolve(to, "manifest.json");
 
     if (IS_DEV) {
       addRefreshContentScript(manifest);
@@ -50,17 +50,17 @@ export default (config: { outDir: string }): PluginOption => {
 
     writeFileSync(manifestPath, ManifestParser.convertManifestToString(manifest, IS_FIREFOX));
 
-    const refreshFileString = readFileSync(refreshFilePath, 'utf-8');
+    const refreshFileString = readFileSync(refreshFilePath, "utf-8");
 
     if (IS_DEV) {
-      writeFileSync(resolve(to, 'refresh.js'), withHMRId(refreshFileString));
+      writeFileSync(resolve(to, "refresh.js"), withHMRId(refreshFileString));
     }
 
-    colorfulLog(`Manifest file copy complete: ${manifestPath}`, 'success');
+    colorfulLog(`Manifest file copy complete: ${manifestPath}`, "success");
   };
 
   return {
-    name: 'make-manifest',
+    name: "make-manifest",
     buildStart() {
       this.addWatchFile(manifestFile);
     },

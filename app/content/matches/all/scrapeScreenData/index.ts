@@ -1,3 +1,3 @@
-import { scrapeScreenData } from '../../../scrapeScreenData';
+import { scrapeScreenData } from "../../../scrapeScreenData";
 
 void scrapeScreenData();

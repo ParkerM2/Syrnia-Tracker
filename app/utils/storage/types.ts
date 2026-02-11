@@ -1,4 +1,4 @@
-import type { StorageEnum } from './enums';
+import type { StorageEnum } from "./enums";
 
 export type ValueOrUpdateType<D> = D | ((prev: D) => Promise<D> | D);
 
@@ -46,7 +46,7 @@ export type StorageConfigType<D = string> = {
 };
 
 export interface ThemeStateType {
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
   isLight: boolean;
   themeName: string; // Theme name like 'default', 'perpetuity', etc.
 }
@@ -63,6 +63,7 @@ export interface CustomTheme {
   variables: {
     light: Record<string, string>;
     dark: Record<string, string>;
+    imports?: string[];
   };
 }
 
@@ -72,6 +73,6 @@ export interface CustomThemesStateType {
 
 export type CustomThemesStorageType = BaseStorageType<CustomThemesStateType> & {
   addTheme: (theme: CustomTheme) => Promise<void>;
-  updateTheme: (id: string, updates: Partial<Pick<CustomTheme, 'name' | 'variables'>>) => Promise<void>;
+  updateTheme: (id: string, updates: Partial<Pick<CustomTheme, "name" | "variables">>) => Promise<void>;
   deleteTheme: (id: string) => Promise<void>;
 };

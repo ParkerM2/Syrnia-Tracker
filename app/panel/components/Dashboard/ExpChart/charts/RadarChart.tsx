@@ -1,8 +1,8 @@
-import { ChartTooltip, ChartTooltipContent } from '@app/components';
-import { memo, useMemo } from 'react';
-import { Radar, RadarChart as RechartsRadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
-import type { ChartDataPoint, TimeFrame } from '../types';
-import type { ChartConfig } from '@app/components';
+import { ChartTooltip, ChartTooltipContent } from "@app/components";
+import { memo, useMemo } from "react";
+import { Radar, RadarChart as RechartsRadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+import type { ChartConfig } from "@app/components";
+import type { ChartDataPoint, TimeFrame } from "@app/types";
 
 interface RadarChartProps {
   chartData: ChartDataPoint[];
@@ -44,8 +44,8 @@ const RadarChart = memo(({ chartData, chartConfig, skills, timeFrame, userStats 
 
         // For short timeframes, always use tracked data (accumulated gains)
         // For longer timeframes, fallback to gainedThisWeek if no tracked data
-        if (exp === 0 && (timeFrame === '7d' || timeFrame === '30d') && userStats?.skills?.[skill]?.gainedThisWeek) {
-          const weeklyExp = parseInt(userStats.skills[skill].gainedThisWeek?.replace(/,/g, '') || '0', 10);
+        if (exp === 0 && (timeFrame === "7d" || timeFrame === "30d") && userStats?.skills?.[skill]?.gainedThisWeek) {
+          const weeklyExp = parseInt(userStats.skills[skill].gainedThisWeek?.replace(/,/g, "") || "0", 10);
           exp = isNaN(weeklyExp) ? 0 : weeklyExp;
         }
 
@@ -62,19 +62,19 @@ const RadarChart = memo(({ chartData, chartConfig, skills, timeFrame, userStats 
 
   // Use a single color for the radar polygon
   const primaryColor = useMemo(() => {
-    if (allSkillsFromStats.length === 0) return 'hsl(var(--primary))';
+    if (allSkillsFromStats.length === 0) return "var(--primary)";
     const skillConfig = chartConfig[allSkillsFromStats[0]];
-    return typeof skillConfig === 'object' && 'color' in skillConfig ? skillConfig.color : 'hsl(var(--primary))';
+    return typeof skillConfig === "object" && "color" in skillConfig ? skillConfig.color : "var(--primary)";
   }, [allSkillsFromStats, chartConfig]);
 
   return (
     <RechartsRadarChart data={radarData} {...commonProps}>
-      <PolarGrid stroke="hsl(var(--border))" />
-      <PolarAngleAxis dataKey="subject" tick={{ className: 'text-xs fill-muted-foreground' }} />
+      <PolarGrid stroke="var(--border)" />
+      <PolarAngleAxis dataKey="subject" tick={{ className: "text-xs fill-muted-foreground" }} />
       <PolarRadiusAxis
         angle={90}
         domain={[0, maxValue]}
-        tick={{ className: 'text-xs fill-muted-foreground' }}
+        tick={{ className: "text-xs fill-muted-foreground" }}
         tickFormatter={value => value.toLocaleString()}
       />
       <ChartTooltip content={<ChartTooltipContent />} />
@@ -83,6 +83,6 @@ const RadarChart = memo(({ chartData, chartConfig, skills, timeFrame, userStats 
   );
 });
 
-RadarChart.displayName = 'RadarChart';
+RadarChart.displayName = "RadarChart";
 
 export { RadarChart };

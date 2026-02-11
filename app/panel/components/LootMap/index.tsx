@@ -1,12 +1,11 @@
-import LootGrid from './LootGrid';
-import LootTable from './LootTable';
-import { useLootMap } from './useLootMap';
-import { GridViewIcon, SettingsIcon, TableViewIcon, ZoomInIcon, ZoomOutIcon } from '@app/assets/icons';
+import LootGrid from "./LootGrid";
+import LootTable from "./LootTable";
+import { useLootMap } from "./useLootMap";
+import { FilterIcon, GridViewIcon, SettingsIcon, TableViewIcon, ZoomInIcon, ZoomOutIcon } from "@app/assets/icons";
 import {
   cn,
   Card,
   CardContent,
-  Input,
   Button,
   Dialog,
   DialogContent,
@@ -17,23 +16,31 @@ import {
   IconButton,
   CardFooter,
   CardDescription,
-} from '@app/components';
-import { memo, useState } from 'react';
-import type { TimeFilterOption, SortOption } from './useLootMap';
+  Input,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Select,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@app/components";
+import { memo, useState } from "react";
+import type { TimeFilterOption, SortOption, SourceFilterOption } from "./useLootMap";
 
-type ViewMode = 'table' | 'grid';
+type ViewMode = "table" | "grid";
 
 /**
  * LootMap Component
  * Pure JSX component - all logic is in useLootMap hook
  */
 const LootMap = memo(() => {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [zoomLevel, setZoomLevel] = useState(18); // Default zoom level (18 = ~3 columns base, range 1-20)
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [zoomLevel, setZoomLevel] = useState(8);
   const {
     loading,
-    searchQuery,
-    setSearchQuery,
+    sourceFilter,
+    setSourceFilter,
     filterMonster,
     setFilterMonster,
     filterLocation,
@@ -58,70 +65,117 @@ const LootMap = memo(() => {
   } = useLootMap();
 
   if (loading) {
-    return <div className={cn('p-4 text-lg font-semibold')}>Loading tracked data...</div>;
+    return <div className={cn("p-4 text-lg font-semibold")}>Loading tracked data...</div>;
   }
 
   return (
-    <div className={cn('flex flex-col gap-4')}>
-      {/* Search and Filter Controls */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1">
-              <Input
-                placeholder="Search by item name, location, or monster..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full"
+    <div className={cn("flex min-h-full min-w-full flex-col gap-4")}>
+      {/* Header Bar */}
+      <div className="flex flex-row items-center gap-4">
+        {/* Center: Time period tabs */}
+        <div className="flex flex-1 justify-center">
+          <Tabs value={timeFilter} onValueChange={v => setTimeFilter(v as TimeFilterOption)}>
+            <TabsList>
+              <TabsTrigger value="none">All</TabsTrigger>
+              <TabsTrigger value="hour">Hour</TabsTrigger>
+              <TabsTrigger value="day">Day</TabsTrigger>
+              <TabsTrigger value="month">Month</TabsTrigger>
+              <TabsTrigger value="year">Year</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Content */}
+      {sortedAndGroupedLoot.length === 0 || sortedAndGroupedLoot.every(group => group.entries.length === 0) ? (
+        <Card>
+          <CardContent className="p-8 text-center">No loot found.</CardContent>
+        </Card>
+      ) : (
+        <Card className="p-2">
+          <div className="flex w-full items-center justify-between gap-1">
+            <div className="flex flex-row items-center justify-start gap-2">
+              <IconButton
+                onClick={() => setViewMode("table")}
+                variant={viewMode === "table" ? "default" : "outline"}
+                size="icon"
+                label="Table View"
+                className={cn(
+                  "flex-shrink-0",
+                  viewMode === "table" ? "hover:bg-accent/80 bg-accent text-accent-foreground" : "",
+                )}
+                Icon={TableViewIcon}
               />
+              <IconButton
+                onClick={() => setViewMode("grid")}
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="icon"
+                label="Grid View"
+                className={cn(
+                  "flex-shrink-0",
+                  viewMode === "grid" ? "hover:bg-accent/80 bg-accent text-accent-foreground" : "",
+                )}
+                Icon={GridViewIcon}
+              />
+              <span className="text-sm font-medium text-foreground">
+                {viewMode === "table" ? "Table View" : "Grid View"}
+              </span>
             </div>
-            <div className="flex min-w-0 flex-wrap gap-2">
-              <select
-                value={filterMonster}
-                onChange={e => setFilterMonster(e.target.value)}
-                className={cn(
-                  'flex h-10 min-w-[120px] max-w-[150px] flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[hsl(var(--secondary))]',
-                )}>
-                <option value="none">All Monsters</option>
-                {uniqueMonsters.map(monster => (
-                  <option key={monster} value={monster}>
-                    {monster}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filterLocation}
-                onChange={e => setFilterLocation(e.target.value)}
-                className={cn(
-                  'flex h-10 min-w-[120px] max-w-[150px] flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[hsl(var(--secondary))]',
-                )}>
-                <option value="none">All Locations</option>
-                {uniqueLocations.map(location => (
-                  <option key={location} value={location}>
-                    {location}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={timeFilter}
-                onChange={e => setTimeFilter(e.target.value as TimeFilterOption)}
-                className={cn(
-                  'flex h-10 min-w-[120px] max-w-[150px] flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[hsl(var(--secondary))]',
-                )}>
-                <option value="none">All Time</option>
-                <option value="day">By Day</option>
-                <option value="week">By Week</option>
-                <option value="hour">By Hour</option>
-              </select>
-              <select
-                value={sortOption}
-                onChange={e => setSortOption(e.target.value as SortOption)}
-                className={cn(
-                  'flex h-10 min-w-[120px] max-w-[150px] flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[hsl(var(--secondary))]',
-                )}>
-                <option value="totalValue">By Total Value</option>
-                <option value="alphabetical">Alphabetical</option>
-              </select>
+            <div className="flex flex-row items-center justify-end gap-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="icon" aria-label="Filters" title="Filters" className="flex-shrink-0">
+                    <FilterIcon className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 space-y-3">
+                  <div className="space-y-1">
+                    <span className="text-sm font-medium">Source</span>
+                    <Select value={sourceFilter} onChange={e => setSourceFilter(e.target.value as SourceFilterOption)}>
+                      <option value="all">All Items</option>
+                      <option value="drops">Drops Only</option>
+                      <option value="produced">Produced Only</option>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm font-medium">Monster</span>
+                    <Select value={filterMonster} onChange={e => setFilterMonster(e.target.value)}>
+                      <option value="none">All Monsters</option>
+                      {uniqueMonsters.map(monster => (
+                        <option key={monster} value={monster}>
+                          {monster}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm font-medium">Location</span>
+                    <Select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}>
+                      <option value="none">All Locations</option>
+                      {uniqueLocations.map(location => (
+                        <option key={location} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm font-medium">Sort</span>
+                    <Select value={sortOption} onChange={e => setSortOption(e.target.value as SortOption)}>
+                      <option value="totalValue">By Total Value</option>
+                      <option value="alphabetical">Alphabetical</option>
+                    </Select>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <IconButton
+                onClick={handleOpenSettings}
+                variant="outline"
+                size="icon"
+                label="Item Value Settings"
+                className="flex-shrink-0"
+                Icon={SettingsIcon}
+              />
               <IconButton
                 onClick={() => setZoomLevel(prev => Math.max(1, prev - 1))}
                 variant="outline"
@@ -140,55 +194,11 @@ const LootMap = memo(() => {
                 Icon={ZoomInIcon}
                 disabled={zoomLevel >= 20}
               />
-              <IconButton
-                onClick={() => setViewMode('table')}
-                variant={viewMode === 'table' ? 'default' : 'outline'}
-                size="icon"
-                label="Table View"
-                className={cn(
-                  'flex-shrink-0',
-                  viewMode === 'table' ? 'hover:bg-accent/80 bg-accent text-accent-foreground' : '',
-                )}
-                Icon={TableViewIcon}
-              />
-              <IconButton
-                onClick={() => setViewMode('grid')}
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="icon"
-                label="Grid View"
-                className={cn(
-                  'flex-shrink-0',
-                  viewMode === 'grid' ? 'hover:bg-accent/80 bg-accent text-accent-foreground' : '',
-                )}
-                Icon={GridViewIcon}
-              />
-              <IconButton
-                onClick={handleOpenSettings}
-                variant="outline"
-                size="icon"
-                label="Item Value Settings"
-                className="flex-shrink-0"
-                Icon={SettingsIcon}
-              />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Loot Table/Grid */}
-      {sortedAndGroupedLoot.length === 0 || sortedAndGroupedLoot.every(group => group.entries.length === 0) ? (
-        <Card>
-          <CardContent className="p-8 text-center">No loot found.</CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            {viewMode === 'table' ? (
-              <LootTable
-                sortedAndGroupedLoot={sortedAndGroupedLoot}
-                filteredLootEntries={filteredLootEntries}
-                zoomLevel={zoomLevel}
-              />
+          <CardContent className="pt-2">
+            {viewMode === "table" ? (
+              <LootTable filteredLootEntries={filteredLootEntries} timeFilter={timeFilter} zoomLevel={zoomLevel} />
             ) : (
               <LootGrid
                 filteredLootEntries={filteredLootEntries}
@@ -233,7 +243,7 @@ const LootMap = memo(() => {
                       id={`item-value-${itemName}`}
                       type="number"
                       placeholder="GP value"
-                      value={tempItemValues[itemName] || ''}
+                      value={tempItemValues[itemName] || ""}
                       onChange={e => handleItemValueChange(itemName, e.target.value)}
                       className="flex-1"
                     />
@@ -247,7 +257,7 @@ const LootMap = memo(() => {
               Cancel
             </Button>
             <Button onClick={handleSaveItemValues} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -256,6 +266,6 @@ const LootMap = memo(() => {
   );
 });
 
-LootMap.displayName = 'LootMap';
+LootMap.displayName = "LootMap";
 
 export default LootMap;

@@ -1,17 +1,17 @@
-import { scrapeUserStats } from '../../scrapeUserStats';
-import { UPDATE_USER_STATS } from '@app/constants';
+import { scrapeUserStats } from "../../scrapeUserStats";
+import { UPDATE_USER_STATS } from "@app/constants";
 
 /**
  * Stats page scraper - runs in isolated content script context
  * Invisible to website JavaScript
  */
 (() => {
-  'use strict';
+  "use strict";
 
   // Verify we're on the correct URL before doing anything
   const isStatsPage = () => {
     const url = window.location.href;
-    return url.includes('syrnia.com/theGame/includes2/stats.php');
+    return url.includes("syrnia.com/theGame/includes2/stats.php");
   };
 
   // Track if we've already scraped in this session to avoid duplicate sends
@@ -54,8 +54,8 @@ import { UPDATE_USER_STATS } from '@app/constants';
   // Only set up scraping if we're on the stats page
   if (isStatsPage()) {
     // Run when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => scrapeAndSendUserStats());
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => scrapeAndSendUserStats());
     } else {
       scrapeAndSendUserStats();
     }
@@ -80,8 +80,8 @@ import { UPDATE_USER_STATS } from '@app/constants';
     });
 
     // Listen for page visibility changes (handles refresh/navigation)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && isStatsPage()) {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && isStatsPage()) {
         // Reset scrape flag when page becomes visible to allow re-scraping on refresh
         hasScraped = false;
         // Scrape after a short delay to ensure page is loaded

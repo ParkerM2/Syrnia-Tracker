@@ -8,8 +8,8 @@
  * @returns Formatted string with locale separators
  */
 export const formatExp = (exp: string | number): string => {
-  const num = typeof exp === 'string' ? parseInt(exp, 10) : exp;
-  if (isNaN(num)) return '0';
+  const num = typeof exp === "string" ? parseInt(exp, 10) : exp;
+  if (isNaN(num)) return "0";
   return num.toLocaleString();
 };
 
@@ -30,19 +30,19 @@ export const formatTime = (timestamp: string): string => {
   if (timestampDate.getTime() === today.getTime()) {
     // Same day - show time only with AM/PM
     return date.toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
       hour12: true,
     });
   } else {
     // Different day - show date and time
     return date.toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
       hour12: true,
     });
   }
@@ -54,9 +54,9 @@ export const formatTime = (timestamp: string): string => {
  * @returns Array of drop strings
  */
 export const parseDrops = (dropsString: string): string[] => {
-  if (!dropsString || dropsString.trim() === '') return [];
+  if (!dropsString || dropsString.trim() === "") return [];
   return dropsString
-    .split(';')
+    .split(";")
     .map(drop => drop.trim())
     .filter(drop => drop.length > 0);
 };

@@ -1,7 +1,7 @@
-import { cn } from '@app/utils/cn';
-import * as React from 'react';
-import * as RechartsPrimitive from 'recharts';
-import type { Payload } from 'recharts/types/component/DefaultTooltipContent';
+import { cn } from "@app/utils/cn";
+import * as React from "react";
+import * as RechartsPrimitive from "recharts";
+import type { Payload } from "recharts/types/component/DefaultTooltipContent";
 
 // Format: { THEME_NAME: { CSS_SELECTOR: CSS_VALUE } }
 type ChartConfig = {
@@ -21,7 +21,7 @@ const useChart = () => {
   const context = React.useContext(ChartContext);
 
   if (!context) {
-    throw new Error('useChart must be used within a ChartContainer');
+    throw new Error("useChart must be used within a ChartContainer");
   }
 
   return context;
@@ -29,14 +29,14 @@ const useChart = () => {
 
 const ChartContainer = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<'div'> & {
+  React.ComponentProps<"div"> & {
     config: ChartConfig;
-    children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>['children'];
+    children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
     className?: string;
   }
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId();
-  const chartId = `chart-${id || uniqueId.replace(/:/g, '')}`;
+  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -54,17 +54,17 @@ const ChartContainer = React.forwardRef<
     </ChartContext.Provider>
   );
 });
-ChartContainer.displayName = 'Chart';
+ChartContainer.displayName = "Chart";
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-    React.ComponentProps<'div'> & {
+    React.ComponentProps<"div"> & {
       hideLabel?: boolean;
       hideIndicator?: boolean;
-      indicator?: 'line' | 'dot' | 'dashed';
+      indicator?: "line" | "dot" | "dashed";
       nameKey?: string;
       labelKey?: string;
       active?: boolean;
@@ -77,7 +77,7 @@ const ChartTooltipContent = React.forwardRef<
       active,
       payload,
       className,
-      indicator = 'dot',
+      indicator = "dot",
       hideLabel = false,
       hideIndicator = false,
       label,
@@ -101,16 +101,16 @@ const ChartTooltipContent = React.forwardRef<
       }
       const seen = new Map<string, Payload<number | string, string>>();
       payload.forEach((item: Payload<number | string, string>) => {
-        const dataKeyStr = typeof item.dataKey === 'string' ? item.dataKey : String(item.dataKey || '');
-        const key = dataKeyStr || String(item.name || '');
+        const dataKeyStr = typeof item.dataKey === "string" ? item.dataKey : String(item.dataKey || "");
+        const key = dataKeyStr || String(item.name || "");
 
         // Keep the first occurrence, or the one with a non-zero value if current is zero
         if (!seen.has(key)) {
           seen.set(key, item);
         } else {
           const existing = seen.get(key)!;
-          const existingValue = typeof existing.value === 'number' ? existing.value : 0;
-          const currentValue = typeof item.value === 'number' ? item.value : 0;
+          const existingValue = typeof existing.value === "number" ? existing.value : 0;
+          const currentValue = typeof item.value === "number" ? item.value : 0;
           // Prefer non-zero values, or keep existing if both are zero/non-zero
           if (currentValue !== 0 && existingValue === 0) {
             seen.set(key, item);
@@ -126,77 +126,77 @@ const ChartTooltipContent = React.forwardRef<
       }
 
       const [item] = payload;
-      const dataKeyStr = typeof item.dataKey === 'string' ? item.dataKey : String(item.dataKey);
-      const key = `${labelKey || dataKeyStr || item.name || 'value'}`;
+      const dataKeyStr = typeof item.dataKey === "string" ? item.dataKey : String(item.dataKey);
+      const key = `${labelKey || dataKeyStr || item.name || "value"}`;
       const itemConfig = config?.[key];
-      const value = !labelKey && typeof label === 'string' ? config?.[label]?.label || label : itemConfig?.label;
+      const value = !labelKey && typeof label === "string" ? config?.[label]?.label || label : itemConfig?.label;
 
       if (labelFormatter) {
-        return <div className={cn('font-medium', labelClassName)}>{labelFormatter(value as string, payload)}</div>;
+        return <div className={cn("font-medium", labelClassName)}>{labelFormatter(value as string, payload)}</div>;
       }
 
       if (!value) {
         return null;
       }
 
-      return <div className={cn('font-medium', labelClassName)}>{value}</div>;
+      return <div className={cn("font-medium", labelClassName)}>{value}</div>;
     }, [label, labelFormatter, payload, hideLabel, labelClassName, config, labelKey]);
 
     if (!active || !payload?.length) {
       return null;
     }
 
-    const nestLabel = uniquePayload.length === 1 && indicator !== 'dot';
+    const nestLabel = uniquePayload.length === 1 && indicator !== "dot";
 
     return (
       <div
         ref={ref}
         className={cn(
-          'grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md',
+          "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md",
           className,
         )}>
         {!nestLabel ? tooltipLabel : null}
-        <div className={cn('grid gap-1.5', nestLabel ? 'grid-cols-[1fr,auto]' : 'grid-cols-[auto,1fr,auto]')}>
+        <div className={cn("grid gap-1.5", nestLabel ? "grid-cols-[1fr,auto]" : "grid-cols-[auto,1fr,auto]")}>
           {uniquePayload.map((item: Payload<number | string, string>, index: number) => {
-            const dataKeyStr = typeof item.dataKey === 'string' ? item.dataKey : String(item.dataKey || '');
-            const key = `${nameKey || item.name || dataKeyStr || 'value'}`;
+            const dataKeyStr = typeof item.dataKey === "string" ? item.dataKey : String(item.dataKey || "");
+            const key = `${nameKey || item.name || dataKeyStr || "value"}`;
             const itemConfig = config?.[key];
             const indicatorColor = color || ((item.payload as Record<string, unknown>)?.fill as string) || item.color;
             // Use a stable key that combines dataKey and index to ensure uniqueness
-            const stableKey = `${dataKeyStr || item.name || 'item'}-${index}`;
+            const stableKey = `${dataKeyStr || item.name || "item"}-${index}`;
 
             return (
               <React.Fragment key={stableKey}>
                 {!nestLabel && !hideIndicator ? (
                   <div
-                    className={cn('shrink-0 rounded-[2px] border-[--color] bg-[--color]', {
-                      'h-2.5 w-2.5': indicator === 'dot',
-                      'w-1': indicator === 'line',
-                      'w-1 border-[1.5px] border-dashed bg-transparent': indicator === 'dashed',
+                    className={cn("shrink-0 rounded-[2px] border-[--color] bg-[--color]", {
+                      "h-2.5 w-2.5": indicator === "dot",
+                      "w-1": indicator === "line",
+                      "w-1 border-[1.5px] border-dashed bg-transparent": indicator === "dashed",
                     })}
                     style={
                       {
-                        '--color': indicatorColor,
+                        "--color": indicatorColor,
                       } as React.CSSProperties
                     }
                   />
                 ) : null}
                 {nestLabel && !hideLabel ? (
-                  <div className={cn('font-medium', labelClassName)}>
+                  <div className={cn("font-medium", labelClassName)}>
                     {labelFormatter
-                      ? labelFormatter(`${itemConfig?.label || item.name || dataKeyStr || 'Value'}`, uniquePayload)
+                      ? labelFormatter(`${itemConfig?.label || item.name || dataKeyStr || "Value"}`, uniquePayload)
                       : itemConfig?.label || item.name || dataKeyStr}
                   </div>
                 ) : null}
-                <span className={cn('text-muted-foreground', nestLabel ? 'text-right' : '')}>
+                <span className={cn("text-muted-foreground", nestLabel ? "text-right" : "")}>
                   {itemConfig?.label || item.name || dataKeyStr}
                 </span>
                 {formatter ? (
                   formatter(item.value, item.name, item, item.payload, item.payload)
                 ) : (
                   <span
-                    className={cn('font-mono font-medium tabular-nums text-foreground', nestLabel ? 'text-right' : '')}>
-                    {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                    className={cn("font-mono font-medium tabular-nums text-foreground", nestLabel ? "text-right" : "")}>
+                    {typeof item.value === "number" ? item.value.toLocaleString() : item.value}
                   </span>
                 )}
               </React.Fragment>
@@ -207,7 +207,7 @@ const ChartTooltipContent = React.forwardRef<
     );
   },
 );
-ChartTooltipContent.displayName = 'ChartTooltip';
+ChartTooltipContent.displayName = "ChartTooltip";
 
 export type { ChartConfig };
 export { ChartContainer, ChartTooltip, ChartTooltipContent };

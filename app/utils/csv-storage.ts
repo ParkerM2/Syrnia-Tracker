@@ -1,11 +1,11 @@
-import { screenDataToCSVRows, csvRowToString, getCSVHeader, parseCSV } from './csv-tracker';
-import { updateWeeklyStats } from './weekly-stats-storage';
-import type { CSVRow } from './csv-tracker';
-import type { ScreenData } from '@app/types';
+import { screenDataToCSVRows, csvRowToString, getCSVHeader, parseCSV } from "./csv-tracker";
+import { updateWeeklyStats } from "./weekly-stats-storage";
+import type { CSVRow } from "./csv-tracker";
+import type { ScreenData } from "@app/types";
 
-const CSV_STORAGE_KEY = 'tracked_data_csv';
-const CSV_FILENAME = 'tracked_data.csv';
-const LAST_EXP_BY_SKILL_KEY = 'last_exp_by_skill'; // Store last exp per skill for calculating gainedExp
+const CSV_STORAGE_KEY = "tracked_data_csv";
+const CSV_FILENAME = "tracked_data.csv";
+const LAST_EXP_BY_SKILL_KEY = "last_exp_by_skill"; // Store last exp per skill for calculating gainedExp
 
 /**
  * Get CSV content from storage
@@ -16,7 +16,7 @@ export const getCSVFromStorage = async (): Promise<string> => {
     const csvContent = result[CSV_STORAGE_KEY] || getCSVHeader();
 
     // Ensure CSV header includes equipment and combatExp columns (migrate old CSV files)
-    const lines = csvContent.trim().split('\n');
+    const lines = csvContent.trim().split("\n");
     if (lines.length > 0) {
       const currentHeader = lines[0];
       const expectedHeader = getCSVHeader();
@@ -24,8 +24,8 @@ export const getCSVFromStorage = async (): Promise<string> => {
       // If header doesn't match, update it (migration for old CSV files)
       if (currentHeader !== expectedHeader) {
         const dataLines = lines.slice(1);
-        const currentFieldCount = currentHeader.split(',').length;
-        const expectedFieldCount = expectedHeader.split(',').length;
+        const currentFieldCount = currentHeader.split(",").length;
+        const expectedFieldCount = expectedHeader.split(",").length;
 
         if (currentFieldCount < expectedFieldCount) {
           // Old format detected - update header and add missing columns to existing rows
@@ -35,10 +35,10 @@ export const getCSVFromStorage = async (): Promise<string> => {
               const trimmedLine = line.trim();
               // Add missing fields (equipment and/or combatExp) as empty strings
               const missingFields = expectedFieldCount - currentFieldCount;
-              return `${trimmedLine}${','.repeat(missingFields)}`;
+              return `${trimmedLine}${",".repeat(missingFields)}`;
             }),
           ];
-          const updatedCSV = updatedLines.join('\n');
+          const updatedCSV = updatedLines.join("\n");
           // Save updated CSV back to storage
           await chrome.storage.local.set({ [CSV_STORAGE_KEY]: updatedCSV });
           return updatedCSV;
@@ -69,8 +69,8 @@ export const appendToCSV = async (data: ScreenData): Promise<void> => {
     const rows = screenDataToCSVRows(data);
 
     // Get the main skill's exp from screen data to calculate gainedExp
-    const mainSkillExp = parseInt(data.actionText.exp || '0', 10) || 0;
-    const mainSkill = data.actionText.currentActionText || '';
+    const mainSkillExp = parseInt(data.actionText.exp || "0", 10) || 0;
+    const mainSkill = data.actionText.currentActionText || "";
 
     // Calculate gainedExp for each row
     const rowsWithGainedExp = rows.map(row => {
@@ -83,7 +83,7 @@ export const appendToCSV = async (data: ScreenData): Promise<void> => {
       if (row.skill === mainSkill && mainSkillExp > 0) {
         const lastExp = lastExpBySkill[mainSkill] || 0;
         const delta = mainSkillExp - lastExp;
-        const gainedExp = delta > 0 ? delta.toString() : '0';
+        const gainedExp = delta > 0 ? delta.toString() : "0";
 
         // Update last exp for this skill
         lastExpBySkill[mainSkill] = mainSkillExp;
@@ -97,7 +97,7 @@ export const appendToCSV = async (data: ScreenData): Promise<void> => {
       // If we can't calculate gainedExp, set to 0
       return {
         ...row,
-        gainedExp: '0',
+        gainedExp: "0",
       };
     });
 
@@ -110,8 +110,8 @@ export const appendToCSV = async (data: ScreenData): Promise<void> => {
     // Append all new lines
     const updatedCSV =
       existingCSV === getCSVHeader()
-        ? `${existingCSV}\n${newLines.join('\n')}`
-        : `${existingCSV}\n${newLines.join('\n')}`;
+        ? `${existingCSV}\n${newLines.join("\n")}`
+        : `${existingCSV}\n${newLines.join("\n")}`;
 
     await chrome.storage.local.set({ [CSV_STORAGE_KEY]: updatedCSV });
 
@@ -143,12 +143,12 @@ export const getCSVRows = async (): Promise<CSVRow[]> => {
  */
 export const downloadCSV = async (saveAs: boolean = true): Promise<void> => {
   const csvContent = await getCSVFromStorage();
-  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const blob = new Blob([csvContent], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
 
   // Get current date for filename
   const date = new Date();
-  const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+  const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
   const filename = `tracked_data_${dateStr}.csv`;
 
   await chrome.downloads.download({
@@ -194,7 +194,7 @@ export const clearCSVDataByHour = async (hour: number, date?: Date): Promise<voi
   } else {
     const header = getCSVHeader();
     const lines = filteredRows.map(row => csvRowToString(row));
-    const updatedCSV = `${header}\n${lines.join('\n')}`;
+    const updatedCSV = `${header}\n${lines.join("\n")}`;
     await chrome.storage.local.set({ [CSV_STORAGE_KEY]: updatedCSV });
   }
 };

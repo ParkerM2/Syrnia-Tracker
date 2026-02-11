@@ -1,6 +1,6 @@
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import type { FallbackProps } from 'react-error-boundary';
+import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import type { FallbackProps } from "react-error-boundary";
 
 export const ErrorDisplay = ({ error, resetErrorBoundary }: FallbackProps) => {
   const handleReturnToDashboard = () => {
@@ -9,7 +9,7 @@ export const ErrorDisplay = ({ error, resetErrorBoundary }: FallbackProps) => {
 
     // Navigate to dashboard by reloading the extension
     // In a Chrome extension context, we can reload the current window
-    if (typeof window !== 'undefined' && window.location) {
+    if (typeof window !== "undefined" && window.location) {
       window.location.reload();
     }
   };

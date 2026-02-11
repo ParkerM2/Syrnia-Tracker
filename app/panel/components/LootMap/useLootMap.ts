@@ -1,16 +1,19 @@
 import {
   formatDayHeader,
-  formatWeekHeader,
   formatHourHeader,
+  formatMonthHeader,
+  formatYearHeader,
   getDayStart,
-  getWeekStart,
   getHourStart,
-} from './helpers/lootHelpers';
-import { useTrackedDataQuery, useFormatting, useItemValuesQuery } from '@app/hooks';
-import { useMemo, useState, useCallback } from 'react';
+  getMonthStart,
+  getYearStart,
+} from "./helpers/lootHelpers";
+import { useTrackedDataQuery, useFormatting, useItemValuesQuery } from "@app/hooks";
+import { useMemo, useState, useCallback } from "react";
 
-export type SortOption = 'alphabetical' | 'totalValue';
-export type TimeFilterOption = 'none' | 'day' | 'week' | 'hour';
+export type SortOption = "alphabetical" | "totalValue";
+export type TimeFilterOption = "none" | "hour" | "day" | "month" | "year";
+export type SourceFilterOption = "all" | "drops" | "produced";
 
 export interface LootEntry {
   timestamp: string;
@@ -21,6 +24,7 @@ export interface LootEntry {
   location: string;
   monster: string;
   imageUrl: string;
+  source: "drop" | "produced";
 }
 
 export interface LootGroup {
@@ -38,53 +42,44 @@ export const useLootMap = () => {
   const { itemValues, save, isSaving } = useItemValuesQuery();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempItemValues, setTempItemValues] = useState<Record<string, string>>({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterMonster, setFilterMonster] = useState<string>('none');
-  const [filterLocation, setFilterLocation] = useState<string>('none');
-  const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('none');
-  const [sortOption, setSortOption] = useState<SortOption>('totalValue');
+  const [filterMonster, setFilterMonster] = useState<string>("none");
+  const [filterLocation, setFilterLocation] = useState<string>("none");
+  const [timeFilter, setTimeFilter] = useState<TimeFilterOption>("none");
+  const [sortOption, setSortOption] = useState<SortOption>("totalValue");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilterOption>("all");
 
-  // Extract all loot entries from all data
+  // Extract all loot entries from all data (drops + produced items)
   const allLootEntries = useMemo(() => {
     const entries: LootEntry[] = [];
 
-    allData.forEach(row => {
-      const drops = parseDrops(row.drops || '');
-      if (drops.length === 0) return;
+    // Sort rows by timestamp ascending for delta calculation
+    const sortedData = [...allData].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
+    // Track previous quantities for actionOutput delta computation
+    const previousQuantities = new Map<string, number>();
+
+    sortedData.forEach(row => {
+      // Process drops
+      const drops = parseDrops(row.drops || "");
       drops.forEach(drop => {
         const trimmedDrop = drop.trim();
+        if (!trimmedDrop || trimmedDrop.length === 0) return;
+        if (/^[\d,]+$/.test(trimmedDrop)) return;
 
-        // Skip empty drops
-        if (!trimmedDrop || trimmedDrop.length === 0) {
+        const { amount, name } = parseDropAmount(drop);
+        const trimmedName = name?.trim() || "";
+
+        if (
+          !trimmedName ||
+          trimmedName.toLowerCase().includes("experience") ||
+          trimmedName.toLowerCase().includes("exp ") ||
+          /^\d+\s*exp$/i.test(trimmedName)
+        ) {
           return;
         }
 
-        // Filter out pure numbers (with or without commas) - these are likely exp values, not actual drops
-        // A valid drop should have text after the number (e.g., "5 Gold", not just "5" or "5,000")
-        if (/^[\d,]+$/.test(trimmedDrop)) {
-          return; // Skip pure numbers (with or without commas)
-        }
-
-        const { amount, name } = parseDropAmount(drop);
-        const trimmedName = name?.trim() || '';
-
-        // Basic validation: skip if name is clearly invalid
-        // A valid item name should:
-        // - Not be empty
-        // - Have at least 1 character (relaxed from 2)
-        // - Not be experience-related
-        if (
-          !trimmedName || // Empty name
-          trimmedName.toLowerCase().includes('experience') || // Experience-related
-          trimmedName.toLowerCase().includes('exp ') || // Exp abbreviation
-          /^\d+\s*exp$/i.test(trimmedName) // Pattern like "61 exp"
-        ) {
-          return; // Skip invalid drop names
-        }
-
-        const itemValue = parseFloat(itemValues[name] || '0') || 0;
-        const imageUrl = `https://www.syrnia.com/images/inventory/${name.replace(/\s/g, '%20')}.png`;
+        const itemValue = parseFloat(itemValues[name] || "0") || 0;
+        const imageUrl = `https://www.syrnia.com/images/inventory/${name.replace(/\s/g, "%20")}.png`;
 
         entries.push({
           timestamp: row.timestamp,
@@ -92,11 +87,50 @@ export const useLootMap = () => {
           quantity: amount,
           valuePerItem: itemValue,
           totalValue: amount * itemValue,
-          location: row.location?.trim() || 'Unknown',
-          monster: row.monster?.trim() || 'Unknown',
+          location: row.location?.trim() || "Unknown",
+          monster: row.monster?.trim() || "Unknown",
           imageUrl,
+          source: "drop",
         });
       });
+
+      // Process actionOutput (produced items) — compute deltas from running totals
+      if (row.actionOutput && row.actionOutput.trim() !== "" && row.actionOutput !== "[]") {
+        try {
+          const outputs: Array<{ item: string; quantity: number }> = JSON.parse(row.actionOutput);
+          if (Array.isArray(outputs)) {
+            outputs.forEach(output => {
+              if (!output.item || output.quantity <= 0) return;
+
+              const prev = previousQuantities.get(output.item);
+              previousQuantities.set(output.item, output.quantity);
+
+              // First occurrence is baseline — no entry created
+              if (prev === undefined) return;
+
+              const delta = output.quantity - prev;
+              if (delta <= 0) return;
+
+              const itemValue = parseFloat(itemValues[output.item] || "0") || 0;
+              const imageUrl = `https://www.syrnia.com/images/inventory/${output.item.replace(/\s/g, "%20")}.png`;
+
+              entries.push({
+                timestamp: row.timestamp,
+                name: output.item,
+                quantity: delta,
+                valuePerItem: itemValue,
+                totalValue: delta * itemValue,
+                location: "",
+                monster: "",
+                imageUrl,
+                source: "produced",
+              });
+            });
+          }
+        } catch {
+          // Silently handle JSON parse errors
+        }
+      }
     });
 
     return entries;
@@ -106,7 +140,7 @@ export const useLootMap = () => {
   const uniqueMonsters = useMemo(() => {
     const monsters = new Set<string>();
     allLootEntries.forEach(entry => {
-      if (entry.monster && entry.monster !== 'Unknown') {
+      if (entry.monster && entry.monster !== "Unknown") {
         monsters.add(entry.monster);
       }
     });
@@ -116,40 +150,36 @@ export const useLootMap = () => {
   const uniqueLocations = useMemo(() => {
     const locations = new Set<string>();
     allLootEntries.forEach(entry => {
-      if (entry.location && entry.location !== 'Unknown') {
+      if (entry.location && entry.location !== "Unknown") {
         locations.add(entry.location);
       }
     });
     return Array.from(locations).sort();
   }, [allLootEntries]);
 
-  // Filter and search loot entries
+  // Filter loot entries
   const filteredLootEntries = useMemo(() => {
     let filtered = [...allLootEntries];
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        entry =>
-          entry.name.toLowerCase().includes(query) ||
-          entry.location.toLowerCase().includes(query) ||
-          entry.monster.toLowerCase().includes(query),
-      );
+    // Apply source filter
+    if (sourceFilter === "drops") {
+      filtered = filtered.filter(entry => entry.source === "drop");
+    } else if (sourceFilter === "produced") {
+      filtered = filtered.filter(entry => entry.source === "produced");
     }
 
     // Apply monster filter
-    if (filterMonster !== 'none') {
+    if (filterMonster !== "none") {
       filtered = filtered.filter(entry => entry.monster === filterMonster);
     }
 
     // Apply location filter
-    if (filterLocation !== 'none') {
+    if (filterLocation !== "none") {
       filtered = filtered.filter(entry => entry.location === filterLocation);
     }
 
     return filtered;
-  }, [allLootEntries, searchQuery, filterMonster, filterLocation]);
+  }, [allLootEntries, sourceFilter, filterMonster, filterLocation]);
 
   // Sort and group loot entries
   const sortedAndGroupedLoot = useMemo(() => {
@@ -159,10 +189,10 @@ export const useLootMap = () => {
     const sortEntries = (entriesToSort: LootEntry[]): LootEntry[] => {
       const sorted = [...entriesToSort];
       switch (sortOption) {
-        case 'alphabetical':
+        case "alphabetical":
           sorted.sort((a, b) => a.name.localeCompare(b.name));
           break;
-        case 'totalValue':
+        case "totalValue":
           sorted.sort((a, b) => {
             if (b.totalValue !== a.totalValue) return b.totalValue - a.totalValue; // Highest value first
             return a.name.localeCompare(b.name); // Then alphabetical
@@ -173,7 +203,7 @@ export const useLootMap = () => {
     };
 
     // Group by time filter
-    if (timeFilter === 'day') {
+    if (timeFilter === "day") {
       const grouped = new Map<string, LootEntry[]>();
       // Group entries by day
       entries.forEach(entry => {
@@ -190,24 +220,37 @@ export const useLootMap = () => {
           header: formatDayHeader(dayStart),
           entries: sortEntries(groupEntries),
         }));
-    } else if (timeFilter === 'week') {
+    } else if (timeFilter === "month") {
       const grouped = new Map<string, LootEntry[]>();
-      // Group entries by week
       entries.forEach(entry => {
-        const weekStart = getWeekStart(entry.timestamp);
-        if (!grouped.has(weekStart)) {
-          grouped.set(weekStart, []);
+        const monthStart = getMonthStart(entry.timestamp);
+        if (!grouped.has(monthStart)) {
+          grouped.set(monthStart, []);
         }
-        grouped.get(weekStart)!.push(entry);
+        grouped.get(monthStart)!.push(entry);
       });
-      // Sort groups by week (newest first), then sort entries within each group by sortOption
       return Array.from(grouped.entries())
-        .sort(([a], [b]) => b.localeCompare(a)) // Sort groups by timestamp (newest first)
-        .map(([weekStart, groupEntries]) => ({
-          header: formatWeekHeader(weekStart),
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([monthStart, groupEntries]) => ({
+          header: formatMonthHeader(monthStart),
           entries: sortEntries(groupEntries),
         }));
-    } else if (timeFilter === 'hour') {
+    } else if (timeFilter === "year") {
+      const grouped = new Map<string, LootEntry[]>();
+      entries.forEach(entry => {
+        const yearStart = getYearStart(entry.timestamp);
+        if (!grouped.has(yearStart)) {
+          grouped.set(yearStart, []);
+        }
+        grouped.get(yearStart)!.push(entry);
+      });
+      return Array.from(grouped.entries())
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([yearStart, groupEntries]) => ({
+          header: formatYearHeader(yearStart),
+          entries: sortEntries(groupEntries),
+        }));
+    } else if (timeFilter === "hour") {
       const grouped = new Map<string, LootEntry[]>();
       // Group entries by hour
       entries.forEach(entry => {
@@ -226,7 +269,7 @@ export const useLootMap = () => {
         }));
     } else {
       // No time filter - no grouping, just sort all entries
-      return [{ header: '', entries: sortEntries(entries) }];
+      return [{ header: "", entries: sortEntries(entries) }];
     }
   }, [filteredLootEntries, sortOption, timeFilter]);
 
@@ -255,7 +298,7 @@ export const useLootMap = () => {
       await save(tempItemValues);
       setIsSettingsOpen(false);
     } catch {
-      alert('Error saving item values');
+      alert("Error saving item values");
     }
   }, [tempItemValues, save]);
 
@@ -269,8 +312,8 @@ export const useLootMap = () => {
   return {
     // State
     loading,
-    searchQuery,
-    setSearchQuery,
+    sourceFilter,
+    setSourceFilter,
     filterMonster,
     setFilterMonster,
     filterLocation,

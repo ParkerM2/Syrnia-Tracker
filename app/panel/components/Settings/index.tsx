@@ -1,29 +1,17 @@
-import CustomThemeDialog from './CustomThemeDialog';
-import { useCustomThemes } from './useCustomThemes';
-import { cn, Button, Card, CardContent, CardHeader, CardTitle, Label, Select } from '@app/components';
-import { useStorage } from '@app/hooks';
-import { exampleThemeStorage } from '@app/utils/storage';
-import { customThemesStorage } from '@app/utils/storage/custom-themes-storage';
-import {
-  themes,
-  applyTheme,
-  applyCustomTheme,
-  getTheme,
-  isCustomThemeName,
-  getCustomThemeId,
-  makeCustomThemeName,
-} from '@app/utils/themes';
-import { memo, useEffect, useMemo } from 'react';
+import CustomThemeDialog from "./CustomThemeDialog";
+import { useCustomThemes } from "./useCustomThemes";
+import { cn, Button, Card, CardContent, CardHeader, CardTitle, Label, Select } from "@app/components";
+import { useStorage } from "@app/hooks";
+import { exampleThemeStorage } from "@app/utils/storage";
+import { themes, makeCustomThemeName } from "@app/utils/themes";
+import { memo } from "react";
 
 /**
  * Settings Component
  */
 const Settings = memo(() => {
   const themeStorage = useStorage(exampleThemeStorage);
-  const customThemesState = useStorage(customThemesStorage);
-  const currentThemeName = themeStorage?.themeName || 'default';
-  const isDark = themeStorage ? !themeStorage.isLight : true;
-  const customThemes = useMemo(() => customThemesState?.themes ?? [], [customThemesState?.themes]);
+  const currentThemeName = themeStorage?.themeName || "default";
 
   const {
     customThemes: hookCustomThemes,
@@ -37,55 +25,19 @@ const Settings = memo(() => {
     deleteTheme,
   } = useCustomThemes();
 
-  // Apply theme when it changes
-  useEffect(() => {
-    if (!themeStorage?.themeName) return;
-
-    if (isCustomThemeName(themeStorage.themeName)) {
-      const themeId = getCustomThemeId(themeStorage.themeName);
-      const custom = customThemes.find(t => t.id === themeId);
-      if (custom) {
-        applyCustomTheme(custom, isDark);
-      }
-    } else {
-      const theme = getTheme(themeStorage.themeName);
-      if (theme) {
-        applyTheme(theme, isDark);
-      }
-    }
-  }, [themeStorage?.themeName, isDark, customThemes]);
-
   const handleThemeChange = async (themeName: string) => {
     await exampleThemeStorage.setThemeName(themeName);
-
-    if (isCustomThemeName(themeName)) {
-      const themeId = getCustomThemeId(themeName);
-      const custom = customThemes.find(t => t.id === themeId);
-      if (custom) {
-        applyCustomTheme(custom, isDark);
-      }
-    } else {
-      const theme = getTheme(themeName);
-      if (theme) {
-        applyTheme(theme, isDark);
-      }
-    }
   };
 
   const handleDeleteTheme = async (id: string) => {
-    // If the deleted theme is currently active, switch to default
     if (currentThemeName === makeCustomThemeName(id)) {
-      await exampleThemeStorage.setThemeName('default');
-      const defaultBuiltIn = getTheme('default');
-      if (defaultBuiltIn) {
-        applyTheme(defaultBuiltIn, isDark);
-      }
+      await exampleThemeStorage.setThemeName("default");
     }
     await deleteTheme(id);
   };
 
   return (
-    <div className={cn('flex flex-col gap-4')}>
+    <div className={cn("flex flex-col gap-4")}>
       {/* Theme Selection */}
       <Card>
         <CardHeader>
@@ -167,6 +119,6 @@ const Settings = memo(() => {
   );
 });
 
-Settings.displayName = 'Settings';
+Settings.displayName = "Settings";
 
 export default Settings;

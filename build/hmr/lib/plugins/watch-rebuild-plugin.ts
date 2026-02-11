@@ -1,66 +1,57 @@
-import { BUILD_COMPLETE, LOCAL_RELOAD_SOCKET_URL } from '../consts.js';
-import MessageInterpreter from '../interpreter/index.js';
-import { WebSocket } from 'ws';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import type { PluginConfigType } from '../types.js';
-import type { PluginOption } from 'vite';
+import { BUILD_COMPLETE, LOCAL_RELOAD_SOCKET_URL } from "../consts.js";
+import MessageInterpreter from "../interpreter/index.js";
+import { WebSocket } from "ws";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import type { PluginConfigType } from "../types.js";
+import type { PluginOption } from "vite";
 
-const injectionsPath = resolve(import.meta.dirname, '..', 'injections');
+// Injection code lives in dist (pre-compiled JS for browser injection)
+const injectionsPath = resolve(import.meta.dirname, "..", "..", "dist", "lib", "injections");
 
-const refreshCode = readFileSync(resolve(injectionsPath, 'refresh.js'), 'utf-8');
-const reloadCode = readFileSync(resolve(injectionsPath, 'reload.js'), 'utf-8');
+const refreshCode = readFileSync(resolve(injectionsPath, "refresh.js"), "utf-8");
+const reloadCode = readFileSync(resolve(injectionsPath, "reload.js"), "utf-8");
 
 export const watchRebuildPlugin = (config: PluginConfigType): PluginOption => {
   const { refresh, reload, id: _id, onStart } = config;
-  const hmrCode = (refresh ? refreshCode : '') + (reload ? reloadCode : '');
+  const hmrCode = (refresh ? refreshCode : "") + (reload ? reloadCode : "");
 
   let ws: WebSocket | null = null;
-
   const id = _id ?? Math.random().toString(36);
-  let reconnectTries = 0;
 
   const initializeWebSocket = () => {
-    ws = new WebSocket(LOCAL_RELOAD_SOCKET_URL);
+    const socket = new WebSocket(LOCAL_RELOAD_SOCKET_URL);
 
-    ws.onopen = () => {
-      console.log(`[HMR] Connected to dev-server at ${LOCAL_RELOAD_SOCKET_URL}`);
+    socket.onopen = () => {
+      ws = socket;
+      console.log(`[HMR] Plugin connected to ${LOCAL_RELOAD_SOCKET_URL}`);
     };
 
-    ws.onerror = () => {
-      console.error(`[HMR] Failed to connect server at ${LOCAL_RELOAD_SOCKET_URL}`);
-      console.warn('Retrying in 3 seconds...');
+    socket.onclose = () => {
       ws = null;
+      setTimeout(initializeWebSocket, 1_000);
+    };
 
-      if (reconnectTries <= 2) {
-        setTimeout(() => {
-          reconnectTries++;
-          initializeWebSocket();
-        }, 3_000);
-      } else {
-        console.error(`[HMR] Cannot establish connection to server at ${LOCAL_RELOAD_SOCKET_URL}`);
-      }
+    socket.onerror = () => {
+      // onclose fires after onerror, which triggers reconnect
     };
   };
 
+  // Connect eagerly so WebSocket is ready before the first closeBundle
+  initializeWebSocket();
+
   return {
-    name: 'watch-rebuild',
+    name: "watch-rebuild",
     closeBundle() {
       onStart?.();
-      if (!ws) {
-        initializeWebSocket();
-        return;
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(MessageInterpreter.send({ type: BUILD_COMPLETE, id }));
       }
-      /**
-       * When the build is complete, send a message to the reload server.
-       * The reload server will send a message to the client to reload or refresh the extension.
-       */
-      ws.send(MessageInterpreter.send({ type: BUILD_COMPLETE, id }));
     },
     generateBundle(_options, bundle) {
       for (const module of Object.values(bundle)) {
-        if (module.type === 'chunk') {
-          module.code = `(function() {let __HMR_ID = "${id}";\n` + hmrCode + '\n' + '})();' + '\n' + module.code;
+        if (module.type === "chunk") {
+          module.code = `(function() {let __HMR_ID = "${id}";\n` + hmrCode + "\n" + "})();" + "\n" + module.code;
         }
       }
     },

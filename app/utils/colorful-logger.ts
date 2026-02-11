@@ -1,4 +1,4 @@
-import type { ColorType } from '@app/types';
+import type { ColorType } from "@app/types";
 
 /**
  * Logging utility (no-op in production)

@@ -1,5 +1,5 @@
 /* eslint-disable import-x/exports-last */
-import type { ScreenData } from '@app/types';
+import type { ScreenData } from "@app/types";
 
 export interface CSVRow {
   timestamp: string;
@@ -22,6 +22,8 @@ export interface CSVRow {
   // All combat exp gains as JSON string: [{"skill":"Strength","exp":"27"},...]
   // Empty string if not available
   combatExp: string;
+  actionType: string; // "combat" | "skilling" | ""
+  actionOutput: string; // JSON string of [{item: string, quantity: number}] or ""
 }
 
 /**
@@ -34,26 +36,28 @@ export const screenDataToCSVRows = (data: ScreenData): CSVRow[] => {
   const row: CSVRow = {
     timestamp: data.timestamp,
     uuid: data.uuid,
-    skill: data.actionText.currentActionText || '',
-    skillLevel: data.actionText.skillLevel || '',
-    expForNextLevel: data.actionText.expForNextLevel || '',
-    gainedExp: '', // Will be calculated when saving
-    drops: data.actionText.drops.join(';'),
-    hp: data.actionText.inventory.hp || '',
-    monster: data.monster || '',
-    location: data.location || '',
-    damageDealt: (data.damageDealt || []).join(';'),
-    damageReceived: (data.damageReceived || []).join(';'),
+    skill: data.actionText.currentActionText || "",
+    skillLevel: data.actionText.skillLevel || "",
+    expForNextLevel: data.actionText.expForNextLevel || "",
+    gainedExp: "", // Will be calculated when saving
+    drops: data.actionText.drops.join(";"),
+    hp: data.actionText.inventory.hp || "",
+    monster: data.monster || "",
+    location: data.location || "",
+    damageDealt: (data.damageDealt || []).join(";"),
+    damageReceived: (data.damageReceived || []).join(";"),
     peopleFighting:
-      data.peopleFighting !== null && data.peopleFighting !== undefined ? String(data.peopleFighting) : '',
-    totalFights: data.totalFights !== null && data.totalFights !== undefined ? String(data.totalFights) : '',
-    totalInventoryHP: data.totalInventoryHP || '',
-    hpUsed: data.hpUsed !== null && data.hpUsed !== undefined ? String(data.hpUsed) : '',
-    equipment: data.equipment ? JSON.stringify(data.equipment) : '',
+      data.peopleFighting !== null && data.peopleFighting !== undefined ? String(data.peopleFighting) : "",
+    totalFights: data.totalFights !== null && data.totalFights !== undefined ? String(data.totalFights) : "",
+    totalInventoryHP: data.totalInventoryHP || "",
+    hpUsed: data.hpUsed !== null && data.hpUsed !== undefined ? String(data.hpUsed) : "",
+    equipment: data.equipment ? JSON.stringify(data.equipment) : "",
     combatExp:
       data.actionText.combatExp && data.actionText.combatExp.length > 0
         ? JSON.stringify(data.actionText.combatExp)
-        : '',
+        : "",
+    actionType: data.actionType || "",
+    actionOutput: data.actionOutput && data.actionOutput.length > 0 ? JSON.stringify(data.actionOutput) : "",
   };
 
   return [row];
@@ -67,13 +71,16 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   if (row.length < 2) return null;
 
   // Format versions (field count → fields):
+  // 20: 18 + actionType + actionOutput
   // 18: timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,
   //     monster,location,damageDealt,damageReceived,peopleFighting,
   //     totalFights,totalInventoryHP,hpUsed,equipment,combatExp
   // 17: same as 18 without combatExp
   // 16: same as 17 without equipment
 
-  // Check for 18 fields first - new format with UUID, equipment, and combatExp
+  // Check for 20 fields first - newest format with actionType and actionOutput
+  const isNewFormatWithActionTracking = row.length === 20;
+  // Check for 18 fields - format with UUID, equipment, and combatExp
   const isNewFormatWithUUIDAndEquipmentAndCombatExp = row.length === 18;
   // Check for 17 fields - new format with UUID and equipment
   const isNewFormatWithUUIDAndEquipment = row.length === 17;
@@ -92,7 +99,7 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   //   row[8]=location, row[9]=damageDealt, row[10]=damageReceived
   const isNewFormatWithCombat = row.length === 11 && row[7] && !row[7].match(/^[\d,]+$/); // 8th field is monster (not a number)
   const isOldNewFormat =
-    row.length === 11 && !isNewFormatWithCombat && row[7] && /^[\d,]+$/.test(row[7].replace(/,/g, '')); // 8th field is gainedExp (number)
+    row.length === 11 && !isNewFormatWithCombat && row[7] && /^[\d,]+$/.test(row[7].replace(/,/g, "")); // 8th field is gainedExp (number)
 
   const isNewFormat = row.length === 6;
   const isMediumFormat = row.length === 9;
@@ -103,304 +110,354 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
   // Heuristic: if row[2] is a number and row[3] looks like
   // expForNextLevel (number), it's new format
   // expForNextLevel is a number
-  const isNewFormatWithHP = row.length === 7 && row[3] && /^\d+$/.test(row[3].replace(/,/g, ''));
+  const isNewFormatWithHP = row.length === 7 && row[3] && /^\d+$/.test(row[3].replace(/,/g, ""));
   const isOldFormat = row.length === 7 && !isNewFormatWithHP;
 
-  if (isNewFormatWithUUIDAndEquipmentAndCombatExp) {
+  if (isNewFormatWithActionTracking) {
+    // 20 fields: UUID + equipment + combatExp + actionType + actionOutput
+    return {
+      timestamp: row[0] || "",
+      uuid: row[1] || "",
+      skill: row[2] || "",
+      skillLevel: row[3] || "",
+      expForNextLevel: row[4] || "",
+      gainedExp: row[5] || "",
+      drops: row[6] || "",
+      hp: row[7] || "",
+      monster: row[8] || "",
+      location: row[9] || "",
+      damageDealt: row[10] || "",
+      damageReceived: row[11] || "",
+      peopleFighting: row[12] || "",
+      totalFights: row[13] || "",
+      totalInventoryHP: row[14] || "",
+      hpUsed: row[15] || "",
+      equipment: row[16] || "",
+      combatExp: row[17] || "",
+      actionType: row[18] || "",
+      actionOutput: row[19] || "",
+    };
+  } else if (isNewFormatWithUUIDAndEquipmentAndCombatExp) {
     // 18 fields: UUID + equipment + combatExp
     return {
-      timestamp: row[0] || '',
-      uuid: row[1] || '',
-      skill: row[2] || '',
-      skillLevel: row[3] || '',
-      expForNextLevel: row[4] || '',
-      gainedExp: row[5] || '',
-      drops: row[6] || '',
-      hp: row[7] || '',
-      monster: row[8] || '',
-      location: row[9] || '',
-      damageDealt: row[10] || '',
-      damageReceived: row[11] || '',
-      peopleFighting: row[12] || '',
-      totalFights: row[13] || '',
-      totalInventoryHP: row[14] || '',
-      hpUsed: row[15] || '',
-      equipment: row[16] || '',
-      combatExp: row[17] || '',
+      timestamp: row[0] || "",
+      uuid: row[1] || "",
+      skill: row[2] || "",
+      skillLevel: row[3] || "",
+      expForNextLevel: row[4] || "",
+      gainedExp: row[5] || "",
+      drops: row[6] || "",
+      hp: row[7] || "",
+      monster: row[8] || "",
+      location: row[9] || "",
+      damageDealt: row[10] || "",
+      damageReceived: row[11] || "",
+      peopleFighting: row[12] || "",
+      totalFights: row[13] || "",
+      totalInventoryHP: row[14] || "",
+      hpUsed: row[15] || "",
+      equipment: row[16] || "",
+      combatExp: row[17] || "",
+      actionType: "",
+      actionOutput: "",
     };
   } else if (isNewFormatWithUUIDAndEquipment) {
     // 17 fields: UUID + equipment
     return {
-      timestamp: row[0] || '',
-      uuid: row[1] || '',
-      skill: row[2] || '',
-      skillLevel: row[3] || '',
-      expForNextLevel: row[4] || '',
-      gainedExp: row[5] || '',
-      drops: row[6] || '',
-      hp: row[7] || '',
-      monster: row[8] || '',
-      location: row[9] || '',
-      damageDealt: row[10] || '',
-      damageReceived: row[11] || '',
-      peopleFighting: row[12] || '',
-      totalFights: row[13] || '',
-      totalInventoryHP: row[14] || '',
-      hpUsed: row[15] || '',
-      equipment: row[16] || '',
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: row[1] || "",
+      skill: row[2] || "",
+      skillLevel: row[3] || "",
+      expForNextLevel: row[4] || "",
+      gainedExp: row[5] || "",
+      drops: row[6] || "",
+      hp: row[7] || "",
+      monster: row[8] || "",
+      location: row[9] || "",
+      damageDealt: row[10] || "",
+      damageReceived: row[11] || "",
+      peopleFighting: row[12] || "",
+      totalFights: row[13] || "",
+      totalInventoryHP: row[14] || "",
+      hpUsed: row[15] || "",
+      equipment: row[16] || "",
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   }
 
   if (isNewFormatWithUUID) {
     // 16 fields: UUID format
     return {
-      timestamp: row[0] || '',
-      uuid: row[1] || '',
-      skill: row[2] || '',
-      skillLevel: row[3] || '',
-      expForNextLevel: row[4] || '',
-      gainedExp: row[5] || '',
-      drops: row[6] || '',
-      hp: row[7] || '',
-      monster: row[8] || '',
-      location: row[9] || '',
-      damageDealt: row[10] || '',
-      damageReceived: row[11] || '',
-      peopleFighting: row[12] || '',
-      totalFights: row[13] || '',
-      totalInventoryHP: row[14] || '',
-      hpUsed: row[15] || '',
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: row[1] || "",
+      skill: row[2] || "",
+      skillLevel: row[3] || "",
+      expForNextLevel: row[4] || "",
+      gainedExp: row[5] || "",
+      drops: row[6] || "",
+      hp: row[7] || "",
+      monster: row[8] || "",
+      location: row[9] || "",
+      damageDealt: row[10] || "",
+      damageReceived: row[11] || "",
+      peopleFighting: row[12] || "",
+      totalFights: row[13] || "",
+      totalInventoryHP: row[14] || "",
+      hpUsed: row[15] || "",
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   }
 
   if (isNewFormatWithHpFields) {
     // 15 fields: HP fields, no UUID
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[2] || '',
-      expForNextLevel: row[3] || '',
-      gainedExp: row[4] || '',
-      drops: row[5] || '',
-      hp: row[6] || '',
-      monster: row[7] || '',
-      location: row[8] || '',
-      damageDealt: row[9] || '',
-      damageReceived: row[10] || '',
-      peopleFighting: row[11] || '',
-      totalFights: row[12] || '',
-      totalInventoryHP: row[13] || '',
-      hpUsed: row[14] || '',
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[2] || "",
+      expForNextLevel: row[3] || "",
+      gainedExp: row[4] || "",
+      drops: row[5] || "",
+      hp: row[6] || "",
+      monster: row[7] || "",
+      location: row[8] || "",
+      damageDealt: row[9] || "",
+      damageReceived: row[10] || "",
+      peopleFighting: row[11] || "",
+      totalFights: row[12] || "",
+      totalInventoryHP: row[13] || "",
+      hpUsed: row[14] || "",
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   }
 
   if (isNewFormatWithTotalFights) {
     // 13 fields: HP + combat + people + totalFights
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[2] || '',
-      expForNextLevel: row[3] || '',
-      gainedExp: row[4] || '',
-      drops: row[5] || '',
-      hp: row[6] || '',
-      monster: row[7] || '',
-      location: row[8] || '',
-      damageDealt: row[9] || '',
-      damageReceived: row[10] || '',
-      peopleFighting: row[11] || '',
-      totalFights: row[12] || '',
-      totalInventoryHP: '', // Backward compatible: not available in old format
-      hpUsed: '', // Backward compatible: not available in old format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[2] || "",
+      expForNextLevel: row[3] || "",
+      gainedExp: row[4] || "",
+      drops: row[5] || "",
+      hp: row[6] || "",
+      monster: row[7] || "",
+      location: row[8] || "",
+      damageDealt: row[9] || "",
+      damageReceived: row[10] || "",
+      peopleFighting: row[11] || "",
+      totalFights: row[12] || "",
+      totalInventoryHP: "", // Backward compatible: not available in old format
+      hpUsed: "", // Backward compatible: not available in old format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   }
 
   if (isNewFormatWithPeople) {
     // 12 fields: HP + combat + people
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[2] || '',
-      expForNextLevel: row[3] || '',
-      gainedExp: row[4] || '',
-      drops: row[5] || '',
-      hp: row[6] || '',
-      monster: row[7] || '',
-      location: row[8] || '',
-      damageDealt: row[9] || '',
-      damageReceived: row[10] || '',
-      peopleFighting: row[11] || '',
-      totalFights: '', // Backward compatible: no totalFights in old format
-      totalInventoryHP: '', // Backward compatible: not available in old format
-      hpUsed: '', // Backward compatible: not available in old format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[2] || "",
+      expForNextLevel: row[3] || "",
+      gainedExp: row[4] || "",
+      drops: row[5] || "",
+      hp: row[6] || "",
+      monster: row[7] || "",
+      location: row[8] || "",
+      damageDealt: row[9] || "",
+      damageReceived: row[10] || "",
+      peopleFighting: row[11] || "",
+      totalFights: "", // Backward compatible: no totalFights in old format
+      totalInventoryHP: "", // Backward compatible: not available in old format
+      hpUsed: "", // Backward compatible: not available in old format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   } else if (isNewFormatWithCombat) {
     // 11 fields: HP + combat
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[2] || '',
-      expForNextLevel: row[3] || '',
-      gainedExp: row[4] || '',
-      drops: row[5] || '',
-      hp: row[6] || '',
-      monster: row[7] || '',
-      location: row[8] || '',
-      damageDealt: row[9] || '',
-      damageReceived: row[10] || '',
-      peopleFighting: '', // Not available in this format
-      totalFights: '', // Not available in this format
-      totalInventoryHP: '', // Not available in this format
-      hpUsed: '', // Not available in this format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[2] || "",
+      expForNextLevel: row[3] || "",
+      gainedExp: row[4] || "",
+      drops: row[5] || "",
+      hp: row[6] || "",
+      monster: row[7] || "",
+      location: row[8] || "",
+      damageDealt: row[9] || "",
+      damageReceived: row[10] || "",
+      peopleFighting: "", // Not available in this format
+      totalFights: "", // Not available in this format
+      totalInventoryHP: "", // Not available in this format
+      hpUsed: "", // Not available in this format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   } else if (isNewFormatWithHP) {
     // New format with HP: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops,hp
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[2] || '',
-      expForNextLevel: row[3] || '',
-      gainedExp: row[4] || '',
-      drops: row[5] || '',
-      hp: row[6] || '',
-      monster: '', // Not available in this format
-      location: '', // Not available in this format
-      damageDealt: '', // Not available in this format
-      damageReceived: '', // Not available in this format
-      peopleFighting: '', // Not available in this format
-      totalFights: '', // Not available in this format
-      totalInventoryHP: '', // Not available in this format
-      hpUsed: '', // Not available in this format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[2] || "",
+      expForNextLevel: row[3] || "",
+      gainedExp: row[4] || "",
+      drops: row[5] || "",
+      hp: row[6] || "",
+      monster: "", // Not available in this format
+      location: "", // Not available in this format
+      damageDealt: "", // Not available in this format
+      damageReceived: "", // Not available in this format
+      peopleFighting: "", // Not available in this format
+      totalFights: "", // Not available in this format
+      totalInventoryHP: "", // Not available in this format
+      hpUsed: "", // Not available in this format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   } else if (isNewFormat) {
     // New format: timestamp,skill,skillLevel,expForNextLevel,gainedExp,drops
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[2] || '',
-      expForNextLevel: row[3] || '',
-      gainedExp: row[4] || '',
-      drops: row[5] || '',
-      hp: '', // HP not available in old format
-      monster: '', // Not available in this format
-      location: '', // Not available in this format
-      damageDealt: '', // Not available in this format
-      damageReceived: '', // Not available in this format
-      peopleFighting: '', // Not available in this format
-      totalFights: '', // Not available in this format
-      totalInventoryHP: '', // Not available in this format
-      hpUsed: '', // Not available in this format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[2] || "",
+      expForNextLevel: row[3] || "",
+      gainedExp: row[4] || "",
+      drops: row[5] || "",
+      hp: "", // HP not available in old format
+      monster: "", // Not available in this format
+      location: "", // Not available in this format
+      damageDealt: "", // Not available in this format
+      damageReceived: "", // Not available in this format
+      peopleFighting: "", // Not available in this format
+      totalFights: "", // Not available in this format
+      totalInventoryHP: "", // Not available in this format
+      hpUsed: "", // Not available in this format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   } else if (isOldNewFormat) {
     // Old new format (11 fields): legacy with gainedExp
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[5] || '',
-      expForNextLevel: row[6] || '',
-      gainedExp: row[7] || '',
-      drops: row[8] || '',
-      hp: '', // HP not available in old format
-      monster: '', // Not available in old format
-      location: '', // Not available in old format
-      damageDealt: '', // Not available in old format
-      damageReceived: '', // Not available in old format
-      peopleFighting: '', // Not available in old format
-      totalFights: '', // Not available in old format
-      totalInventoryHP: '', // Not available in old format
-      hpUsed: '', // Not available in old format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[5] || "",
+      expForNextLevel: row[6] || "",
+      gainedExp: row[7] || "",
+      drops: row[8] || "",
+      hp: "", // HP not available in old format
+      monster: "", // Not available in old format
+      location: "", // Not available in old format
+      damageDealt: "", // Not available in old format
+      damageReceived: "", // Not available in old format
+      peopleFighting: "", // Not available in old format
+      totalFights: "", // Not available in old format
+      totalInventoryHP: "", // Not available in old format
+      hpUsed: "", // Not available in old format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   } else if (isMediumFormat) {
     // Medium format (9 fields): timestamp,skill,exp,speedText,addExp,skillLevel,expForNextLevel,images,links
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: row[5] || '',
-      expForNextLevel: row[6] || '',
-      gainedExp: '', // Not available in this format
-      drops: '', // Not available in this format
-      hp: '', // HP not available in old format
-      monster: '', // Not available in old format
-      location: '', // Not available in old format
-      damageDealt: '', // Not available in old format
-      damageReceived: '', // Not available in old format
-      peopleFighting: '', // Not available in old format
-      totalFights: '', // Not available in old format
-      totalInventoryHP: '', // Not available in old format
-      hpUsed: '', // Not available in old format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: row[5] || "",
+      expForNextLevel: row[6] || "",
+      gainedExp: "", // Not available in this format
+      drops: "", // Not available in this format
+      hp: "", // HP not available in old format
+      monster: "", // Not available in old format
+      location: "", // Not available in old format
+      damageDealt: "", // Not available in old format
+      damageReceived: "", // Not available in old format
+      peopleFighting: "", // Not available in old format
+      totalFights: "", // Not available in old format
+      totalInventoryHP: "", // Not available in old format
+      hpUsed: "", // Not available in old format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   } else if (isOldFormat) {
     // Old format (7 fields): timestamp,skill,exp,speedText,addExp,images,links
     return {
-      timestamp: row[0] || '',
-      uuid: '', // Backward compatible: no UUID in old format
-      skill: row[1] || '',
-      skillLevel: '', // Not available in this format
-      expForNextLevel: '', // Not available in this format
-      gainedExp: '', // Not available in this format
-      drops: '', // Not available in this format
-      hp: '', // HP not available in old format
-      monster: '', // Not available in old format
-      location: '', // Not available in old format
-      damageDealt: '', // Not available in old format
-      damageReceived: '', // Not available in old format
-      peopleFighting: '', // Not available in old format
-      totalFights: '', // Not available in old format
-      totalInventoryHP: '', // Not available in old format
-      hpUsed: '', // Not available in old format
-      equipment: '', // Backward compatible: no equipment in old format
-      combatExp: '', // Backward compatible: no combatExp in old format
+      timestamp: row[0] || "",
+      uuid: "", // Backward compatible: no UUID in old format
+      skill: row[1] || "",
+      skillLevel: "", // Not available in this format
+      expForNextLevel: "", // Not available in this format
+      gainedExp: "", // Not available in this format
+      drops: "", // Not available in this format
+      hp: "", // HP not available in old format
+      monster: "", // Not available in old format
+      location: "", // Not available in old format
+      damageDealt: "", // Not available in old format
+      damageReceived: "", // Not available in old format
+      peopleFighting: "", // Not available in old format
+      totalFights: "", // Not available in old format
+      totalInventoryHP: "", // Not available in old format
+      hpUsed: "", // Not available in old format
+      equipment: "", // Backward compatible: no equipment in old format
+      combatExp: "", // Backward compatible: no combatExp in old format
+      actionType: "",
+      actionOutput: "",
     };
   }
 
   // Unknown format, try to extract what we can
   // Always return a complete CSVRow object with all fields
   const result: CSVRow = {
-    timestamp: row[0] || '',
-    uuid: row[1] || '', // Try to get UUID if available (may be empty for old formats)
-    skill: row[2] || row[1] || '', // Try row[2] first (new format), fallback to row[1] (old format)
-    skillLevel: row[3] || row[2] || '',
-    expForNextLevel: row[4] || row[3] || '',
-    gainedExp: row[5] || row[4] || '',
-    drops: row[6] || row[5] || '',
-    hp: row[7] || row[6] || '', // Try to get HP if available
-    monster: row[8] || row[7] || '', // Try to get monster if available
-    location: row[9] || row[8] || '', // Try to get location if available
-    damageDealt: row[10] || row[9] || '', // Try to get damageDealt if available
-    damageReceived: row[11] || row[10] || '', // Try to get damageReceived if available
-    peopleFighting: row[12] || row[11] || '', // Try to get peopleFighting if available
-    totalFights: row[13] || row[12] || '', // Try to get totalFights if available
-    totalInventoryHP: row[14] || row[13] || '', // Try to get totalInventoryHP if available
-    hpUsed: row[15] || row[14] || '', // Try to get hpUsed if available
-    equipment: row[16] || '', // Try to get equipment if available
-    combatExp: row[17] || '', // Try to get combatExp if available
+    timestamp: row[0] || "",
+    uuid: row[1] || "", // Try to get UUID if available (may be empty for old formats)
+    skill: row[2] || row[1] || "", // Try row[2] first (new format), fallback to row[1] (old format)
+    skillLevel: row[3] || row[2] || "",
+    expForNextLevel: row[4] || row[3] || "",
+    gainedExp: row[5] || row[4] || "",
+    drops: row[6] || row[5] || "",
+    hp: row[7] || row[6] || "", // Try to get HP if available
+    monster: row[8] || row[7] || "", // Try to get monster if available
+    location: row[9] || row[8] || "", // Try to get location if available
+    damageDealt: row[10] || row[9] || "", // Try to get damageDealt if available
+    damageReceived: row[11] || row[10] || "", // Try to get damageReceived if available
+    peopleFighting: row[12] || row[11] || "", // Try to get peopleFighting if available
+    totalFights: row[13] || row[12] || "", // Try to get totalFights if available
+    totalInventoryHP: row[14] || row[13] || "", // Try to get totalInventoryHP if available
+    hpUsed: row[15] || row[14] || "", // Try to get hpUsed if available
+    equipment: row[16] || "", // Try to get equipment if available
+    combatExp: row[17] || "", // Try to get combatExp if available
+    actionType: row[18] || "",
+    actionOutput: row[19] || "",
   };
   return result;
 };
@@ -409,8 +466,8 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
  * Escape CSV field (handles commas, quotes, newlines)
  */
 const escapeCSVField = (field: string | undefined | null): string => {
-  const safeField = field || '';
-  if (safeField.includes(',') || safeField.includes('"') || safeField.includes('\n')) {
+  const safeField = field || "";
+  if (safeField.includes(",") || safeField.includes('"') || safeField.includes("\n")) {
     return `"${safeField.replace(/"/g, '""')}"`;
   }
   return safeField;
@@ -439,19 +496,21 @@ export const csvRowToString = (row: CSVRow): string =>
     escapeCSVField(row.hpUsed),
     escapeCSVField(row.equipment),
     escapeCSVField(row.combatExp),
-  ].join(',');
+    escapeCSVField(row.actionType),
+    escapeCSVField(row.actionOutput),
+  ].join(",");
 
 /**
  * Get CSV header row
  */
 export const getCSVHeader = (): string =>
-  'timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed,equipment,combatExp';
+  "timestamp,uuid,skill,skillLevel,expForNextLevel,gainedExp,drops,hp,monster,location,damageDealt,damageReceived,peopleFighting,totalFights,totalInventoryHP,hpUsed,equipment,combatExp,actionType,actionOutput";
 
 /**
  * Parse CSV content to array of CSVRow objects
  */
 export const parseCSV = (csvContent: string): CSVRow[] => {
-  const lines = csvContent.trim().split('\n');
+  const lines = csvContent.trim().split("\n");
   if (lines.length === 0) return [];
 
   // Skip header row
@@ -461,7 +520,7 @@ export const parseCSV = (csvContent: string): CSVRow[] => {
     .map(line => {
       // Simple CSV parsing (handles quoted fields)
       const row: string[] = [];
-      let current = '';
+      let current = "";
       let inQuotes = false;
 
       for (let i = 0; i < line.length; i++) {
@@ -475,9 +534,9 @@ export const parseCSV = (csvContent: string): CSVRow[] => {
           } else {
             inQuotes = !inQuotes;
           }
-        } else if (char === ',' && !inQuotes) {
+        } else if (char === "," && !inQuotes) {
           row.push(current);
-          current = '';
+          current = "";
         } else {
           current += char;
         }
@@ -492,7 +551,7 @@ export const parseCSV = (csvContent: string): CSVRow[] => {
 /**
  * Time period types for filtering
  */
-export type TimePeriod = 'hour' | 'day' | 'week' | 'month';
+export type TimePeriod = "hour" | "day" | "week" | "month";
 
 /**
  * Filter CSV rows by time period
@@ -504,16 +563,16 @@ export const filterByTimePeriod = (rows: CSVRow[], period: TimePeriod, reference
   let startTime: number;
 
   switch (period) {
-    case 'hour':
+    case "hour":
       startTime = now - 60 * 60 * 1000; // 1 hour ago
       break;
-    case 'day':
+    case "day":
       startTime = now - 24 * 60 * 60 * 1000; // 24 hours ago
       break;
-    case 'week':
+    case "week":
       startTime = now - 7 * 24 * 60 * 60 * 1000; // 7 days ago
       break;
-    case 'month':
+    case "month":
       // Approximate month as 30 days
       startTime = now - 30 * 24 * 60 * 60 * 1000; // 30 days ago
       break;
@@ -580,8 +639,8 @@ export const aggregateStats = (rows: CSVRow[]): TrackedStats => {
       totalExp: 0,
       skills: {},
       timeRange: {
-        start: '',
-        end: '',
+        start: "",
+        end: "",
       },
     };
   }
@@ -594,15 +653,15 @@ export const aggregateStats = (rows: CSVRow[]): TrackedStats => {
   const sortedRows = [...rows].sort((a, b) => {
     const timeDiff = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     if (timeDiff !== 0) return timeDiff;
-    return (a.skill || '').localeCompare(b.skill || '');
+    return (a.skill || "").localeCompare(b.skill || "");
   });
 
   // Deduplicate entries: one entry per timestamp+skill (keep the one with highest gainedExp or most complete data)
   const uniqueEntriesMap = new Map<string, CSVRow>();
 
   sortedRows.forEach(row => {
-    const skill = row.skill || '';
-    const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+    const skill = row.skill || "";
+    const gainedExp = parseInt(row.gainedExp || "0", 10) || 0;
 
     // Deduplicate by timestamp+skill
     const key = `${row.timestamp}-${skill}`;
@@ -613,7 +672,7 @@ export const aggregateStats = (rows: CSVRow[]): TrackedStats => {
       uniqueEntriesMap.set(key, row);
     } else {
       // Entry exists - keep the one with higher gainedExp or more complete data
-      const existingGainedExp = parseInt(existing.gainedExp || '0', 10) || 0;
+      const existingGainedExp = parseInt(existing.gainedExp || "0", 10) || 0;
       if (gainedExp > existingGainedExp || (gainedExp === existingGainedExp && row.skillLevel)) {
         uniqueEntriesMap.set(key, row);
       }
@@ -624,8 +683,8 @@ export const aggregateStats = (rows: CSVRow[]): TrackedStats => {
   const uniqueEntries = Array.from(uniqueEntriesMap.values());
 
   uniqueEntries.forEach(row => {
-    const skill = row.skill || '';
-    const gainedExp = parseInt(row.gainedExp || '0', 10) || 0;
+    const skill = row.skill || "";
+    const gainedExp = parseInt(row.gainedExp || "0", 10) || 0;
 
     // Only count entries with gained exp > 0
     if (gainedExp > 0) {
@@ -636,7 +695,7 @@ export const aggregateStats = (rows: CSVRow[]): TrackedStats => {
   });
 
   return {
-    totalEntries: uniqueEntries.filter(row => parseInt(row.gainedExp || '0', 10) > 0).length,
+    totalEntries: uniqueEntries.filter(row => parseInt(row.gainedExp || "0", 10) > 0).length,
     totalExp: totalGainedExp, // This is actually total gained exp, not total exp
     skills,
     timeRange: {

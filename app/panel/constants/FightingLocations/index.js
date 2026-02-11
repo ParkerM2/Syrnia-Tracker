@@ -1,7 +1,7 @@
-import ARCH_CAVES_6 from './archCaves6';
-import BARRACKS from './barracks';
-import CATACOMBS from './catacombs';
-import HIGHLANDS from './highlands';
+import ARCH_CAVES_6 from "./archCaves6";
+import BARRACKS from "./barracks";
+import CATACOMBS from "./catacombs";
+import HIGHLANDS from "./highlands";
 
 const FIGHTING_LOCATIONS = {
   ARCH_CAVES_6: ARCH_CAVES_6,

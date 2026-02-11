@@ -1,8 +1,8 @@
-import { UPDATE_SCREEN_DATA, UPDATE_USER_STATS } from '@app/constants';
-import { TRACKED_DATA_QUERY_KEY } from '@app/hooks/useTrackedDataQuery';
-import { getTrackedData } from '@app/utils/storage-service';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { UPDATE_SCREEN_DATA, UPDATE_USER_STATS } from "@app/constants";
+import { TRACKED_DATA_QUERY_KEY } from "@app/hooks";
+import { getTrackedData } from "@app/utils/storage-service";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 /**
  * Global hook to sync data updates across all components
@@ -35,11 +35,11 @@ export const useGlobalDataSync = () => {
         try {
           // User stats are passed in the message, so we can update directly
           if (message.data) {
-            queryClient.setQueryData(['userStats'], message.data);
+            queryClient.setQueryData(["userStats"], message.data);
           }
         } catch {
           // If update fails, fall back to invalidation
-          queryClient.invalidateQueries({ queryKey: ['userStats'] });
+          queryClient.invalidateQueries({ queryKey: ["userStats"] });
         }
       }
     };
@@ -47,7 +47,7 @@ export const useGlobalDataSync = () => {
     // Storage listener as a backup mechanism
     // Only triggers if message listener somehow fails
     const storageListener = async (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
-      if (areaName === 'local' && changes.tracked_data_csv) {
+      if (areaName === "local" && changes.tracked_data_csv) {
         const newValue = changes.tracked_data_csv.newValue;
         if (newValue && newValue.trim().length > 0) {
           // Directly update cache with fresh data

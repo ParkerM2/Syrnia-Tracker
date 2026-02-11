@@ -9,8 +9,8 @@ import {
   DialogTitle,
   Input,
   Label,
-} from '@app/components';
-import { memo } from 'react';
+} from "@app/components";
+import { memo } from "react";
 
 interface CustomThemeDialogProps {
   open: boolean;
@@ -29,7 +29,7 @@ const CustomThemeDialog = memo<CustomThemeDialogProps>(
     <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
       <DialogContent className="max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editingId ? 'Edit Custom Theme' : 'Add Custom Theme'}</DialogTitle>
+          <DialogTitle>{editingId ? "Edit Custom Theme" : "Add Custom Theme"}</DialogTitle>
           <DialogDescription>
             Paste CSS variables from tweakcn.com or similar. Supports any color format (hsl, hex, oklch, rgb).
           </DialogDescription>
@@ -49,11 +49,11 @@ const CustomThemeDialog = memo<CustomThemeDialogProps>(
               placeholder={`:root {\n  --background: hsl(0 0% 100%);\n  --foreground: hsl(222 84% 5%);\n  /* ... */\n}\n\n.dark {\n  --background: hsl(222 84% 5%);\n  --foreground: hsl(210 40% 98%);\n  /* ... */\n}`}
               rows={12}
               className={cn(
-                'flex w-full rounded-md border border-input px-3 py-2 text-sm text-foreground ring-offset-background',
-                'bg-background dark:bg-secondary',
-                'placeholder:text-muted-foreground',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                'resize-y font-mono',
+                "flex w-full rounded-md border border-input px-3 py-2 text-sm text-foreground ring-offset-background",
+                "bg-transparent",
+                "placeholder:text-muted-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "resize-y font-mono",
               )}
             />
           </div>
@@ -65,13 +65,13 @@ const CustomThemeDialog = memo<CustomThemeDialogProps>(
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={onSave}>{editingId ? 'Update' : 'Save'}</Button>
+          <Button onClick={onSave}>{editingId ? "Update" : "Save"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   ),
 );
 
-CustomThemeDialog.displayName = 'CustomThemeDialog';
+CustomThemeDialog.displayName = "CustomThemeDialog";
 
 export default CustomThemeDialog;

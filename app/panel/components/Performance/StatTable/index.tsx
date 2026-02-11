@@ -1,7 +1,7 @@
-import { useStatTable } from './useStatTable';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, cn } from '@app/components';
-import { memo } from 'react';
-import type { StatRow } from './types';
+import { useStatTable } from "./useStatTable";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, cn } from "@app/components";
+import { memo } from "react";
+import type { StatRow } from "./types";
 
 interface StatTableProps {
   rows: StatRow[];
@@ -20,7 +20,7 @@ const StatTable = memo(({ rows, className }: StatTableProps) => {
   }
 
   return (
-    <div className={cn('overflow-x-auto', className)}>
+    <div className={cn("overflow-x-auto", className)}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -35,7 +35,7 @@ const StatTable = memo(({ rows, className }: StatTableProps) => {
           <TableRow>
             {visibleRows.map((row, index) => {
               const displayValue = formatRowValue(row);
-              const cellClassName = cn('text-right font-medium', row.className);
+              const cellClassName = cn("text-right font-medium", row.className);
 
               return (
                 <TableCell key={`value-${row.label}-${index}`} className={cellClassName}>
@@ -50,7 +50,7 @@ const StatTable = memo(({ rows, className }: StatTableProps) => {
   );
 });
 
-StatTable.displayName = 'StatTable';
+StatTable.displayName = "StatTable";
 
 export { StatTable };
-export type { StatRow } from './types';
+export type { StatRow } from "./types";

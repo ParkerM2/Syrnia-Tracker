@@ -1,25 +1,11 @@
-import { cn } from '../../utils';
-import { Button } from '../ui/button';
-import { useStorage } from '@app/hooks';
-import { exampleThemeStorage } from '@app/utils/storage';
-import { useEffect } from 'react';
+import { cn } from "../../utils";
+import { Button } from "../ui/button";
+import { useStorage } from "@app/hooks";
+import { exampleThemeStorage } from "@app/utils/storage";
 
 export const ThemeToggle = () => {
   const storageData = useStorage(exampleThemeStorage);
   const isLight = storageData?.isLight ?? false;
-
-  // Ensure dark mode class is applied when theme changes
-  useEffect(() => {
-    const root = document.documentElement;
-    // Default to dark mode if storage hasn't loaded yet
-    const shouldBeDark = storageData ? !isLight : true;
-
-    if (shouldBeDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [isLight, storageData]);
 
   return (
     <Button
@@ -27,8 +13,8 @@ export const ThemeToggle = () => {
       size="icon"
       onClick={exampleThemeStorage.toggle}
       className={cn(
-        'fixed bottom-4 left-4 z-50 h-12 w-12 rounded-full shadow-lg',
-        'border-2 bg-background hover:bg-accent',
+        "fixed bottom-4 left-4 z-50 h-12 w-12 rounded-full shadow-lg",
+        "border-2 bg-background hover:bg-accent",
       )}
       aria-label="Toggle theme">
       {isLight ? (

@@ -1,6 +1,6 @@
-import { useEquipmentDisplay } from './useEquipmentDisplay';
-import { memo } from 'react';
-import type { EquipmentItem } from '@app/types';
+import { useEquipmentDisplay } from "./useEquipmentDisplay";
+import { memo } from "react";
+import type { EquipmentItem } from "@app/types";
 
 interface EquipmentDisplayData {
   items?: Record<string, EquipmentItem>;
@@ -28,8 +28,8 @@ const EquipmentDisplay = memo(({ equipment }: EquipmentDisplayProps) => {
   const { equipmentRows, formattedTotals } = useEquipmentDisplay(equipment);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 border-l pl-6">
-      <h4 className="text-left text-sm font-semibold">Average Equipment</h4>
+    <div className="flex flex-1 flex-col gap-4 pl-6 sm:border-l">
+      <h3 className="text-center text-lg font-semibold">Average Equipment</h3>
 
       {/* Equipment Grid */}
       <div className="flex flex-col gap-1">
@@ -162,6 +162,6 @@ const EquipmentDisplay = memo(({ equipment }: EquipmentDisplayProps) => {
   );
 });
 
-EquipmentDisplay.displayName = 'EquipmentDisplay';
+EquipmentDisplay.displayName = "EquipmentDisplay";
 
 export { EquipmentDisplay };

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import type { EquipmentItem } from '@app/types';
+import { useMemo } from "react";
+import type { EquipmentItem } from "@app/types";
 
 interface FormattedEquipmentItem {
   slot: string;
@@ -23,20 +23,20 @@ interface EquipmentDisplayData {
 export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined) => {
   // Format image URL like loot images: https://www.syrnia.com/images/inventory/Item%20Name.png?query
   const formatImageUrl = (imageUrl: string | undefined): string => {
-    if (!imageUrl) return '';
+    if (!imageUrl) return "";
 
-    if (imageUrl.startsWith('https://')) {
+    if (imageUrl.startsWith("https://")) {
       return imageUrl;
     }
 
     // If it's a relative path, format it properly
-    if (imageUrl.startsWith('images/')) {
+    if (imageUrl.startsWith("images/")) {
       // Extract the path and query parameters
-      const [path, query] = imageUrl.split('?');
+      const [path, query] = imageUrl.split("?");
       // URL encode spaces in the path (like loot images)
-      const encodedPath = path.replace(/\s/g, '%20');
+      const encodedPath = path.replace(/\s/g, "%20");
       // Reconstruct with query params if they exist
-      return `https://www.syrnia.com/${encodedPath}${query ? `?${query}` : ''}`;
+      return `https://www.syrnia.com/${encodedPath}${query ? `?${query}` : ""}`;
     }
 
     // Fallback: prepend base URL
@@ -75,8 +75,8 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
     const row1: FormattedEquipmentItem[] = [];
     if (items.helm) {
       row1.push({
-        slot: 'helm',
-        name: items.helm.name || 'Helm',
+        slot: "helm",
+        name: items.helm.name || "Helm",
         imageUrl: formatImageUrl(items.helm.imageUrl),
       });
     }
@@ -85,22 +85,22 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
     const row2: FormattedEquipmentItem[] = [];
     if (items.shield) {
       row2.push({
-        slot: 'shield',
-        name: items.shield.name || 'Shield',
+        slot: "shield",
+        name: items.shield.name || "Shield",
         imageUrl: formatImageUrl(items.shield.imageUrl),
       });
     }
     if (items.body) {
       row2.push({
-        slot: 'body',
-        name: items.body.name || 'Body',
+        slot: "body",
+        name: items.body.name || "Body",
         imageUrl: formatImageUrl(items.body.imageUrl),
       });
     }
     if (items.weapon) {
       row2.push({
-        slot: 'weapon',
-        name: items.weapon.name || 'Weapon',
+        slot: "weapon",
+        name: items.weapon.name || "Weapon",
         imageUrl: formatImageUrl(items.weapon.imageUrl),
       });
     }
@@ -109,15 +109,15 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
     const row3: FormattedEquipmentItem[] = [];
     if (items.legs) {
       row3.push({
-        slot: 'legs',
-        name: items.legs.name || 'Legs',
+        slot: "legs",
+        name: items.legs.name || "Legs",
         imageUrl: formatImageUrl(items.legs.imageUrl),
       });
     }
     if (items.gloves) {
       row3.push({
-        slot: 'gloves',
-        name: items.gloves.name || 'Gloves',
+        slot: "gloves",
+        name: items.gloves.name || "Gloves",
         imageUrl: formatImageUrl(items.gloves.imageUrl),
       });
     }
@@ -126,34 +126,34 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
     const row4: FormattedEquipmentItem[] = [];
     if (items.horse) {
       row4.push({
-        slot: 'horse',
-        name: items.horse.name || 'Horse',
+        slot: "horse",
+        name: items.horse.name || "Horse",
         imageUrl: formatImageUrl(items.horse.imageUrl),
       });
     }
     if (items.boots) {
       row4.push({
-        slot: 'boots',
-        name: items.boots.name || 'Boots',
+        slot: "boots",
+        name: items.boots.name || "Boots",
         imageUrl: formatImageUrl(items.boots.imageUrl),
       });
     }
 
     // Create lookup maps for easy access without repeated .find() calls
     const row2Map = {
-      shield: row2.find(item => item.slot === 'shield'),
-      body: row2.find(item => item.slot === 'body'),
-      weapon: row2.find(item => item.slot === 'weapon'),
+      shield: row2.find(item => item.slot === "shield"),
+      body: row2.find(item => item.slot === "body"),
+      weapon: row2.find(item => item.slot === "weapon"),
     };
 
     const row3Map = {
-      legs: row3.find(item => item.slot === 'legs'),
-      gloves: row3.find(item => item.slot === 'gloves'),
+      legs: row3.find(item => item.slot === "legs"),
+      gloves: row3.find(item => item.slot === "gloves"),
     };
 
     const row4Map = {
-      boots: row4.find(item => item.slot === 'boots'),
-      horse: row4.find(item => item.slot === 'horse'),
+      boots: row4.find(item => item.slot === "boots"),
+      horse: row4.find(item => item.slot === "horse"),
     };
 
     return {
@@ -177,7 +177,7 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
       label: string;
       value: number;
       enchant?: string;
-      enchantType?: 'aim' | 'armour' | 'power';
+      enchantType?: "aim" | "armour" | "power";
       enchantColorClass: string;
     }> = [];
 
@@ -208,29 +208,29 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
 
     if (equipment.totals.armour !== undefined) {
       totals.push({
-        label: 'Total Armour',
+        label: "Total Armour",
         value: Math.round(equipment.totals.armour),
         enchant: totalArmourEnchant > 0 ? `+${totalArmourEnchant} Armour` : undefined,
-        enchantType: 'armour',
-        enchantColorClass: totalArmourEnchant > 0 ? 'text-blue-500' : '',
+        enchantType: "armour",
+        enchantColorClass: totalArmourEnchant > 0 ? "text-blue-500" : "",
       });
     }
     if (equipment.totals.aim !== undefined) {
       totals.push({
-        label: 'Aim',
+        label: "Aim",
         value: Math.round(equipment.totals.aim),
         enchant: totalAimEnchant > 0 ? `+${totalAimEnchant} Aim` : undefined,
-        enchantType: 'aim',
-        enchantColorClass: totalAimEnchant > 0 ? 'text-[#f8ef8c]' : '',
+        enchantType: "aim",
+        enchantColorClass: totalAimEnchant > 0 ? "text-[#f8ef8c]" : "",
       });
     }
     if (equipment.totals.power !== undefined) {
       totals.push({
-        label: 'Power',
+        label: "Power",
         value: Math.round(equipment.totals.power),
         enchant: totalPowerEnchant > 0 ? `+${totalPowerEnchant} Power` : undefined,
-        enchantType: 'power',
-        enchantColorClass: totalPowerEnchant > 0 ? 'text-red-500' : '',
+        enchantType: "power",
+        enchantColorClass: totalPowerEnchant > 0 ? "text-red-500" : "",
       });
     }
 

@@ -1,12 +1,12 @@
-import type { UserStats } from '@app/types';
+import type { UserStats } from "@app/types";
 
-const USER_STATS_STORAGE_KEY = 'user_stats_csv';
+const USER_STATS_STORAGE_KEY = "user_stats_csv";
 
 /**
  * Get CSV header for user stats
  */
 const getUserStatsCSVHeader = (): string =>
-  'timestamp,username,skill,level,totalExp,expForNextLevel,percentToNext,expLeft,gainedThisHour,gainedThisWeek,levelGainedThisWeek';
+  "timestamp,username,skill,level,totalExp,expForNextLevel,percentToNext,expLeft,gainedThisHour,gainedThisWeek,levelGainedThisWeek";
 
 /**
  * Convert UserStats to CSV string
@@ -26,22 +26,22 @@ const userStatsToCSV = (stats: UserStats): string => {
       escapeCSVField(skillStat.expForNextLevel),
       escapeCSVField(skillStat.percentToNext.toString()),
       escapeCSVField(skillStat.expLeft),
-      escapeCSVField(skillStat.gainedThisHour || ''),
-      escapeCSVField(skillStat.gainedThisWeek || ''),
-      escapeCSVField(skillStat.levelGainedThisWeek || ''),
-    ].join(',');
+      escapeCSVField(skillStat.gainedThisHour || ""),
+      escapeCSVField(skillStat.gainedThisWeek || ""),
+      escapeCSVField(skillStat.levelGainedThisWeek || ""),
+    ].join(",");
     lines.push(line);
   });
 
-  return lines.join('\n');
+  return lines.join("\n");
 };
 
 /**
  * Escape CSV field
  */
 const escapeCSVField = (field: string | undefined | null): string => {
-  const safeField = field || '';
-  if (safeField.includes(',') || safeField.includes('"') || safeField.includes('\n')) {
+  const safeField = field || "";
+  if (safeField.includes(",") || safeField.includes('"') || safeField.includes("\n")) {
     return `"${safeField.replace(/"/g, '""')}"`;
   }
   return safeField;
@@ -51,7 +51,7 @@ const escapeCSVField = (field: string | undefined | null): string => {
  * Parse CSV content to UserStats
  */
 const parseUserStatsCSV = (csvContent: string): UserStats | null => {
-  const lines = csvContent.trim().split('\n');
+  const lines = csvContent.trim().split("\n");
 
   if (lines.length === 0) {
     return null;
@@ -87,7 +87,7 @@ const parseUserStatsCSV = (csvContent: string): UserStats | null => {
 
   dataLines.forEach(line => {
     const row: string[] = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
 
     for (let i = 0; i < line.length; i++) {
@@ -101,9 +101,9 @@ const parseUserStatsCSV = (csvContent: string): UserStats | null => {
         } else {
           inQuotes = !inQuotes;
         }
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === "," && !inQuotes) {
         row.push(current);
-        current = '';
+        current = "";
       } else {
         current += char;
       }
@@ -112,17 +112,17 @@ const parseUserStatsCSV = (csvContent: string): UserStats | null => {
 
     if (row.length >= 11) {
       rows.push({
-        timestamp: row[0] || '',
-        username: row[1] || '',
-        skill: row[2] || '',
-        level: row[3] || '',
-        totalExp: row[4] || '',
-        expForNextLevel: row[5] || '',
-        percentToNext: row[6] || '0',
-        expLeft: row[7] || '',
-        gainedThisHour: row[8] || '',
-        gainedThisWeek: row[9] || '',
-        levelGainedThisWeek: row[10] || '',
+        timestamp: row[0] || "",
+        username: row[1] || "",
+        skill: row[2] || "",
+        level: row[3] || "",
+        totalExp: row[4] || "",
+        expForNextLevel: row[5] || "",
+        percentToNext: row[6] || "0",
+        expLeft: row[7] || "",
+        gainedThisHour: row[8] || "",
+        gainedThisWeek: row[9] || "",
+        levelGainedThisWeek: row[10] || "",
       });
     }
   });
