@@ -1,18 +1,141 @@
-<div align="center">
+> [!IMPORTANT] 
+> **ONLY** for testing in the  **[PTR](www.ptr.syrnia.com) Environment** until further notice.
 
-<picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/99cb6303-64e4-4bed-bf3f-35735353e6de" />
-    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a5dbf71c-c509-4c4f-80f4-be88a1943a0a" />
-    <img alt="Logo" src="https://github.com/user-attachments/assets/99cb6303-64e4-4bed-bf3f-35735353e6de" />
-</picture>
+# Syrnia Tracker - Local Live Data Tracking and Analysis
 
-![](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
-![](https://img.shields.io/badge/Typescript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![](https://badges.aleen42.com/src/vitejs.svg)
+<img width="2350" height="887" alt="image" src="https://github.com/user-attachments/assets/a26d083b-c502-4af7-a1ba-f736ed707f92" />
 
+## Views
+<img width="200" height="400" alt="image" src="https://github.com/user-attachments/assets/251a739c-c3d4-4b08-94ec-f4a155004ed9" />
+<img title="Calendar" width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/e5ccf6a2-e4db-4cf6-8297-e49c34464509" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/ee876226-4665-422d-ac26-692d8d7e0a83" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/7226bb35-21d2-46b7-8039-912a9bcff76f" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/b9fe8cc6-731a-48d6-b9bc-ecbe3d27e20b" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/43bb2d42-b1bd-437f-899c-f9d4113f4875" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/223c7fdb-ee8f-4219-bab1-c497301937f3" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/27e3ee96-d885-4260-8a1c-41212bb0dcc0" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/a3f0353b-38dc-4f70-97f2-5e080440ef3d" />
 
-</div>
-
+## How data is stored
+```
+[
+  {
+    "timestamp": "2026-02-11T23:04:03.806Z",
+    "uuid": "a0c976b3-7560-42cd-a974-5d6867abe092",
+    "skill": "Defence",
+    "skillLevel": "139",
+    "expForNextLevel": "644256",
+    "gainedExp": "245",
+    "drops": [],
+    "hp": "273,514",
+    "monster": "Sirin",
+    "location": "The Travasi highlands",
+    "damageDealt": [
+      "57",
+      "39"
+    ],
+    "damageReceived": [
+      "8"
+    ],
+    "peopleFighting": "",
+    "totalFights": "1",
+    "totalInventoryHP": "273,514",
+    "hpUsed": "8",
+    "equipment": {
+      "totals": {
+        "armour": 265,
+        "aim": 167,
+        "power": 160
+      },
+      "helm": {
+        "slot": "helm",
+        "name": "Dragon helm",
+        "title": "Dragon helm [4 Aim]",
+        "imageUrl": "images/inventory/Dragon helm.png?4",
+        "stats": "40",
+        "enchant": "4 Aim"
+      },
+      "shield": {
+        "slot": "shield",
+        "name": "Dragon shield",
+        "title": "Dragon shield [4 Aim]",
+        "imageUrl": "images/inventory/Dragon shield.png?4",
+        "stats": "55",
+        "enchant": "4 Aim"
+      },
+      "body": {
+        "slot": "body",
+        "name": "Dragon plate",
+        "title": "Dragon plate [4 Aim]",
+        "imageUrl": "images/inventory/Dragon plate.png?4",
+        "stats": "70",
+        "enchant": "4 Aim"
+      },
+      "weapon": {
+        "slot": "weapon",
+        "name": "Novariet scimitar",
+        "title": "Novariet scimitar [0 Durability]",
+        "imageUrl": "images/inventory/Novariet scimitar.png?4",
+        "stats": "167/160"
+      },
+      "legs": {
+        "slot": "legs",
+        "name": "Dragon legs",
+        "title": "Dragon legs [4 Aim]",
+        "imageUrl": "images/inventory/Dragon legs.png?4",
+        "stats": "50",
+        "enchant": "4 Aim"
+      },
+      "gloves": {
+        "slot": "gloves",
+        "name": "Dragon gauntlets",
+        "title": "Dragon gauntlets [4 Aim]",
+        "imageUrl": "images/inventory/Dragon gauntlets.png?4",
+        "stats": "25",
+        "enchant": "4 Aim"
+      },
+      "boots": {
+        "slot": "boots",
+        "name": "Dragon boots",
+        "title": "Dragon boots [4 Aim]",
+        "imageUrl": "images/inventory/Dragon boots.png?4",
+        "stats": "25",
+        "enchant": "4 Aim"
+      },
+      "horse": {
+        "slot": "horse",
+        "name": "No horse",
+        "title": "No horse ",
+        "imageUrl": "images/inventory/No horse.png?4"
+      },
+      "trophy": {
+        "slot": "trophy",
+        "name": "Bloodmoon dahlia",
+        "title": "Bloodmoon dahlia",
+        "imageUrl": "images/inventory/Bloodmoon dahlia.png?4"
+      }
+    },
+    "combatExp": [
+      {
+        "skill": "Defence",
+        "exp": "222",
+        "skillLevel": "139",
+        "totalExp": "33074923",
+        "expForNextLevel": "644256"
+      },
+      {
+        "skill": "Defence",
+        "exp": "23",
+        "skillLevel": "139",
+        "totalExp": "33074923",
+        "expForNextLevel": "644256"
+      }
+    ],
+    "actionType": "combat",
+    "actionOutput": null // if skilling this would be [ { item: "Cooked Salmon", amount: 99 // total } ]
+  },
+];
+```
 ## Table of Contents
 
 - [What is Syrnia Tracker?](#what-is-syrnia-tracker)
@@ -160,7 +283,7 @@ The side panel is the main interface for viewing and interacting with your track
 
 The Dashboard provides an overview of your current gameplay session:
 
-![Dashboard Tab](https://i.gyazo.com/1954837345d92f0455a06d6971bf23d3.png)
+<img src="https://i.gyazo.com/1954837345d92f0455a06d6971bf23d3.png" alt="dashboard image" width="300" align="center" />
 
 **Current Hour Statistics**:
 - Total experience gained in the current hour
@@ -192,7 +315,7 @@ The Dashboard provides an overview of your current gameplay session:
 
 The Profile tab displays your character information and current training progress:
 
-![Profile Tab](https://i.gyazo.com/28e6ed73a768687abd0a763dfd639b57.png)
+<img src="https://i.gyazo.com/28e6ed73a768687abd0a763dfd639b57.png" alt="dashboard image" width="300" align="center" />
 
 **Profile Card**:
 - Username and last update timestamp
@@ -213,7 +336,7 @@ The Profile tab displays your character information and current training progres
 
 The Performance tab shows detailed statistics organized by location:
 
-![Performance Tab](SCREENSHOT_URL_PERFORMANCE)
+<img src="https://i.gyazo.com/536cbd4044f46fbc2116782c080dcc87.png" width="300" align="center" />
 
 **Location Filtering**:
 - Tabs for each location where you've trained
@@ -241,7 +364,10 @@ The Performance tab shows detailed statistics organized by location:
 
 The Loot tab tracks all items dropped during gameplay:
 
-![Loot Tab](SCREENSHOT_URL_LOOT)
+<div align="center">
+  <img src="https://i.gyazo.com/5f1a78b7900edb30e326db0bbd8efe97.webp" width="300" />
+  <img src="https://i.gyazo.com/780e0e0abf006be7962d25a1917ba062.png" width="300" />
+</div>
 
 **Current Hour Drops**:
 - All items dropped in the current hour
@@ -269,7 +395,7 @@ The Loot tab tracks all items dropped during gameplay:
 
 The History tab provides comprehensive historical data analysis:
 
-![History Tab](https://i.gyazo.com/2ba212467883e6fd1fa9b280fc52551e.png)
+<img src="https://i.gyazo.com/2ba212467883e6fd1fa9b280fc52551e.png" width="300" />
 
 **Time Period Selection**:
 - Filter by Hour, Day, Week, or Month
