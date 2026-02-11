@@ -1,4 +1,5 @@
 import { useDataView } from "./useDataView";
+import { DownloadIcon, RefreshIcon, TrashIcon } from "@app/assets/icons";
 import {
   cn,
   Card,
@@ -6,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
   Badge,
+  IconButton,
   Switch,
   Label,
   Table,
@@ -15,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@app/components";
-import { memo } from "react";
+import { useDataExport, useTrackedDataQuery } from "@app/hooks";
+import { memo, useCallback } from "react";
 import type { CSVRow } from "@app/types";
 
 /**
@@ -270,6 +273,28 @@ JSONView.displayName = "JSONView";
 const DataView = memo(() => {
   const { rows, filterType, setFilterType, viewMode, setViewMode, isLoading, error, totalCount, filteredCount } =
     useDataView();
+  const { refresh, clear } = useTrackedDataQuery();
+  const { exportData, isExporting } = useDataExport();
+
+  const handleDownload = useCallback(async () => {
+    try {
+      await exportData("tracked", true);
+      alert("CSV file downloaded successfully!");
+    } catch {
+      alert("Error downloading CSV file");
+    }
+  }, [exportData]);
+
+  const handleClear = useCallback(async () => {
+    if (confirm("Are you sure you want to clear all tracked data? This action cannot be undone.")) {
+      try {
+        await clear();
+        alert("All tracked data cleared successfully!");
+      } catch {
+        alert("Error clearing tracked data");
+      }
+    }
+  }, [clear]);
 
   if (isLoading) {
     return <div className={cn("p-4 text-lg font-semibold")}>Loading data...</div>;
@@ -288,7 +313,27 @@ const DataView = memo(() => {
       {/* Header Card with Filters and View Toggle */}
       <Card>
         <CardHeader>
-          <CardTitle>Data View</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Data View</CardTitle>
+            <div className="flex gap-2">
+              <IconButton
+                onClick={handleDownload}
+                disabled={isExporting}
+                variant="default"
+                size="icon"
+                label="Download CSV"
+                Icon={DownloadIcon}
+              />
+              <IconButton
+                onClick={handleClear}
+                variant="destructive"
+                size="icon"
+                label="Clear All Data"
+                Icon={TrashIcon}
+              />
+              <IconButton onClick={refresh} variant="secondary" size="icon" label="Refresh" Icon={RefreshIcon} />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {/* Stats */}

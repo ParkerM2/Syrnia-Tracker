@@ -1,3 +1,4 @@
+export * from "./aggregate-rows";
 export * from "./cn";
 export * from "./helpers";
 export * from "./colorful-logger";

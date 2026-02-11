@@ -31,7 +31,7 @@ const Dashboard = memo(() => {
   }
 
   return (
-    <div className={cn("flex flex-col gap-6")}>
+    <div className={cn("flex flex-col gap-4")}>
       {/* Hour Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {currentHourData && <HourCard data={currentHourData} />}

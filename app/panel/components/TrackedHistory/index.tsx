@@ -1,7 +1,5 @@
-import { DownloadIcon, RefreshIcon, TrashIcon } from "@app/assets/icons";
 import {
   cn,
-  IconButton,
   Card,
   CardContent,
   CardHeader,
@@ -16,13 +14,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@app/components";
-import { useTrackedDataQuery, useDataExport, usePeriodStats } from "@app/hooks";
+import { useTrackedDataQuery, usePeriodStats } from "@app/hooks";
 import React, { useState } from "react";
 import type { TimePeriod } from "@app/types";
 
 const TrackedHistory = () => {
-  const { statsByPeriod, refresh, clear } = useTrackedDataQuery();
-  const { exportData, isExporting } = useDataExport();
+  const { statsByPeriod } = useTrackedDataQuery();
   const {
     periodBreakdown,
     selectedPeriod,
@@ -92,63 +89,12 @@ const TrackedHistory = () => {
     }
   };
 
-  const handleDownload = async () => {
-    try {
-      // Export tracked data CSV
-      await exportData("tracked", true);
-      alert("CSV file downloaded successfully!");
-    } catch {
-      alert("Error downloading CSV file");
-    }
-  };
-
-  const handleClear = async () => {
-    if (confirm("Are you sure you want to clear all tracked data? This action cannot be undone.")) {
-      try {
-        await clear();
-        alert("All tracked data cleared successfully!");
-      } catch {
-        alert("Error clearing tracked data");
-      }
-    }
-  };
-
   if (loading) {
     return <div className={cn("text-lg font-semibold")}>Loading tracked data...</div>;
   }
 
   return (
     <div className={cn("flex w-full flex-col gap-4")}>
-      <div className="flex flex-row items-center justify-end">
-        <div className="flex gap-2">
-          <IconButton
-            onClick={handleDownload}
-            disabled={isExporting}
-            variant="default"
-            size="icon"
-            label="Download CSV"
-            className="flex-shrink-0"
-            Icon={DownloadIcon}
-          />
-          <IconButton
-            onClick={handleClear}
-            variant="destructive"
-            size="icon"
-            label="Clear All Data"
-            className="flex-shrink-0"
-            Icon={TrashIcon}
-          />
-          <IconButton
-            onClick={refresh}
-            variant="secondary"
-            size="icon"
-            label="Refresh"
-            className="flex-shrink-0"
-            Icon={RefreshIcon}
-          />
-        </div>
-      </div>
-
       {/* Time Period Selector */}
       <Tabs value={selectedPeriod} onValueChange={value => setSelectedPeriod(value as TimePeriod)}>
         <TabsList>

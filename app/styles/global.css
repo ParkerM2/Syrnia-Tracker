@@ -5,6 +5,15 @@
 @layer base {
   :root {
     color-scheme: light;
+    --sidebar: hsl(0 0% 100%);
+    --sidebar-foreground: hsl(222.2 84% 4.9%);
+    --sidebar-border: hsl(214.3 31.8% 91.4%);
+    --sidebar-background: hsl(0 0% 100%);
+    --sidebar-background-hover: hsl(210 40% 96.1%);
+    --sidebar-background-active: hsl(210 40% 96.1%);
+    --sidebar-background-selected: hsl(210 40% 96.1%);
+    --sidebar-background-selected-hover: hsl(210 40% 96.1%);
+    --sidebar-background-selected-active: hsl(210 40% 96.1%);
     --background: hsl(0 0% 100%);
     --foreground: hsl(222.2 84% 4.9%);
     --card: hsl(0 0% 100%);
@@ -30,10 +39,35 @@
       sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --spacing: 0.25rem;
+    --tracking-normal: 0em;
+    --shadow-color: hsl(0 0% 0%);
+    --shadow-x: 0px;
+    --shadow-y: 1px;
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.1;
+    --shadow-2xs: 0 1px rgb(0 0 0 / 0.05);
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   }
 
   .dark {
     color-scheme: dark;
+    --sidebar: hsl(222.2 84% 4.9%);
+    --sidebar-foreground: hsl(210 40% 98%);
+    --sidebar-border: hsl(217.2 32.6% 17.5%);
+    --sidebar-background: hsl(222.2 84% 4.9%);
+    --sidebar-background-hover: hsl(217.2 32.6% 17.5%);
+    --sidebar-background-active: hsl(217.2 32.6% 17.5%);
+    --sidebar-background-selected: hsl(217.2 32.6% 17.5%);
+    --sidebar-background-selected-hover: hsl(217.2 32.6% 17.5%);
+    --sidebar-background-selected-active: hsl(217.2 32.6% 17.5%);
     --background: hsl(222.2 84% 4.9%);
     --foreground: hsl(210 40% 98%);
     --card: hsl(222.2 84% 4.9%);
@@ -53,6 +87,20 @@
     --border: hsl(217.2 32.6% 17.5%);
     --input: hsl(217.2 32.6% 17.5%);
     --ring: hsl(212.7 26.8% 83.9%);
+    --shadow-color: hsl(0 0% 0%);
+    --shadow-x: 0px;
+    --shadow-y: 1px;
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.1;
+    --shadow-2xs: 0 1px rgb(0 0 0 / 0.1);
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.1);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.15);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.15);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.15), 0 2px 4px -2px rgb(0 0 0 / 0.15);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.15), 0 4px 6px -4px rgb(0 0 0 / 0.15);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.15);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.35);
   }
 }
 

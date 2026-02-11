@@ -1,4 +1,5 @@
 import { useGlobalDataSync } from "./useGlobalDataSync";
+import Calendar from "../components/Calendar";
 import Dashboard from "../components/Dashboard";
 import DataView from "../components/DataView";
 import LootMap from "../components/LootMap/index";
@@ -15,6 +16,7 @@ import { useMemo, useState, useEffect } from "react";
 
 const SCREEN_MAP: Record<string, React.ComponentType> = {
   [DISPLAY.DASHBOARD]: Dashboard,
+  [DISPLAY.CALENDAR]: Calendar,
   [DISPLAY.PROFILE]: Profile,
   [DISPLAY.STATS]: Performance,
   [DISPLAY.LOOT]: LootMap,

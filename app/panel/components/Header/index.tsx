@@ -11,6 +11,7 @@ interface HeaderProps {
 
 const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   [DISPLAY.DASHBOARD]: RadixIcons.HomeIcon,
+  [DISPLAY.CALENDAR]: RadixIcons.CalendarIcon,
   [DISPLAY.PROFILE]: RadixIcons.PersonIcon,
   [DISPLAY.STATS]: RadixIcons.BarChartIcon,
   [DISPLAY.LOOT]: RadixIcons.CubeIcon,
@@ -26,6 +27,7 @@ const Header: React.FC<HeaderProps> = ({ display, setDisplay }) => {
   // Main tabs (excluding settings)
   const mainTabs = [
     { key: DISPLAY.DASHBOARD, label: "Dashboard" },
+    { key: DISPLAY.CALENDAR, label: "Calendar" },
     { key: DISPLAY.PROFILE, label: "Profile" },
     { key: DISPLAY.STATS, label: "Performance" },
     { key: DISPLAY.LOOT, label: "Loot" },

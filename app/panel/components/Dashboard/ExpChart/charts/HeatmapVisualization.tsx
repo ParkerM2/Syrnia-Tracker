@@ -40,7 +40,9 @@ const buildTimeline = (data: PeriodStats[], selectedPeriod: TimePeriod): PeriodS
           totalDropValue: 0,
           hpValue: 0,
           netProfit: 0,
-        });
+          totalSkillingActions: 0,
+          itemsProduced: {},
+        } as PeriodStats);
       }
     }
 
@@ -96,7 +98,9 @@ const buildTimeline = (data: PeriodStats[], selectedPeriod: TimePeriod): PeriodS
           totalDropValue: 0,
           hpValue: 0,
           netProfit: 0,
-        });
+          totalSkillingActions: 0,
+          itemsProduced: {},
+        } as PeriodStats);
       }
     }
   } else if (selectedPeriod === "day") {
@@ -123,7 +127,9 @@ const buildTimeline = (data: PeriodStats[], selectedPeriod: TimePeriod): PeriodS
           totalDropValue: 0,
           hpValue: 0,
           netProfit: 0,
-        });
+          totalSkillingActions: 0,
+          itemsProduced: {},
+        } as PeriodStats);
       }
     }
   } else {
@@ -155,6 +161,8 @@ const buildTimeline = (data: PeriodStats[], selectedPeriod: TimePeriod): PeriodS
           totalDropValue: 0,
           hpValue: 0,
           netProfit: 0,
+          totalSkillingActions: 0,
+          itemsProduced: {},
         });
       }
     }
@@ -166,7 +174,7 @@ const buildTimeline = (data: PeriodStats[], selectedPeriod: TimePeriod): PeriodS
 export const HeatmapVisualization = ({ data, selectedPeriod }: HeatmapVisualizationProps) => {
   const normalizedData = buildTimeline(data, selectedPeriod);
   return (
-    <div className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
+    <div className="grid grid-cols-2 gap-4">
       <HeatmapChart
         data={normalizedData}
         valueKey="totalGainedExp"

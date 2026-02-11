@@ -24,8 +24,8 @@ const ExpChart = memo(() => {
   }
 
   return (
-    <Card className="py-4">
-      <CardHeader className="flex flex-col items-stretch border-b py-4 sm:flex-row sm:py-6">
+    <Card>
+      <CardHeader>
         <Tabs value={selectedPeriod} onValueChange={handlePeriodChange}>
           <TabsList>
             <TabsTrigger value="hour">Hour</TabsTrigger>
@@ -35,7 +35,7 @@ const ExpChart = memo(() => {
           </TabsList>
         </Tabs>
       </CardHeader>
-      <CardContent className="p-6 px-2">
+      <CardContent>
         <HeatmapVisualization data={periodBreakdown} selectedPeriod={selectedPeriod} />
       </CardContent>
     </Card>
