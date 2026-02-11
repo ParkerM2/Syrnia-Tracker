@@ -1,11 +1,37 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "ESLint",
-  "extends": "./packages/tsconfig/base.json",
   "compilerOptions": {
+    "allowJs": true,
+    "noEmit": true,
+    "downlevelIteration": true,
+    "isolatedModules": true,
+    "strict": true,
     "noImplicitAny": false,
-    "noEmit": false,
-    "target": "ESNext"
+    "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noImplicitReturns": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "lib": ["DOM", "ESNext"],
+    "types": ["node", "chrome"],
+    "paths": {
+      "@app/*": ["./app/*"]
+    }
   },
-  "include": ["eslint.config.ts"]
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "build/**/*.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "eslint.config.ts",
+    "tailwind.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
 }

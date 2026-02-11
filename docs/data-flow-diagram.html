@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syrnia Tracker - Data Flow Overview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #f8fafc;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 32px;
+    }
+
+    /* Boundary */
+    .browser-boundary {
+      border: 2px dashed #334155;
+      border-radius: 16px;
+      padding: 40px 28px 28px;
+      position: relative;
+      width: fit-content;
+      max-width: 100%;
+    }
+    .boundary-label {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      padding: 4px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    /* Horizontal flow */
+    .flow {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    /* Nodes */
+    .node {
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .node-title {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .node-desc {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.5;
+      flex: 1;
+    }
+    .node-items {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .node-items span {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-size: 10px;
+      color: #cbd5e1;
+    }
+
+    /* Column sizing */
+    .col-game { flex: 0 0 180px; }
+    .col-observers { flex: 0 0 190px; display: flex; flex-direction: column; gap: 8px; }
+    .col-worker { flex: 0 0 200px; }
+    .col-storage { flex: 0 0 190px; }
+    .col-panel { flex: 0 0 260px; }
+
+    /* Color themes */
+    .node-game {
+      background: linear-gradient(135deg, #1e3a5f 0%, #172554 100%);
+      border: 1px solid #1e40af;
+    }
+    .node-reader {
+      background: linear-gradient(135deg, #1a3a2a 0%, #14332a 100%);
+      border: 1px solid #166534;
+    }
+    .node-messaging {
+      background: linear-gradient(135deg, #3b1f4a 0%, #2e1065 100%);
+      border: 1px solid #6b21a8;
+    }
+    .node-storage {
+      background: linear-gradient(135deg, #422006 0%, #431407 100%);
+      border: 1px solid #c2410c;
+    }
+    .node-panel {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 100%);
+      border: 1px solid #0284c7;
+    }
+
+    /* Horizontal arrows */
+    .h-arrow {
+      flex: 0 0 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .h-arrow-line {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .h-arrow-line-bar {
+      height: 2px;
+      flex: 1;
+      background: #475569;
+    }
+    .h-arrow-head {
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 8px solid #475569;
+      flex-shrink: 0;
+    }
+    .h-arrow-label {
+      font-size: 9px;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .badge-blue { background: #1e40af; color: #93c5fd; }
+    .badge-green { background: #166534; color: #86efac; }
+    .badge-purple { background: #6b21a8; color: #d8b4fe; }
+    .badge-orange { background: #9a3412; color: #fed7aa; }
+    .badge-cyan { background: #155e75; color: #67e8f9; }
+
+    /* Panel views grid */
+    .panel-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .panel-item {
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .panel-item-icon { font-size: 16px; }
+    .panel-item-name { font-size: 10px; font-weight: 600; color: #e2e8f0; }
+    .panel-item-desc { font-size: 9px; color: #64748b; }
+
+    /* Icon circles */
+    .icon-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .ic-blue { background: #1e3a8a; }
+    .ic-green { background: #14532d; }
+    .ic-purple { background: #581c87; }
+    .ic-orange { background: #7c2d12; }
+    .ic-cyan { background: #164e63; }
+
+    /* Callout */
+    .callout {
+      margin-top: 24px;
+      background: linear-gradient(135deg, #14532d 0%, #052e16 100%);
+      border: 1px solid #166534;
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: fit-content;
+      max-width: 100%;
+    }
+    .callout-icon { font-size: 24px; flex-shrink: 0; }
+    .callout-text { font-size: 12px; line-height: 1.5; color: #86efac; }
+    .callout-text strong { color: #4ade80; }
+  </style>
+</head>
+<body>
+  <h1>Syrnia Tracker — Data Flow</h1>
+  <p class="subtitle">How the extension reads, stores, and displays your game activity</p>
+
+  <div class="browser-boundary">
+    <div class="boundary-label">All data stays inside your browser</div>
+
+    <div class="flow">
+      <!-- 1. Game Page -->
+      <div class="col-game">
+        <div class="node node-game" style="height:100%">
+          <div class="node-title">
+            <span class="icon-circle ic-blue">🎮</span>
+            Game Page
+          </div>
+          <div class="node-desc">
+            The game displays your activity in the browser — combat, experience, items, and progress. This is what you already see while playing.
+          </div>
+          <div class="node-items">
+            <span class="badge badge-blue">syrnia.com</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow 1 -->
+      <div class="h-arrow">
+        <div class="h-arrow-label">Reads visible<br>page elements</div>
+        <div class="h-arrow-line">
+          <div class="h-arrow-line-bar"></div>
+          <div class="h-arrow-head"></div>
+        </div>
+      </div>
+
+      <!-- 2. Observers -->
+      <div class="col-observers">
+        <div class="node node-reader">
+          <div class="node-title">
+            <span class="icon-circle ic-green">👁</span>
+            Activity Observer
+          </div>
+          <div class="node-desc">Detects experience gains, loot drops, and combat results.</div>
+          <div class="node-items">
+            <span>Experience</span>
+            <span>Loot</span>
+            <span>Combat</span>
+            <span>Skilling</span>
+          </div>
+        </div>
+        <div class="node node-reader">
+          <div class="node-title">
+            <span class="icon-circle ic-green">📊</span>
+            Stats Reader
+          </div>
+          <div class="node-desc">Reads skill levels and totals from your stats page.</div>
+          <div class="node-items">
+            <span>Levels</span>
+            <span>Total Exp</span>
+            <span>Weekly</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow 2 -->
+      <div class="h-arrow">
+        <div class="h-arrow-label">Chrome internal<br>messaging</div>
+        <div class="h-arrow-line">
+          <div class="h-arrow-line-bar"></div>
+          <div class="h-arrow-head"></div>
+        </div>
+      </div>
+
+      <!-- 3. Background Worker -->
+      <div class="col-worker">
+        <div class="node node-messaging" style="height:100%">
+          <div class="node-title">
+            <span class="icon-circle ic-purple">⚙️</span>
+            Background Worker
+          </div>
+          <div class="node-desc">
+            Receives data from observers, organizes it, removes duplicates, and saves to local storage. Runs entirely within Chrome.
+          </div>
+          <div class="node-items">
+            <span class="badge badge-purple">Chrome API</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow 3 -->
+      <div class="h-arrow">
+        <div class="h-arrow-label">Saves to<br>local storage</div>
+        <div class="h-arrow-line">
+          <div class="h-arrow-line-bar"></div>
+          <div class="h-arrow-head"></div>
+        </div>
+      </div>
+
+      <!-- 4. Storage -->
+      <div class="col-storage">
+        <div class="node node-storage" style="height:100%">
+          <div class="node-title">
+            <span class="icon-circle ic-orange">💾</span>
+            Local Storage
+          </div>
+          <div class="node-desc">
+            All data stored locally on your computer. Never uploaded, synced, or shared.
+          </div>
+          <div class="node-items">
+            <span>History</span>
+            <span>Stats</span>
+            <span>Totals</span>
+            <span>Values</span>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow 4 -->
+      <div class="h-arrow">
+        <div class="h-arrow-label">Reads &amp;<br>displays</div>
+        <div class="h-arrow-line">
+          <div class="h-arrow-line-bar"></div>
+          <div class="h-arrow-head"></div>
+        </div>
+      </div>
+
+      <!-- 5. Side Panel -->
+      <div class="col-panel">
+        <div class="node node-panel" style="height:100%">
+          <div class="node-title">
+            <span class="icon-circle ic-cyan">📱</span>
+            Side Panel
+            <span class="badge badge-cyan">Your Stats</span>
+          </div>
+          <div class="node-desc">
+            Formats and displays your tracked data visually. All processing is local.
+          </div>
+          <div class="panel-grid">
+            <div class="panel-item">
+              <div class="panel-item-icon">📈</div>
+              <div class="panel-item-name">Dashboard</div>
+              <div class="panel-item-desc">Charts & trends</div>
+            </div>
+            <div class="panel-item">
+              <div class="panel-item-icon">👤</div>
+              <div class="panel-item-name">Profile</div>
+              <div class="panel-item-desc">Skills & levels</div>
+            </div>
+            <div class="panel-item">
+              <div class="panel-item-icon">⚔️</div>
+              <div class="panel-item-name">Performance</div>
+              <div class="panel-item-desc">Combat metrics</div>
+            </div>
+            <div class="panel-item">
+              <div class="panel-item-icon">💰</div>
+              <div class="panel-item-name">Loot Map</div>
+              <div class="panel-item-desc">Drops & values</div>
+            </div>
+            <div class="panel-item">
+              <div class="panel-item-icon">📅</div>
+              <div class="panel-item-name">Calendar</div>
+              <div class="panel-item-desc">Daily activity</div>
+            </div>
+            <div class="panel-item">
+              <div class="panel-item-icon">📋</div>
+              <div class="panel-item-name">Data View</div>
+              <div class="panel-item-desc">Raw data & export</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Callout -->
+  <div class="callout">
+    <div class="callout-icon">🔒</div>
+    <div class="callout-text">
+      <strong>No data is sent to any external server.</strong>
+      The extension only reads what is already visible on the game page, stores it locally in your browser, and formats it for display. The only way data leaves your browser is if you manually export a CSV file to your own computer.
+    </div>
+  </div>
+</body>
+</html>

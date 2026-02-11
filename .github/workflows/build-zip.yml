@@ -1,6 +1,9 @@
-name: Build And Upload Extension Zip Via Artifact
+name: Build Extension
 
-on: [ pull_request_target ]
+on: [pull_request]
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -10,10 +13,16 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Create .env for build
+        run: |
+          echo "CLI_CEB_DEV=false" > .env
+          echo "CLI_CEB_FIREFOX=false" >> .env
       - run: pnpm build
+      - run: pnpm zip
       - uses: actions/upload-artifact@v4
         with:
-          path: dist/*
+          name: syrnia-tracker
+          path: dist-zip/*.zip

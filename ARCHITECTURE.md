@@ -1,237 +1,193 @@
-# Architecture Documentation
-
-This document outlines the architecture, patterns, and structure of the Chrome Extension codebase.
+# Architecture
 
 ## Overview
 
-This extension is a **Side-Panel only** Chrome extension that tracks game statistics, experience gains, and loot data. The codebase follows **MVP (Model-View-Presenter)** patterns with clear separation of concerns.
+Syrnia Tracker is a Chrome Extension (Manifest V3) that tracks game statistics for the browser-based MMORPG Syrnia. Built with React 19, TypeScript, Tailwind CSS, and Vite 6.
+
+The extension has three runtime contexts:
+
+1. **Content Scripts** - Injected into web pages to scrape game data from the DOM
+2. **Background Service Worker** - Processes and stores data received from content scripts
+3. **Side Panel** - React UI that displays charts, stats, and player data
 
 ## Project Structure
 
 ```
 Chrome-Ext/
-├── chrome-extension/          # Extension manifest and build config
-│   ├── manifest.ts           # Extension manifest (side-panel only)
-│   └── src/
-│       └── background/       # Background service worker
-├── pages/
-│   ├── content/              # Content scripts (data scraping)
-│   └── side-panel/          # Main UI (React components)
-│       └── src/
-│           ├── components/  # React components
-│           ├── constants/   # Constants and configuration
-│           └── SidePanel.tsx # Main entry point
-└── packages/
-    ├── shared/              # Shared utilities and hooks
-    │   └── lib/
-    │       ├── hooks/       # Reusable React hooks
-    │       └── utils/       # Utility functions
-    └── ui/                  # UI component library
-```
-
-## Architecture Patterns
-
-### MVP (Model-View-Presenter) Pattern
-
-Components follow the MVP pattern for clear separation:
-
-- **Model**: Data layer (hooks, storage, data fetching)
-- **View**: Presentation layer (React components, UI)
-- **Presenter**: Business logic layer (custom hooks, data transformation)
-
-#### Example Structure
-
-```
-Component/
-├── index.tsx          # View (presentation only)
-├── hooks/            # Presenter (business logic)
-│   └── useComponentLogic.ts
-└── types.ts          # Model (data types)
-```
-
-### Component Guidelines
-
-1. **Components should be presentational** - minimal logic, focused on rendering
-2. **Business logic in hooks** - extract complex logic to custom hooks
-3. **Shared utilities** - common functions in `packages/shared/lib/utils`
-4. **Type safety** - use TypeScript types for all data structures
-
-## Key Packages
-
-### `@extension/shared`
-
-Shared utilities and hooks used across the extension.
-
-#### Hooks
-
-- **`useHourlyExp`**: Tracks experience gains for the current hour
-- **`useTrackedData`**: Manages CSV-tracked data with filtering and aggregation
-- **`useScreenData`**: Receives real-time screen data from content scripts
-- **`useFormatting`**: Provides formatting utilities (exp, time, drops)
-- **`useHourStats`**: Calculates statistics for a specific hour
-
-#### Utilities
-
-- **`formatting.ts`**: Formatting functions (formatExp, formatTime, parseDrops, parseDropAmount)
-- **`csv-tracker.ts`**: CSV data tracking and aggregation
-- **`csv-storage.ts`**: Chrome storage operations for CSV data
-
-### `@extension/ui`
-
-UI component library with shadcn/ui components.
-
-## Component Structure
-
-### Side Panel Components
-
-Located in `pages/side-panel/src/components/`:
-
-1. **Dashboard** - Overview of current and previous hour stats
-2. **Stats** - Detailed experience tracking per skill
-3. **LootMap** - Loot and drop tracking
-4. **TrackedHistory** - Historical data with time period filtering
-5. **Header** - Navigation and tab switching
-
-### Component Pattern
-
-Each component should:
-
-```typescript
-// 1. Import hooks and utilities
-import { useHourlyExp, useTrackedData, useFormatting } from '@extension/shared';
-import { Card, CardContent } from '@extension/ui';
-
-// 2. Use custom hooks for business logic
-const MyComponent = memo(() => {
-  const { formatExp } = useFormatting();
-  const hourlyExp = useHourlyExp();
-  
-  // 3. Minimal component logic
-  // 4. Return JSX
-});
+├── app/                        # All application source code
+│   ├── background/             # Chrome service worker
+│   │   └── index.ts
+│   ├── content/                # Content scripts (DOM scraping)
+│   │   ├── scrapeScreenData.ts
+│   │   ├── scrapeUserStats.ts
+│   │   ├── sendData.ts
+│   │   └── matches/            # Build entry points
+│   │       ├── all/            # Runs on all pages
+│   │       └── stats/          # Runs on stats page
+│   ├── panel/                  # React side panel UI
+│   │   ├── index.html
+│   │   ├── index.tsx
+│   │   ├── SidePanel.tsx
+│   │   ├── providers/          # React Query provider
+│   │   ├── hooks/              # Panel-specific hooks
+│   │   ├── constants/          # Tabs, FightingLocations
+│   │   └── components/         # Page-level views
+│   │       ├── Dashboard/      # Overview with exp charts
+│   │       ├── Profile/        # Player profile
+│   │       ├── Performance/    # Combat stats and equipment
+│   │       ├── LootMap/        # Loot tracking
+│   │       ├── DataView/       # Raw data table
+│   │       ├── Header/         # Navigation
+│   │       ├── Settings/       # Theme and preferences
+│   │       └── TrackedHistory/ # Historical data
+│   ├── components/             # Shared components
+│   │   ├── ui/                 # Radix UI primitives (shadcn/ui)
+│   │   └── *.tsx               # ErrorDisplay, LoadingSpinner, etc.
+│   ├── hooks/                  # All shared React hooks
+│   ├── utils/                  # All utility functions
+│   │   └── storage/            # Chrome storage abstraction
+│   ├── hoc/                    # HOCs (withSuspense, withErrorBoundary)
+│   ├── types/                  # Shared TypeScript types
+│   ├── constants/              # Message types, skill lists
+│   ├── styles/                 # Global CSS
+│   └── assets/                 # Icons
+├── build/                      # Build tooling
+│   ├── build.ts                # Orchestrates content + background builds
+│   ├── env.ts                  # Environment variables
+│   ├── plugins/                # Vite plugins (make-manifest)
+│   ├── hmr/                    # Hot module reload (dev)
+│   ├── dev-utils/              # Manifest parser
+│   └── zipper/                 # Extension packaging
+├── public/                     # Static assets (icons, armor images)
+├── manifest.js                 # Chrome MV3 manifest definition
+├── vite.config.ts              # Side panel Vite config
+├── tsconfig.json               # TypeScript config (@app/* alias)
+├── tailwind.config.ts          # Tailwind CSS config
+└── eslint.config.ts            # ESLint config
 ```
 
 ## Data Flow
 
 ```
-Content Script (pages/content)
-    ↓ (scrapes game data)
-Background Script (chrome-extension/src/background)
-    ↓ (processes and stores)
-Chrome Storage (local)
-    ↓ (hooks read from storage)
-Side Panel Components
-    ↓ (display data)
-User Interface
+[Syrnia Game Page]
+       |
+       v
+[Content Scripts]  -- chrome.runtime.sendMessage() -->  [Background Worker]
+  (all.iife.js)                                          (background.js)
+  (stats.iife.js)                                             |
+                                                              v
+                                                    [Chrome Storage API]
+                                                         (local storage)
+                                                              |
+                                                              v
+                                                    [Side Panel React App]
+                                                      (React Query hooks)
 ```
 
-## Adding New Features
+### Content Scripts
 
-### 1. Create a New Component
+- **`matches/all/`** - Runs on all pages. Scrapes screen data (current action, exp gains, loot) via `scrapeScreenData.ts` and sends to background worker via `sendData.ts`.
+- **`matches/stats/`** - Runs on the Syrnia stats page. Scrapes detailed user stats via `scrapeUserStats.ts`.
+
+### Background Worker
+
+- **`background/index.ts`** - Listens for messages from content scripts, processes data, and stores it in Chrome storage using CSV-based tracking (`csv-tracker.ts`, `csv-storage.ts`).
+
+### Side Panel
+
+- React 19 app with React Query for data caching
+- Views are tab-based, switched via Header component
+- Each view has a co-located `use*.ts` hook for business logic
+
+## Key Patterns
+
+### Presentational Components + Hook Logic
+
+All business logic lives in hooks. Components only render:
 
 ```typescript
-// pages/side-panel/src/components/NewFeature/index.tsx
-import { useTrackedData, useFormatting } from '@extension/shared';
-import { Card } from '@extension/ui';
+// useDashboard.ts - all logic here
+export const useDashboard = () => {
+  const { allData } = useTrackedDataQuery();
+  // ... calculations, formatting, memoization
+  return { stats, chartData, ... };
+};
 
-export const NewFeature = memo(() => {
-  const { allData } = useTrackedData();
-  const { formatExp } = useFormatting();
-  
+// index.tsx - pure presentation
+const Dashboard = memo(() => {
+  const { stats, chartData } = useDashboard();
   return <Card>...</Card>;
 });
 ```
 
-### 2. Add to Side Panel
+### React Query for Data
+
+All data access goes through React Query hooks in `app/hooks/`:
+- `useTrackedDataQuery` - CSV-tracked hourly EXP data
+- `useUserStatsQuery` - Player profile stats from stats page
+- `useWeeklyStatsQuery` - Weekly aggregated statistics
+- `useItemValuesQuery` - Item value data
+
+### Chrome Storage Abstraction
+
+`app/utils/storage/` provides a typed wrapper around `chrome.storage`:
 
 ```typescript
-// pages/side-panel/src/SidePanel.tsx
-import NewFeature from './components/NewFeature';
-
-const renderComponent = (screen: String) => {
-  switch (screen) {
-    case DISPLAY.NEW_FEATURE:
-      return <NewFeature />;
-    // ...
-  }
-};
+const storage = createStorage<MyType>('key', defaultValue, {
+  storageEnum: StorageEnum.Local,
+  liveUpdate: true,
+});
 ```
 
-### 3. Create Reusable Hooks
+- `createStorage<T>()` - Creates typed storage with get/set/subscribe
+- Supports Local, Session, and Sync storage areas
+- Live updates via `chrome.storage.onChanged` listener
 
-If logic is reusable, create a hook in `packages/shared/lib/hooks/`:
+### Import Alias
+
+Single path alias: `@app/*` maps to `app/*`
 
 ```typescript
-// packages/shared/lib/hooks/useNewFeature.ts
-export const useNewFeature = () => {
-  // Business logic here
-  return { /* data */ };
-};
+import { useStorage } from '@app/hooks';
+import { Card, Button } from '@app/components';
+import { cn } from '@app/utils/cn';
+import type { CSVRow } from '@app/types';
 ```
 
-## Best Practices
+## Build System
 
-1. **Separation of Concerns**
-   - View: Only rendering logic
-   - Presenter: Business logic in hooks
-   - Model: Data types and storage
+Three separate Vite builds:
 
-2. **Reusability**
-   - Extract common logic to hooks
-   - Use shared utilities for formatting
-   - Create reusable UI components
+1. **Content scripts** (IIFE) - Each `app/content/matches/*/index.ts` builds to `dist/content/*.iife.js`
+2. **Background** (ES module library) - `app/background/index.ts` builds to `dist/background.js`
+3. **Side panel** (standard HTML app) - `app/panel/` builds to `dist/side-panel/`
 
-3. **Type Safety**
-   - Define types for all data structures
-   - Use TypeScript strictly
-   - Export types from shared package
+Build orchestration: `tsx build/build.ts` runs builds 1+2, then `vite build` runs build 3.
 
-4. **Performance**
-   - Use `memo()` for components
-   - Use `useMemo()` for expensive calculations
-   - Avoid unnecessary re-renders
+## Adding New Features
 
-5. **Error Handling**
-   - Use try-catch for async operations
-   - Provide user-friendly error messages
-   - Log errors appropriately
+### New Side Panel View
 
-## File Naming Conventions
+1. Create component in `app/panel/components/NewFeature/`
+2. Add `useNewFeature.ts` hook with all logic
+3. Add `index.tsx` as presentational component
+4. Register tab in `app/panel/constants/Tabs.ts`
+5. Add case to `SidePanel.tsx` render switch
 
-- **Components**: PascalCase (`Dashboard.tsx`)
-- **Hooks**: camelCase with `use` prefix (`useHourStats.ts`)
-- **Utilities**: camelCase (`formatting.ts`)
-- **Types**: camelCase with `.ts` extension (`types.ts`)
-- **Constants**: UPPER_SNAKE_CASE (`DISPLAY.ts`)
+### New Shared Hook
 
-## Extension Manifest
+Add to `app/hooks/` and export from `app/hooks/index.ts`.
 
-The extension only includes:
-- **Side Panel**: Main UI interface
-- **Content Scripts**: Data scraping from game pages
-- **Background Script**: Data processing and storage
+### New Shared Component
 
-**Removed Features** (not part of this extension):
-- New Tab override
-- Popup
-- Options page
-- DevTools
+Add to `app/components/` (or `app/components/ui/` for primitives) and export from barrel.
 
-## Testing Considerations
+## Conventions
 
-When adding new features:
-1. Test with real game data
-2. Verify data persistence across sessions
-3. Check performance with large datasets
-4. Ensure proper error handling
-
-## Code Review Checklist
-
-For game developer review:
-- ✅ Clean, readable code
-- ✅ Clear separation of concerns
-- ✅ Proper TypeScript types
-- ✅ No hardcoded values
-- ✅ Proper error handling
-- ✅ Performance considerations
-- ✅ Documentation for complex logic
+- Functional components with `memo()`
+- Arrow functions enforced (`func-style`)
+- `const` over `let`, no `var`
+- `import type {}` for type-only imports
+- Barrel `index.ts` in each directory
+- Parameterless `catch {}` (no `_error`)
+- Strict import ordering (auto-fixable)
