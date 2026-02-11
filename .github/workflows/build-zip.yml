@@ -21,7 +21,8 @@ jobs:
           echo "CLI_CEB_DEV=false" > .env
           echo "CLI_CEB_FIREFOX=false" >> .env
       - run: pnpm build
+      - run: pnpm zip
       - uses: actions/upload-artifact@v4
         with:
-          name: extension-dist
-          path: dist/*
+          name: syrnia-tracker
+          path: dist-zip/*.zip
