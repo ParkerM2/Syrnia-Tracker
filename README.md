@@ -145,8 +145,6 @@
   - [Side Panel Interface](#side-panel-interface)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Scripts](#scripts)
 
 ## What is Syrnia Tracker?
 
@@ -462,24 +460,4 @@ app/
   types/            # Shared TypeScript types
 build/              # Build tooling (build.ts, plugins, HMR)
 ```
-
-## Installation
-
-1. Clone the repository
-2. Ensure Node.js >= 22.15.1 and install pnpm: `npm install -g pnpm`
-3. Run `pnpm install`
-4. Run `pnpm build` (or `pnpm dev` for development with HMR)
-5. Open `chrome://extensions`, enable **Developer mode**
-6. Click **Load unpacked** and select the `dist` directory
-
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `pnpm build` | Production build |
-| `pnpm dev` | Dev build with hot reload |
-| `pnpm lint` | ESLint check |
-| `pnpm format` | Prettier format |
-| `pnpm type-check` | TypeScript type checking |
-| `pnpm zip` | Package `dist/` into a `.zip` for Chrome Web Store |
 
