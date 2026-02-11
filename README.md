@@ -1,6 +1,142 @@
 > [!IMPORTANT] 
 > **ONLY** for testing in the  **[PTR](www.ptr.syrnia.com) Environment** until further notice.
 
+# Syrnia Tracker - Local Live Data Tracking and Analysis
+
+<img width="2350" height="887" alt="image" src="https://github.com/user-attachments/assets/a26d083b-c502-4af7-a1ba-f736ed707f92" />
+
+## Views
+
+<img title="Dashboard" width="200px" height="600px" alt="image" src="https://github.com/user-attachments/assets/23ed8e1c-04d2-4e92-aa9d-20b65f028eab" />
+<img title="Calendar" width="200px" height="600px" alt="image" src="https://github.com/user-attachments/assets/e5ccf6a2-e4db-4cf6-8297-e49c34464509" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/ee876226-4665-422d-ac26-692d8d7e0a83" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/7226bb35-21d2-46b7-8039-912a9bcff76f" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/b9fe8cc6-731a-48d6-b9bc-ecbe3d27e20b" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/43bb2d42-b1bd-437f-899c-f9d4113f4875" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/223c7fdb-ee8f-4219-bab1-c497301937f3" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/27e3ee96-d885-4260-8a1c-41212bb0dcc0" />
+<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/a3f0353b-38dc-4f70-97f2-5e080440ef3d" />
+
+## How data is stored
+```
+[
+  {
+    "timestamp": "2026-02-11T23:04:03.806Z",
+    "uuid": "a0c976b3-7560-42cd-a974-5d6867abe092",
+    "skill": "Defence",
+    "skillLevel": "139",
+    "expForNextLevel": "644256",
+    "gainedExp": "245",
+    "drops": [],
+    "hp": "273,514",
+    "monster": "Sirin",
+    "location": "The Travasi highlands",
+    "damageDealt": [
+      "57",
+      "39"
+    ],
+    "damageReceived": [
+      "8"
+    ],
+    "peopleFighting": "",
+    "totalFights": "1",
+    "totalInventoryHP": "273,514",
+    "hpUsed": "8",
+    "equipment": {
+      "totals": {
+        "armour": 265,
+        "aim": 167,
+        "power": 160
+      },
+      "helm": {
+        "slot": "helm",
+        "name": "Dragon helm",
+        "title": "Dragon helm [4 Aim]",
+        "imageUrl": "images/inventory/Dragon helm.png?4",
+        "stats": "40",
+        "enchant": "4 Aim"
+      },
+      "shield": {
+        "slot": "shield",
+        "name": "Dragon shield",
+        "title": "Dragon shield [4 Aim]",
+        "imageUrl": "images/inventory/Dragon shield.png?4",
+        "stats": "55",
+        "enchant": "4 Aim"
+      },
+      "body": {
+        "slot": "body",
+        "name": "Dragon plate",
+        "title": "Dragon plate [4 Aim]",
+        "imageUrl": "images/inventory/Dragon plate.png?4",
+        "stats": "70",
+        "enchant": "4 Aim"
+      },
+      "weapon": {
+        "slot": "weapon",
+        "name": "Novariet scimitar",
+        "title": "Novariet scimitar [0 Durability]",
+        "imageUrl": "images/inventory/Novariet scimitar.png?4",
+        "stats": "167/160"
+      },
+      "legs": {
+        "slot": "legs",
+        "name": "Dragon legs",
+        "title": "Dragon legs [4 Aim]",
+        "imageUrl": "images/inventory/Dragon legs.png?4",
+        "stats": "50",
+        "enchant": "4 Aim"
+      },
+      "gloves": {
+        "slot": "gloves",
+        "name": "Dragon gauntlets",
+        "title": "Dragon gauntlets [4 Aim]",
+        "imageUrl": "images/inventory/Dragon gauntlets.png?4",
+        "stats": "25",
+        "enchant": "4 Aim"
+      },
+      "boots": {
+        "slot": "boots",
+        "name": "Dragon boots",
+        "title": "Dragon boots [4 Aim]",
+        "imageUrl": "images/inventory/Dragon boots.png?4",
+        "stats": "25",
+        "enchant": "4 Aim"
+      },
+      "horse": {
+        "slot": "horse",
+        "name": "No horse",
+        "title": "No horse ",
+        "imageUrl": "images/inventory/No horse.png?4"
+      },
+      "trophy": {
+        "slot": "trophy",
+        "name": "Bloodmoon dahlia",
+        "title": "Bloodmoon dahlia",
+        "imageUrl": "images/inventory/Bloodmoon dahlia.png?4"
+      }
+    },
+    "combatExp": [
+      {
+        "skill": "Defence",
+        "exp": "222",
+        "skillLevel": "139",
+        "totalExp": "33074923",
+        "expForNextLevel": "644256"
+      },
+      {
+        "skill": "Defence",
+        "exp": "23",
+        "skillLevel": "139",
+        "totalExp": "33074923",
+        "expForNextLevel": "644256"
+      }
+    ],
+    "actionType": "combat",
+    "actionOutput": null // if skilling this would be [ { item: "Cooked Salmon", amount: 99 // total } ]
+  },
+];
+```
 ## Table of Contents
 
 - [What is Syrnia Tracker?](#what-is-syrnia-tracker)
