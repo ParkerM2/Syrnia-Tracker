@@ -69,7 +69,7 @@ const HourRow = memo(({ hour, data, mainSkill, trendPct }: HourRowProps) => {
             <div
               className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold"
               style={EXP_BADGE_STYLE}>
-              <span>{formatExp(data.totalExp)} xp</span>
+              <span>{formatExp(data.totalExp)} exp</span>
               {trendPct !== undefined && (
                 <>
                   <span className="text-[10px] opacity-60">|</span>
@@ -133,17 +133,38 @@ const HourRow = memo(({ hour, data, mainSkill, trendPct }: HourRowProps) => {
           )}
 
           {hasStats && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-2 text-xs text-muted-foreground">
-              {data.totalDropValue > 0 && <span>Total: {formatGP(data.totalDropValue)} GP</span>}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-2 text-xs">
+              {data.totalDropValue > 0 && (
+                <span className="text-muted-foreground">
+                  Total Value: <span className="font-medium text-foreground">{formatGP(data.totalDropValue)} GP</span>
+                </span>
+              )}
+              {data.foodUsed > 0 && (
+                <span className="text-muted-foreground">
+                  Food Cost: <span className="font-medium text-foreground">{formatGP(data.foodUsed)} GP</span>
+                </span>
+              )}
               {data.netProfit !== 0 && (
-                <span className={cn(data.netProfit > 0 ? "text-primary" : "text-destructive")}>
-                  Net: {data.netProfit > 0 ? "+" : ""}
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                    data.netProfit > 0 ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-600",
+                  )}>
+                  {data.netProfit > 0 ? "+" : ""}
                   {formatGP(data.netProfit)} GP
                 </span>
               )}
-              {data.foodUsed > 0 && <span>Food: {formatGP(data.foodUsed)} GP</span>}
-              {data.totalFights > 0 && <span>Fights: {data.totalFights.toLocaleString()}</span>}
-              {data.totalSkillingActions > 0 && <span>Actions: {data.totalSkillingActions.toLocaleString()}</span>}
+              {data.totalFights > 0 && (
+                <span className="text-muted-foreground">
+                  Fights: <span className="font-medium text-foreground">{data.totalFights.toLocaleString()}</span>
+                </span>
+              )}
+              {data.totalSkillingActions > 0 && (
+                <span className="text-muted-foreground">
+                  Actions:{" "}
+                  <span className="font-medium text-foreground">{data.totalSkillingActions.toLocaleString()}</span>
+                </span>
+              )}
             </div>
           )}
         </CardContent>

@@ -34,7 +34,7 @@ const WeekView = memo(({ currentDate, getCell, onDrillDown }: WeekViewProps) => 
   }, [currentDate]);
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-1.5">
+    <div className="grid grid-cols-1 gap-1.5 min-[480px]:grid-cols-2 min-[720px]:grid-cols-3 min-[960px]:grid-cols-4">
       {days.map(({ date, key, label, isToday }) => (
         <CalendarCell
           key={key}

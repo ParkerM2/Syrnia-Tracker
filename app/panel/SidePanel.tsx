@@ -8,9 +8,13 @@ const SidePanelContent = () => {
   const { display, setDisplay, ActiveScreen } = useSidePanel();
 
   return (
-    <div className="min-h-screen bg-sidebar p-8 text-sidebarForeground">
-      <Header display={display} setDisplay={setDisplay} />
-      <ActiveScreen />
+    <div className="min-h-screen bg-sidebar text-sidebarForeground">
+      <div className="sticky top-0 z-50 bg-sidebar px-8 pb-0 pt-8">
+        <Header display={display} setDisplay={setDisplay} />
+      </div>
+      <div className="px-8 pb-8">
+        <ActiveScreen />
+      </div>
       <ThemeToggle />
     </div>
   );

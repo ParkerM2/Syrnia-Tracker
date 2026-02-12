@@ -1,5 +1,5 @@
 import { formatTimestamp } from "../helpers/lootHelpers";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, ItemImage } from "@app/components";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, ItemImage, Badge, cn } from "@app/components";
 import {
   createColumnHelper,
   flexRender,
@@ -7,18 +7,22 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { memo, useState } from "react";
-import type { LootEntry, TimeFilterOption } from "../useLootMap";
+import { memo, useMemo, useState } from "react";
+import type { LootEntry, LootGroup, TimeFilterOption } from "../useLootMap";
 import type { SortingState } from "@tanstack/react-table";
 
 const columnHelper = createColumnHelper<LootEntry>();
 
-const buildColumns = (timeFilter: TimeFilterOption) => [
-  columnHelper.accessor("timestamp", {
-    header: "Time",
-    cell: info => formatTimestamp(info.getValue(), timeFilter),
-    sortingFn: "datetime",
-  }),
+const buildColumns = (timeFilter: TimeFilterOption, combined: boolean) => [
+  ...(combined
+    ? []
+    : [
+        columnHelper.accessor("timestamp", {
+          header: "Time",
+          cell: info => formatTimestamp(info.getValue(), timeFilter),
+          sortingFn: "datetime" as const,
+        }),
+      ]),
   columnHelper.display({
     id: "image",
     header: "Item",
@@ -40,6 +44,15 @@ const buildColumns = (timeFilter: TimeFilterOption) => [
       </span>
     ),
   }),
+  ...(combined
+    ? [
+        columnHelper.accessor("quantity", {
+          header: "Qty",
+          cell: info => info.getValue().toLocaleString(),
+          meta: { align: "right" },
+        }),
+      ]
+    : []),
   columnHelper.accessor("totalValue", {
     header: "Value",
     cell: info =>
@@ -52,30 +65,61 @@ const buildColumns = (timeFilter: TimeFilterOption) => [
   }),
 ];
 
+/**
+ * Aggregate entries by item name — sums quantity and totalValue, keeps most recent timestamp
+ */
+const combineEntries = (entries: LootEntry[]): LootEntry[] => {
+  const map = new Map<string, LootEntry>();
+
+  entries.forEach(entry => {
+    const existing = map.get(entry.name);
+    if (existing) {
+      existing.quantity += entry.quantity;
+      existing.totalValue += entry.totalValue;
+      if (entry.timestamp > existing.timestamp) {
+        existing.timestamp = entry.timestamp;
+      }
+    } else {
+      map.set(entry.name, { ...entry });
+    }
+  });
+
+  return Array.from(map.values()).sort((a, b) => b.totalValue - a.totalValue || a.name.localeCompare(b.name));
+};
+
 interface LootTableProps {
   filteredLootEntries: LootEntry[];
+  sortedAndGroupedLoot: LootGroup[];
   timeFilter: TimeFilterOption;
   zoomLevel: number;
 }
 
-const LootTable = memo(({ filteredLootEntries, timeFilter }: LootTableProps) => {
-  const [sorting, setSorting] = useState<SortingState>([{ id: "timestamp", desc: true }]);
+const GroupTable = memo(
+  ({
+    entries,
+    timeFilter,
+    combined,
+    sorting,
+    onSortingChange,
+  }: {
+    entries: LootEntry[];
+    timeFilter: TimeFilterOption;
+    combined: boolean;
+    sorting: SortingState;
+    onSortingChange: (s: SortingState) => void;
+  }) => {
+    const columns = useMemo(() => buildColumns(timeFilter, combined), [timeFilter, combined]);
 
-  const columns = buildColumns(timeFilter);
+    const table = useReactTable({
+      data: entries,
+      columns,
+      state: { sorting },
+      onSortingChange,
+      getCoreRowModel: getCoreRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+    });
 
-  const table = useReactTable({
-    data: filteredLootEntries,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  if (filteredLootEntries.length === 0) return null;
-
-  return (
-    <div className="overflow-x-auto">
+    return (
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map(headerGroup => (
@@ -116,6 +160,86 @@ const LootTable = memo(({ filteredLootEntries, timeFilter }: LootTableProps) => 
           ))}
         </TableBody>
       </Table>
+    );
+  },
+);
+
+GroupTable.displayName = "GroupTable";
+
+const LootTable = memo(({ filteredLootEntries, sortedAndGroupedLoot, timeFilter }: LootTableProps) => {
+  const [sorting, setSorting] = useState<SortingState>([{ id: "timestamp", desc: true }]);
+  const [combineItems, setCombineItems] = useState(false);
+  const isGrouped = timeFilter !== "none";
+
+  if (filteredLootEntries.length === 0) return null;
+
+  if (!isGrouped) {
+    return (
+      <div className="overflow-x-auto">
+        <GroupTable
+          entries={filteredLootEntries}
+          timeFilter={timeFilter}
+          combined={false}
+          sorting={sorting}
+          onSortingChange={setSorting}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {sortedAndGroupedLoot.map(group => {
+        if (group.entries.length === 0) return null;
+
+        const totalValue = group.entries.reduce((sum, e) => sum + e.totalValue, 0);
+        const netProfit = totalValue - group.totalCost;
+
+        return (
+          <div key={group.header} className="flex flex-col gap-2">
+            <div className="bg-muted/50 flex items-center justify-between rounded-md px-4 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold">{group.header}</span>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                    netProfit >= 0 ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-600",
+                  )}>
+                  {netProfit >= 0 ? "+" : ""}
+                  {netProfit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} GP
+                </span>
+              </div>
+              <Badge
+                as="button"
+                type="button"
+                onClick={() => setCombineItems(prev => !prev)}
+                isActive={combineItems}
+                className="cursor-pointer text-xs">
+                Combine
+              </Badge>
+            </div>
+            <div className="overflow-x-auto">
+              <GroupTable
+                entries={combineItems ? combineEntries(group.entries) : group.entries}
+                timeFilter={timeFilter}
+                combined={combineItems}
+                sorting={combineItems ? [{ id: "totalValue", desc: true }] : sorting}
+                onSortingChange={setSorting}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-4 px-4 py-1 text-xs text-muted-foreground">
+              <span>
+                Total Value:{" "}
+                {totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} GP
+              </span>
+              <span>
+                Total Cost:{" "}
+                {group.totalCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} GP
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 });

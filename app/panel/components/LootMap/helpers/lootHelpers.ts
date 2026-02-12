@@ -151,3 +151,34 @@ export const formatTimestamp = (timestamp: string, timeFilter: string): string =
   const month = date.toLocaleString("en-US", { month: "short" });
   return `${month} ${date.getDate()}`;
 };
+
+/**
+ * Parse a semicolon-separated damageReceived string and return total HP damage.
+ * e.g. "5;7;3;8" → 23
+ */
+export const parseDamageReceived = (damageReceived: string): number => {
+  if (!damageReceived) return 0;
+  return damageReceived.split(";").reduce((sum, val) => {
+    const num = parseInt(val.trim(), 10);
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
+};
+
+/**
+ * Get the time group key for a timestamp based on the active time filter.
+ * Returns the ISO string of the period start, or "" for "none".
+ */
+export const getTimeGroupKey = (timestamp: string, timeFilter: string): string => {
+  switch (timeFilter) {
+    case "hour":
+      return getHourStart(timestamp);
+    case "day":
+      return getDayStart(timestamp);
+    case "month":
+      return getMonthStart(timestamp);
+    case "year":
+      return getYearStart(timestamp);
+    default:
+      return "";
+  }
+};

@@ -198,7 +198,12 @@ const LootMap = memo(() => {
           </div>
           <CardContent className="pt-2">
             {viewMode === "table" ? (
-              <LootTable filteredLootEntries={filteredLootEntries} timeFilter={timeFilter} zoomLevel={zoomLevel} />
+              <LootTable
+                filteredLootEntries={filteredLootEntries}
+                sortedAndGroupedLoot={sortedAndGroupedLoot}
+                timeFilter={timeFilter}
+                zoomLevel={zoomLevel}
+              />
             ) : (
               <LootGrid
                 filteredLootEntries={filteredLootEntries}
