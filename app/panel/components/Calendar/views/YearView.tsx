@@ -27,6 +27,7 @@ const YearView = memo(({ currentDate, getCell, onDrillDown }: YearViewProps) => 
             label={name}
             data={cellData}
             isToday={isCurrentMonth}
+            compact
             onClick={() => onDrillDown("month", new Date(year, i, 1))}
           />
         );

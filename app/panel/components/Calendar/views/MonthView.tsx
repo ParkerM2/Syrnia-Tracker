@@ -71,6 +71,7 @@ const MonthView = memo(({ currentDate, getCell, onDrillDown }: MonthViewProps) =
           data={getCell(key)}
           isToday={isToday}
           isMuted={!isCurrentMonth}
+          compact
           onClick={() => onDrillDown("day", date)}
         />
       ))}

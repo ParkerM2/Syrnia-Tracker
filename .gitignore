@@ -17,6 +17,12 @@ tsconfig.tsbuildinfo
 # etc
 .DS_Store
 .idea
+.claude/settings.local.json
+.turbo/
+
+# extension artifacts
+*.crx
+*.pem
 
 # compiled
 **/tailwind-output.css

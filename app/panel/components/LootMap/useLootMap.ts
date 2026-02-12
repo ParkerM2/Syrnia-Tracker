@@ -6,7 +6,9 @@ import {
   getDayStart,
   getHourStart,
   getMonthStart,
+  getTimeGroupKey,
   getYearStart,
+  parseDamageReceived,
 } from "./helpers/lootHelpers";
 import { useTrackedDataQuery, useFormatting, useItemValuesQuery } from "@app/hooks";
 import { useMemo, useState, useCallback } from "react";
@@ -30,6 +32,7 @@ export interface LootEntry {
 export interface LootGroup {
   header: string;
   entries: LootEntry[];
+  totalCost: number;
 }
 
 /**
@@ -181,6 +184,27 @@ export const useLootMap = () => {
     return filtered;
   }, [allLootEntries, sourceFilter, filterMonster, filterLocation]);
 
+  // Compute HP cost (damageReceived * 2.5 GP) per time group from raw data
+  const costByTimeGroup = useMemo(() => {
+    const map = new Map<string, number>();
+
+    allData.forEach(row => {
+      if (!row.damageReceived) return;
+
+      // Apply same monster/location filters as loot entries
+      if (filterMonster !== "none" && row.monster?.trim() !== filterMonster) return;
+      if (filterLocation !== "none" && row.location?.trim() !== filterLocation) return;
+
+      const damage = parseDamageReceived(row.damageReceived);
+      if (damage <= 0) return;
+
+      const key = getTimeGroupKey(row.timestamp, timeFilter);
+      map.set(key, (map.get(key) || 0) + damage);
+    });
+
+    return map;
+  }, [allData, timeFilter, filterMonster, filterLocation]);
+
   // Sort and group loot entries
   const sortedAndGroupedLoot = useMemo(() => {
     const entries = [...filteredLootEntries];
@@ -202,76 +226,40 @@ export const useLootMap = () => {
       return sorted;
     };
 
+    // Helper: build a group with cost attached
+    const buildGroup = (key: string, header: string, groupEntries: LootEntry[]): LootGroup => ({
+      header,
+      entries: sortEntries(groupEntries),
+      totalCost: (costByTimeGroup.get(key) || 0) * 2.5,
+    });
+
+    // Helper: group entries by a time function, format headers, attach costs
+    const groupByTime = (getStart: (ts: string) => string, formatHeader: (ts: string) => string): LootGroup[] => {
+      const grouped = new Map<string, LootEntry[]>();
+      entries.forEach(entry => {
+        const key = getStart(entry.timestamp);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key)!.push(entry);
+      });
+      return Array.from(grouped.entries())
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([key, groupEntries]) => buildGroup(key, formatHeader(key), groupEntries));
+    };
+
     // Group by time filter
-    if (timeFilter === "day") {
-      const grouped = new Map<string, LootEntry[]>();
-      // Group entries by day
-      entries.forEach(entry => {
-        const dayStart = getDayStart(entry.timestamp);
-        if (!grouped.has(dayStart)) {
-          grouped.set(dayStart, []);
-        }
-        grouped.get(dayStart)!.push(entry);
-      });
-      // Sort groups by day (newest first), then sort entries within each group by sortOption
-      return Array.from(grouped.entries())
-        .sort(([a], [b]) => b.localeCompare(a)) // Sort groups by timestamp (newest first)
-        .map(([dayStart, groupEntries]) => ({
-          header: formatDayHeader(dayStart),
-          entries: sortEntries(groupEntries),
-        }));
-    } else if (timeFilter === "month") {
-      const grouped = new Map<string, LootEntry[]>();
-      entries.forEach(entry => {
-        const monthStart = getMonthStart(entry.timestamp);
-        if (!grouped.has(monthStart)) {
-          grouped.set(monthStart, []);
-        }
-        grouped.get(monthStart)!.push(entry);
-      });
-      return Array.from(grouped.entries())
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([monthStart, groupEntries]) => ({
-          header: formatMonthHeader(monthStart),
-          entries: sortEntries(groupEntries),
-        }));
-    } else if (timeFilter === "year") {
-      const grouped = new Map<string, LootEntry[]>();
-      entries.forEach(entry => {
-        const yearStart = getYearStart(entry.timestamp);
-        if (!grouped.has(yearStart)) {
-          grouped.set(yearStart, []);
-        }
-        grouped.get(yearStart)!.push(entry);
-      });
-      return Array.from(grouped.entries())
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([yearStart, groupEntries]) => ({
-          header: formatYearHeader(yearStart),
-          entries: sortEntries(groupEntries),
-        }));
-    } else if (timeFilter === "hour") {
-      const grouped = new Map<string, LootEntry[]>();
-      // Group entries by hour
-      entries.forEach(entry => {
-        const hourStart = getHourStart(entry.timestamp);
-        if (!grouped.has(hourStart)) {
-          grouped.set(hourStart, []);
-        }
-        grouped.get(hourStart)!.push(entry);
-      });
-      // Sort groups by hour (newest first), then sort entries within each group by sortOption
-      return Array.from(grouped.entries())
-        .sort(([a], [b]) => b.localeCompare(a)) // Sort groups by timestamp (newest first)
-        .map(([hourStart, groupEntries]) => ({
-          header: formatHourHeader(hourStart),
-          entries: sortEntries(groupEntries),
-        }));
-    } else {
-      // No time filter - no grouping, just sort all entries
-      return [{ header: "", entries: sortEntries(entries) }];
+    switch (timeFilter) {
+      case "hour":
+        return groupByTime(getHourStart, formatHourHeader);
+      case "day":
+        return groupByTime(getDayStart, formatDayHeader);
+      case "month":
+        return groupByTime(getMonthStart, formatMonthHeader);
+      case "year":
+        return groupByTime(getYearStart, formatYearHeader);
+      default:
+        return [buildGroup("", "", entries)];
     }
-  }, [filteredLootEntries, sortOption, timeFilter]);
+  }, [filteredLootEntries, sortOption, timeFilter, costByTimeGroup]);
 
   // Get all unique item names for settings
   const allUniqueItems = useMemo(() => {
