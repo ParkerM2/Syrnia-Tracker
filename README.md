@@ -3,18 +3,27 @@
 
 # Syrnia Tracker - Local Live Data Tracking and Analysis
 
-<img width="2350" height="887" alt="image" src="https://github.com/user-attachments/assets/a26d083b-c502-4af7-a1ba-f736ed707f92" />
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/a26d083b-c502-4af7-a1ba-f736ed707f92" />
+
+## Table of Contents
+
+- [What is Syrnia Tracker?](#what-is-syrnia-tracker)
+- [How It Works](#how-it-works)
+  - [Data Collection Process](#data-collection-process)
+  - [Data Storage](#data-storage)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
 
 ## Views
-<img width="200" height="400" alt="image" src="https://github.com/user-attachments/assets/251a739c-c3d4-4b08-94ec-f4a155004ed9" />
-<img title="Calendar" width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/e5ccf6a2-e4db-4cf6-8297-e49c34464509" />
-<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/ee876226-4665-422d-ac26-692d8d7e0a83" />
-<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/7226bb35-21d2-46b7-8039-912a9bcff76f" />
-<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/b9fe8cc6-731a-48d6-b9bc-ecbe3d27e20b" />
-<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/43bb2d42-b1bd-437f-899c-f9d4113f4875" />
-<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/223c7fdb-ee8f-4219-bab1-c497301937f3" />
-<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/27e3ee96-d885-4260-8a1c-41212bb0dcc0" />
-<img width="200" height="600" alt="image" src="https://github.com/user-attachments/assets/a3f0353b-38dc-4f70-97f2-5e080440ef3d" />
+<img width="200" alt="image" src="https://github.com/user-attachments/assets/251a739c-c3d4-4b08-94ec-f4a155004ed9" />
+<img width="200" title="Month View" alt="Calendar Month View Image" src="https://github.com/user-attachments/assets/e5ccf6a2-e4db-4cf6-8297-e49c34464509" />
+<img width="200" title="Day View" alt="Calendar Day view Image" src="https://github.com/user-attachments/assets/ee876226-4665-422d-ac26-692d8d7e0a83" />
+<img width="200" title="Player Stats" alt="Player Stats view Image" src="https://github.com/user-attachments/assets/7226bb35-21d2-46b7-8039-912a9bcff76f" />
+<img width="200" title="Combat Performance" alt="Combat Performance View" src="https://github.com/user-attachments/assets/b9fe8cc6-731a-48d6-b9bc-ecbe3d27e20b" />
+<img width="200" title="Drops, Processed, or Gathered Items" alt="Loot/Gathered/Processed Items View" src="https://github.com/user-attachments/assets/43bb2d42-b1bd-437f-899c-f9d4113f4875" />
+<img width="200" title="History Table for Analysis" alt="History Stats View" src="https://github.com/user-attachments/assets/223c7fdb-ee8f-4219-bab1-c497301937f3" />
+<img width="200" title="History Table for Analysis Expanded" alt="History Stats View (expanded)" src="https://github.com/user-attachments/assets/27e3ee96-d885-4260-8a1c-41212bb0dcc0" />
+<img width="200" title="Data View for Export, Delete, Refresh" alt="Data View Screen" src="https://github.com/user-attachments/assets/a3f0353b-38dc-4f70-97f2-5e080440ef3d" />
 
 ## Example of a Data Entry on fight end
 ```
@@ -78,15 +87,6 @@
   },
 ];
 ```
-## Table of Contents
-
-- [What is Syrnia Tracker?](#what-is-syrnia-tracker)
-- [How It Works](#how-it-works)
-  - [Data Collection Process](#data-collection-process)
-  - [Data Storage](#data-storage)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-
 ## What is Syrnia Tracker?
 
 **Syrnia Tracker** is a Chrome extension designed to automatically track and analyze gameplay statistics for the online game [Syrnia](https://www.syrnia.com). The extension monitors your gameplay in real-time, collecting data about experience gains, combat statistics, loot drops, and more, then presents this information in an organized side panel interface.
@@ -115,21 +115,14 @@
 
 - **Data Export**: Download all tracked data as CSV files for external analysis
 
-#### Step 3: Data Transmission
-When new values are detected that differ from previously saved values, the extension sends them for processing:
-
-- Sends `UPDATE_SCREEN_DATA` messages containing the detected values
-- Only sends data when values have actually changed to avoid duplicates
-- Handles cases where the extension context may be invalidated
-
 ### Technical Architecture
-
 The extension follows a clear separation of concerns:
 
-- **Content Scripts**: Handle data scraping
-- **Background Service Worker**: Processes and stores data
-- **Side Panel (React)**: Displays data using TanStack Query for state management
+- **Singular Content Script**: Handle data scraping ( `queryById("#LocationContent" || "CenterContent")` and filters `.textContent || .innerHTML` to find patterns matching `regExp` for `{SkillName} Level {levelNumber}: ({TotalExp} exp, {expForNextLevel} for next level)` and compares against the previously detected skill || totalExp value, if the same it escapes and returns to waiting for change, if different it moves the scraped data to background worker to formate and distribute to side-panel cache and chrome storage.
+- **Background Service Worker**: Processes and stores data | formatting (json / csv) | Optimistically Updating RQ-Cache store and Manually updating chrome extension storage.
+- **Side Panel (React)**: Displays data using TanStack Query for state management. TanStack query (Previously ReactQuery provides a cache layer, with built in properties like `isLoading`, `isError`, `isFetching`, and is good to have in place if possible API connection either to 3rd party site or Syrnia becomes available.
 - **Shared Packages**: Reusable utilities, hooks, and components
+- **3rd Party Sites**: As of now, the stored information is open, if a 3rd party site knows the extension is there it can acce
 
 Data flows unidirectionally:
 ```
