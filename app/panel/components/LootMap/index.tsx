@@ -14,8 +14,6 @@ import {
   DialogDescription,
   DialogFooter,
   IconButton,
-  CardFooter,
-  CardDescription,
   Input,
   Popover,
   PopoverTrigger,
@@ -79,6 +77,7 @@ const LootMap = memo(() => {
               <TabsTrigger value="none">All</TabsTrigger>
               <TabsTrigger value="hour">Hour</TabsTrigger>
               <TabsTrigger value="day">Day</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
               <TabsTrigger value="month">Month</TabsTrigger>
               <TabsTrigger value="year">Year</TabsTrigger>
             </TabsList>
@@ -214,11 +213,6 @@ const LootMap = memo(() => {
               />
             )}
           </CardContent>
-          <CardFooter className="flex justify-end">
-            <CardDescription className="text-sm text-muted-foreground">
-              {filteredLootEntries?.map(item => item.totalValue).reduce((acc, curr) => acc + curr, 0)} GP
-            </CardDescription>
-          </CardFooter>
         </Card>
       )}
 

@@ -1,9 +1,32 @@
 import { useItemValuesQuery } from "../data/useItemValuesQuery";
 import { useTrackedDataQuery } from "../data/useTrackedDataQuery";
+import { useUntrackedExp } from "../data/useUntrackedExp";
 import { useFormatting } from "../utils/useFormatting";
 import { useMemo, useState } from "react";
 import type { CSVRow, TimePeriod } from "../../utils/csv-tracker";
-import type { CombatExpGain } from "@app/types";
+import type { CombatExpGain, UntrackedExpRecord } from "@app/types";
+
+/**
+ * Compute the end date for a period starting at the given date.
+ */
+const getPeriodEnd = (period: TimePeriod, date: Date): Date => {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const d = date.getUTCDate();
+  const h = date.getUTCHours();
+
+  if (period === "hour") {
+    return new Date(Date.UTC(y, m, d, h, 59, 59, 999));
+  }
+  if (period === "day") {
+    return new Date(Date.UTC(y, m, d, 23, 59, 59, 999));
+  }
+  if (period === "week") {
+    return new Date(Date.UTC(y, m, d + 6, 23, 59, 59, 999));
+  }
+  // month
+  return new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999));
+};
 
 export interface PeriodStats {
   periodKey: string;
@@ -20,6 +43,8 @@ export interface PeriodStats {
   netProfit: number;
   totalSkillingActions: number;
   itemsProduced: Record<string, { quantity: number; skill: string }>;
+  hasUntrackedExp?: boolean;
+  untrackedRecords?: UntrackedExpRecord[];
 }
 
 export interface PeriodLootItem {
@@ -33,6 +58,7 @@ export interface PeriodLootItem {
 export const usePeriodStats = (initialPeriod: TimePeriod = "day") => {
   const { allData, loading } = useTrackedDataQuery();
   const { itemValues, loading: itemValuesLoading } = useItemValuesQuery();
+  const { getUntrackedForRange } = useUntrackedExp();
   const { parseDrops, parseDropAmount } = useFormatting();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>(initialPeriod);
 
@@ -349,6 +375,18 @@ export const usePeriodStats = (initialPeriod: TimePeriod = "day") => {
         const hpValue = totalDamageReceived * 2.5;
         const netProfit = totalDropValue + producedItemsValue - hpValue;
 
+        // Compute untracked exp for this period's time range
+        const periodEnd = getPeriodEnd(selectedPeriod, date);
+        const cellGranularity = selectedPeriod === "hour" ? "hour" : selectedPeriod === "month" ? "month" : "day";
+        const untracked = getUntrackedForRange(date, periodEnd, cellGranularity);
+
+        if (untracked.totalExp > 0) {
+          totalGainedExp += untracked.totalExp;
+          Object.entries(untracked.totalBySkill).forEach(([skill, exp]) => {
+            skills[skill] = (skills[skill] || 0) + exp;
+          });
+        }
+
         return {
           periodKey,
           date,
@@ -364,10 +402,20 @@ export const usePeriodStats = (initialPeriod: TimePeriod = "day") => {
           netProfit,
           totalSkillingActions,
           itemsProduced,
+          hasUntrackedExp: untracked.indicatorRecords.length > 0,
+          untrackedRecords: untracked.indicatorRecords.length > 0 ? untracked.indicatorRecords : undefined,
         };
       })
       .sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [allDeduplicatedData, allDeduplicatedDataWithExp, selectedPeriod, itemValues, parseDrops, parseDropAmount]);
+  }, [
+    allDeduplicatedData,
+    allDeduplicatedDataWithExp,
+    selectedPeriod,
+    itemValues,
+    parseDrops,
+    parseDropAmount,
+    getUntrackedForRange,
+  ]);
 
   return {
     periodBreakdown,

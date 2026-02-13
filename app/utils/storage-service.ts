@@ -16,7 +16,7 @@ import { getUserStatsCSVHeader } from "./user-stats-storage";
 import { getWeeklyStatsHeader, weeklyStatsRowToString, parseWeeklyStatsRow } from "./weekly-stats-storage";
 import type { CSVRow } from "./csv-tracker";
 import type { WeeklyStatsRow } from "./weekly-stats-storage";
-import type { UserStats } from "@app/types";
+import type { SessionBaseline, UntrackedExpRecord, UserStats } from "@app/types";
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -25,6 +25,8 @@ const STORAGE_KEYS = {
   WEEKLY_STATS: "weekly_stats_csv",
   LAST_EXP_BY_SKILL: "last_exp_by_skill",
   ITEM_VALUES: "drop_gp_values",
+  SESSION_BASELINE: "session_baseline",
+  UNTRACKED_EXP: "untracked_exp_records",
 } as const;
 
 /**
@@ -356,6 +358,56 @@ const saveItemValues = async (values: Record<string, string>): Promise<void> => 
 };
 
 // ============================================================================
+// Session Baseline Operations
+// ============================================================================
+
+/**
+ * Get the session baseline (snapshot of all skills at session start)
+ */
+const getSessionBaseline = async (): Promise<SessionBaseline | null> =>
+  await getFromStorage<SessionBaseline | null>(STORAGE_KEYS.SESSION_BASELINE, null);
+
+/**
+ * Save session baseline
+ */
+const saveSessionBaseline = async (baseline: SessionBaseline): Promise<void> => {
+  await setInStorage(STORAGE_KEYS.SESSION_BASELINE, baseline);
+};
+
+// ============================================================================
+// Untracked Exp Operations
+// ============================================================================
+
+/**
+ * Get all untracked exp records
+ */
+const getUntrackedExpRecords = async (): Promise<UntrackedExpRecord[]> =>
+  await getFromStorage<UntrackedExpRecord[]>(STORAGE_KEYS.UNTRACKED_EXP, []);
+
+/**
+ * Save a single untracked exp record (appends to existing)
+ */
+const saveUntrackedExpRecord = async (record: UntrackedExpRecord): Promise<void> => {
+  const existing = await getUntrackedExpRecords();
+
+  // Deduplicate: skip if same skill + overlapping time range exists
+  const isDuplicate = existing.some(
+    r =>
+      r.skill === record.skill &&
+      new Date(r.startUTC).getTime() < new Date(record.endUTC).getTime() &&
+      new Date(r.endUTC).getTime() > new Date(record.startUTC).getTime(),
+  );
+  if (isDuplicate) return;
+
+  // Prune old records (90 days retention)
+  const MAX_RECORD_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const pruned = existing.filter(r => now - new Date(r.detectedAt).getTime() < MAX_RECORD_AGE_MS);
+  pruned.push(record);
+  await setInStorage(STORAGE_KEYS.UNTRACKED_EXP, pruned);
+};
+
+// ============================================================================
 // CSV Export Operations
 // ============================================================================
 
@@ -444,6 +496,10 @@ export {
   saveLastExpBySkill,
   getItemValues,
   saveItemValues,
+  getSessionBaseline,
+  saveSessionBaseline,
+  getUntrackedExpRecords,
+  saveUntrackedExpRecord,
   downloadTrackedDataCSV,
   downloadUserStatsCSV,
   downloadWeeklyStatsCSV,

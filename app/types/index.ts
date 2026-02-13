@@ -85,6 +85,30 @@ export interface UserStats {
   timestamp: string;
   skills: Record<string, SkillStat>;
 }
+
+export interface SessionBaseline {
+  timestamp: string; // ISO string when baseline was captured
+  skills: Record<
+    string,
+    {
+      level: number;
+      totalExp: number;
+    }
+  >;
+}
+
+export interface UntrackedExpRecord {
+  id: string; // UUID for this record
+  skill: string; // Skill name (e.g., "Cooking")
+  expGained: number; // Amount of exp gained while untracked
+  startUTC: string; // ISO timestamp - last tracked exp for this skill
+  endUTC: string; // ISO timestamp - when tracking resumed
+  detectedAt: string; // ISO timestamp - when this gap was detected
+  totalExpBefore: number; // Total exp at startUTC
+  totalExpAfter: number; // Total exp at endUTC
+  durationMs: number; // endUTC - startUTC in milliseconds
+}
+
 export type * from "type-fest";
 export type ColorType = "success" | "info" | "error" | "warning" | keyof typeof COLORS;
 export type ExcludeValuesFromBaseArrayType<B extends string[], E extends (string | number)[]> = Exclude<
