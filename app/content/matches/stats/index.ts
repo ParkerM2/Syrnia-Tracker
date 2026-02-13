@@ -89,9 +89,14 @@ import { UPDATE_USER_STATS } from "@app/constants";
       }
     });
 
-    observer.observe(document.body, {
+    const observeTarget = document.querySelector("#mainContent") || document.body;
+    observer.observe(observeTarget, {
       childList: true,
       subtree: true,
+    });
+
+    window.addEventListener("beforeunload", () => {
+      observer.disconnect();
     });
   }
 })();

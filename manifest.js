@@ -25,10 +25,6 @@ const manifest = {
       js: ["content/all.iife.js"],
     },
     {
-      matches: ["*://*.syrnia.com/*"],
-      css: ["content.css"],
-    },
-    {
       matches: ["https://www.syrnia.com/theGame/includes2/stats.php*"],
       js: ["content/stats.iife.js"],
     },

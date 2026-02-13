@@ -56,18 +56,14 @@ const SkillCardWrapper = memo(
             </div>
             <div className="flex flex-1 items-center justify-end gap-2">
               {(!imageLoaded || imageError) && <span className="mr-auto text-base font-semibold">{skill}</span>}
-              <span className="text-base font-semibold text-green-500">+{formatExp(stats.gainedExp)}</span>
-              {isCurrentSkill && (
-                <Badge className="border-slate-300 bg-slate-200 text-slate-900 dark:border-slate-300 dark:bg-slate-200 dark:text-slate-900">
-                  Current
-                </Badge>
-              )}
+              <span className="text-base font-semibold text-primary">+{formatExp(stats.gainedExp)}</span>
+              {isCurrentSkill && <Badge className="border-accent bg-accent text-accent-foreground">Current</Badge>}
             </div>
           </div>
           <div className="flex flex-col gap-1 text-left text-sm">
             <div>
               <span className="text-muted-foreground">Current Exp: </span>
-              <span className="font-semibold text-green-500">+{formatExp(stats.gainedExp)}</span>
+              <span className="font-semibold text-primary">+{formatExp(stats.gainedExp)}</span>
             </div>
             {expForNextLevel !== "0" && (
               <div>

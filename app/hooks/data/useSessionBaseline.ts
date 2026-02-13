@@ -31,7 +31,6 @@ export const useSessionBaseline = () => {
     const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === "local" && changes.session_baseline) {
         queryClient.invalidateQueries({ queryKey: SESSION_BASELINE_QUERY_KEY });
-        queryClient.refetchQueries({ queryKey: SESSION_BASELINE_QUERY_KEY, type: "active" });
       }
     };
 

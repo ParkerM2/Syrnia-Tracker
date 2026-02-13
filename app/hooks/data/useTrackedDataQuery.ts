@@ -5,11 +5,9 @@ import {
   clearTrackedDataByHour,
   downloadTrackedDataCSV,
 } from "../../utils/storage-service";
-import { UPDATE_SCREEN_DATA } from "@app/constants";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import type { CSVRow, TimePeriod, TrackedStats } from "../../utils/csv-tracker";
-import type { ScreenData } from "@app/types";
 
 // Query key for tracked data
 export const TRACKED_DATA_QUERY_KEY = ["trackedData"] as const;
@@ -57,61 +55,22 @@ export const useTrackedDataQuery = () => {
     refetchOnMount: "always",
   });
 
-  // Track if we just updated via message to avoid double-updating
-  const justUpdatedViaMessageRef = useRef(false);
-
   // Listen for storage changes and invalidate query (triggers background refetch)
-  // This ensures UI updates automatically when tracked_data_csv changes
+  // Message handling is consolidated in useGlobalDataSync (called at app root)
   useEffect(() => {
     const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === "local" && changes.tracked_data_csv) {
-        // If we just updated via message, skip the storage invalidation to avoid double-update
-        if (justUpdatedViaMessageRef.current) {
-          justUpdatedViaMessageRef.current = false;
-          return;
-        }
-
-        // Only invalidate if the new value is not empty/null and has actual data (not just header)
         const newValue = changes.tracked_data_csv.newValue;
         if (newValue && newValue.trim().length > 0) {
-          // Force refetch by invalidating and refetching
-          // This ensures data updates even if it was recently fetched
           queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
-          queryClient.refetchQueries({
-            queryKey: TRACKED_DATA_QUERY_KEY,
-            type: "active",
-          });
         }
-      }
-    };
-
-    // Also listen for runtime messages to update cache immediately when scrape is saved
-    // The background script only sends this message AFTER successfully saving unique scrape data
-    const messageListener = (message: { type: string; data?: ScreenData }) => {
-      if (message.type === UPDATE_SCREEN_DATA && message.data) {
-        justUpdatedViaMessageRef.current = true;
-        // Invalidate and refetch to get the updated data
-        // Use a small delay to ensure storage changes have propagated
-        setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
-          queryClient.refetchQueries({
-            queryKey: TRACKED_DATA_QUERY_KEY,
-            type: "active",
-          });
-          // Reset flag after a short delay
-          setTimeout(() => {
-            justUpdatedViaMessageRef.current = false;
-          }, 1000);
-        }, 50); // Small delay to ensure storage changes have propagated
       }
     };
 
     chrome.storage.onChanged.addListener(storageListener);
-    chrome.runtime.onMessage.addListener(messageListener);
 
     return () => {
       chrome.storage.onChanged.removeListener(storageListener);
-      chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, [queryClient]);
 
@@ -126,6 +85,9 @@ export const useTrackedDataQuery = () => {
       // Invalidate to ensure consistency
       queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
     },
+    onError: (error: Error) => {
+      console.error("[useTrackedDataQuery] Failed to clear tracked data:", error);
+    },
   });
 
   // Mutation for clearing data by hour
@@ -136,6 +98,9 @@ export const useTrackedDataQuery = () => {
     onSuccess: () => {
       // Invalidate and refetch after clearing
       queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
+    },
+    onError: (error: Error) => {
+      console.error("[useTrackedDataQuery] Failed to clear tracked data by hour:", error);
     },
   });
 

@@ -64,7 +64,7 @@ export const createDamageStatRow = (
   },
 ): StatRow => {
   const safeValue = value ?? 0;
-  const className = safeValue > 0 ? "text-red-500" : "text-foreground";
+  const className = safeValue > 0 ? "text-destructive" : "text-foreground";
 
   return createNumberStatRow(label, safeValue, {
     round: options?.round,

@@ -33,14 +33,15 @@ export const useGlobalDataSync = () => {
       if (message.type === UPDATE_USER_STATS) {
         // Update user stats cache directly
         try {
-          // User stats are passed in the message, so we can update directly
           if (message.data) {
             queryClient.setQueryData(["userStats"], message.data);
           }
         } catch {
-          // If update fails, fall back to invalidation
           queryClient.invalidateQueries({ queryKey: ["userStats"] });
         }
+        // Also invalidate related queries that depend on user stats
+        queryClient.invalidateQueries({ queryKey: ["sessionBaseline"] });
+        queryClient.invalidateQueries({ queryKey: ["weeklyStats"] });
       }
     };
 

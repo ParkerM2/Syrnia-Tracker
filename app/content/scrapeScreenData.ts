@@ -1,5 +1,4 @@
 import { matchText, skillExpRegex } from "@app/utils/helpers";
-import { v4 as uuidv4 } from "uuid";
 import type { ScreenData, CombatExpGain, EquipmentData, EquipmentItem } from "@app/types";
 
 // Track last processed fight to prevent duplicate wearDisplayTD collection
@@ -108,10 +107,10 @@ const parseCombatExp = (fightLogElement: HTMLElement | null): CombatExpGain[] =>
     const levelMatch = fullText.match(levelRegex);
 
     if (levelMatch && levelMatch[1] && levelMatch[2] && levelMatch[3]) {
-      // Level info found - save it to the gain object
-      gain.skillLevel = levelMatch[1];
-      gain.totalExp = levelMatch[2]; // Total exp for this skill
-      gain.expForNextLevel = levelMatch[3];
+      // Level info found - save it to the gain object (strip commas from formatted numbers)
+      gain.skillLevel = levelMatch[1].replace(/,/g, "");
+      gain.totalExp = levelMatch[2].replace(/,/g, "");
+      gain.expForNextLevel = levelMatch[3].replace(/,/g, "");
     }
   });
 
@@ -858,7 +857,7 @@ export const scrapeScreenData = (): ScreenData => {
   let hasSkillLevelInfo = false;
 
   // Regex pattern to match: "Skill level: number (number exp, number for next level)"
-  const skillLevelPattern = /\w+\s+level:\s+\d+\s+\(\d+\s+exp,\s+\d+\s+for\s+next\s+level\)/i;
+  const skillLevelPattern = /\w+\s+level:\s+[\d,]+\s+\([\d,]+\s+exp,\s+[\d,]+\s+for\s+next\s+level\)/i;
 
   if (addExpTextNode) {
     textContent.combatExp = parseCombatExp(addExpTextNode);
@@ -952,7 +951,7 @@ export const scrapeScreenData = (): ScreenData => {
     images: [],
     links: [],
     timestamp: new Date().toISOString(),
-    uuid: uuidv4(), // Generate unique identifier for this screen scrape
+    uuid: crypto.randomUUID(), // Generate unique identifier for this screen scrape
     monster: monster,
     location: location,
     damageDealt: damage.dealt,

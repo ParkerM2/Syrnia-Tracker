@@ -1,13 +1,14 @@
 import { getUntrackedExpRecords } from "@app/utils/storage-service";
+import { MS_PER_DAY, MS_PER_HOUR } from "@app/utils/time-constants";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import type { UntrackedExpRecord } from "@app/types";
 
 // Cell durations in ms for each granularity level
 const CELL_DURATION_MS: Record<string, number> = {
-  hour: 3_600_000,
-  day: 86_400_000,
-  month: 2_592_000_000,
+  hour: MS_PER_HOUR,
+  day: MS_PER_DAY,
+  month: 30 * MS_PER_DAY,
 };
 
 export const UNTRACKED_EXP_QUERY_KEY = ["untrackedExp"] as const;
@@ -48,7 +49,6 @@ export const useUntrackedExp = () => {
     const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === "local" && changes.untracked_exp_records) {
         queryClient.invalidateQueries({ queryKey: UNTRACKED_EXP_QUERY_KEY });
-        queryClient.refetchQueries({ queryKey: UNTRACKED_EXP_QUERY_KEY, type: "active" });
       }
     };
 

@@ -90,7 +90,7 @@ const Performance = memo(() => {
     modeHit: number,
     isDamageReceived: boolean = false,
   ): StatRow[] => {
-    const className = isDamageReceived && maxHit > 0 ? "text-red-500" : undefined;
+    const className = isDamageReceived && maxHit > 0 ? "text-destructive" : undefined;
     return [
       { label: "Max", value: maxHit, className },
       {
@@ -142,13 +142,13 @@ const Performance = memo(() => {
                 )}
                 <div className="flex flex-col">
                   <span className="text-sm text-muted-foreground">Avg Damage per 15 Min</span>
-                  <span className="text-2xl font-bold text-red-500">
+                  <span className="text-2xl font-bold text-destructive">
                     {Math.round(locationStats.avgDamagePer15Min).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm text-muted-foreground">Max Damage per 15 Min</span>
-                  <span className="text-2xl font-bold text-red-500">
+                  <span className="text-2xl font-bold text-destructive">
                     {Math.round(locationStats.maxDamagePer15Min).toLocaleString()}
                   </span>
                 </div>

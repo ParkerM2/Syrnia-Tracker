@@ -11,12 +11,19 @@
  * - CSV export is unified and consistent
  */
 
+import { escapeCSVField, parseCSVLine } from "./csv-helpers";
 import { parseCSV, csvRowToString, getCSVHeader } from "./csv-tracker";
-import { getUserStatsCSVHeader } from "./user-stats-storage";
+import { MS_PER_DAY } from "./time-constants";
 import { getWeeklyStatsHeader, weeklyStatsRowToString, parseWeeklyStatsRow } from "./weekly-stats-storage";
 import type { CSVRow } from "./csv-tracker";
 import type { WeeklyStatsRow } from "./weekly-stats-storage";
 import type { SessionBaseline, UntrackedExpRecord, UserStats } from "@app/types";
+
+/**
+ * Get CSV header for user stats
+ */
+const getUserStatsCSVHeader = (): string =>
+  "timestamp,username,skill,level,totalExp,expForNextLevel,percentToNext,expLeft,gainedThisHour,gainedThisWeek,levelGainedThisWeek";
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -151,29 +158,7 @@ const getUserStats = async (): Promise<UserStats | null> => {
   }> = [];
 
   dataLines.forEach(line => {
-    const row: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      const nextChar = line[i + 1];
-
-      if (char === '"') {
-        if (inQuotes && nextChar === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === "," && !inQuotes) {
-        row.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    row.push(current);
+    const row = parseCSVLine(line);
 
     if (row.length >= 11) {
       rows.push({
@@ -400,7 +385,7 @@ const saveUntrackedExpRecord = async (record: UntrackedExpRecord): Promise<void>
   if (isDuplicate) return;
 
   // Prune old records (90 days retention)
-  const MAX_RECORD_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+  const MAX_RECORD_AGE_MS = 90 * MS_PER_DAY;
   const now = Date.now();
   const pruned = existing.filter(r => now - new Date(r.detectedAt).getTime() < MAX_RECORD_AGE_MS);
   pruned.push(record);
@@ -418,13 +403,15 @@ const downloadCSV = async (csvContent: string, filename: string, saveAs: boolean
   const blob = new Blob([csvContent], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
 
-  await chrome.downloads.download({
-    url: url,
-    filename: filename,
-    saveAs: saveAs,
-  });
-
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    await chrome.downloads.download({
+      url,
+      filename,
+      saveAs,
+    });
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
 };
 
 /**
@@ -462,21 +449,6 @@ const downloadAllDataCSV = async (saveAs: boolean = true): Promise<void> => {
 };
 
 // ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Escape CSV field
- */
-const escapeCSVField = (field: string | undefined | null): string => {
-  const safeField = field || "";
-  if (safeField.includes(",") || safeField.includes('"') || safeField.includes("\n")) {
-    return `"${safeField.replace(/"/g, '""')}"`;
-  }
-  return safeField;
-};
-
-// ============================================================================
 // Exports
 // ============================================================================
 
@@ -504,4 +476,5 @@ export {
   downloadUserStatsCSV,
   downloadWeeklyStatsCSV,
   downloadAllDataCSV,
+  getUserStatsCSVHeader,
 };

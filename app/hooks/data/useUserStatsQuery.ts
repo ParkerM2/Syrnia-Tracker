@@ -1,9 +1,6 @@
-import { getUserStats } from "../../utils/storage-service";
-import { getUserStatsCSVHeader } from "../../utils/user-stats-storage";
-import { UPDATE_USER_STATS } from "@app/constants";
+import { getUserStats, getUserStatsCSVHeader } from "../../utils/storage-service";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
-import type { UserStats } from "@app/types";
+import { useEffect } from "react";
 
 // Query key for user stats
 export const USER_STATS_QUERY_KEY = ["userStats"] as const;
@@ -42,56 +39,27 @@ export const useUserStatsQuery = () => {
     refetchOnWindowFocus: false,
     // Don't refetch on reconnect
     refetchOnReconnect: false,
-    // Only refetch on mount if data is stale
-    refetchOnMount: false,
+    // Always refetch on mount to ensure fresh data
+    refetchOnMount: "always",
   });
 
-  // Track if we just updated via message to avoid double-updating
-  const justUpdatedViaMessageRef = useRef(false);
-
   // Listen for storage changes and invalidate query (triggers background refetch)
+  // Message handling is consolidated in useGlobalDataSync (called at app root)
   useEffect(() => {
     const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === "local" && changes.user_stats_csv) {
-        // If we just updated via message, skip the storage invalidation to avoid double-update
-        if (justUpdatedViaMessageRef.current) {
-          justUpdatedViaMessageRef.current = false;
-          return;
-        }
-
-        // Only invalidate if the new value is not empty/null and has actual data (not just header)
         const newValue = changes.user_stats_csv.newValue;
         const header = getUserStatsCSVHeader();
         if (newValue && newValue !== header && newValue.trim().length > header.length) {
-          // Invalidate the query to trigger a background refetch
-          // This will update the data without showing a loading state
           queryClient.invalidateQueries({ queryKey: USER_STATS_QUERY_KEY });
         }
       }
     };
 
-    // Also listen for runtime messages
-    const messageListener = (message: { type: string; data?: UserStats }) => {
-      if (message.type === UPDATE_USER_STATS && message.data) {
-        // Only update if we have valid data (username and at least one skill)
-        if (message.data.username && message.data.skills && Object.keys(message.data.skills).length > 0) {
-          justUpdatedViaMessageRef.current = true;
-          // Update the query cache directly with the new data
-          queryClient.setQueryData(USER_STATS_QUERY_KEY, message.data);
-          // Reset flag after a short delay
-          setTimeout(() => {
-            justUpdatedViaMessageRef.current = false;
-          }, 1000);
-        }
-      }
-    };
-
     chrome.storage.onChanged.addListener(storageListener);
-    chrome.runtime.onMessage.addListener(messageListener);
 
     return () => {
       chrome.storage.onChanged.removeListener(storageListener);
-      chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, [queryClient]);
 

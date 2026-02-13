@@ -4,7 +4,6 @@ import { watchRebuildPlugin } from "./build/hmr/dist/lib/plugins/watch-rebuild-p
 import makeManifestPlugin from "./build/plugins/make-manifest-plugin";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { resolve } from "node:path";
 
 const rootDir = resolve(import.meta.dirname);
@@ -35,7 +34,6 @@ export default defineConfig({
     IS_DEV && watchRebuildPlugin({ refresh: true }),
     watchPublicPlugin(),
     makeManifestPlugin({ outDir }),
-    nodePolyfills(),
   ],
   publicDir: resolve(rootDir, "public", "panel"),
   build: {

@@ -246,7 +246,8 @@ const JSONView = memo(({ rows }: { rows: CSVRow[] }) => {
               navigator.clipboard.writeText(jsonString);
             }}
             className="rounded bg-slate-800 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700"
-            title="Copy to clipboard">
+            title="Copy to clipboard"
+            aria-label="Copy JSON to clipboard">
             Copy
           </button>
         </div>

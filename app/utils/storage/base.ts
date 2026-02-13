@@ -80,9 +80,8 @@ export const createStorage = <D = string>(
       .setAccessLevel({
         accessLevel: SessionAccessLevelEnum.ExtensionPagesAndContentScripts,
       })
-      .catch(error => {
-        console.error(error);
-        console.error("Please call .setAccessLevel() into different context, like a background script.");
+      .catch(() => {
+        // Storage access level should be set from the background script context
       });
     globalSessionAccessLevelFlag = true;
   }
