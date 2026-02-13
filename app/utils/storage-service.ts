@@ -403,13 +403,15 @@ const downloadCSV = async (csvContent: string, filename: string, saveAs: boolean
   const blob = new Blob([csvContent], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
 
-  await chrome.downloads.download({
-    url: url,
-    filename: filename,
-    saveAs: saveAs,
-  });
-
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    await chrome.downloads.download({
+      url,
+      filename,
+      saveAs,
+    });
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
 };
 
 /**

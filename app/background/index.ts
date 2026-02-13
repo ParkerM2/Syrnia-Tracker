@@ -21,7 +21,7 @@ let autoOpenedStatsTabId: number | null = null;
 let baselinePending = false;
 let lastStatsPageFetchTime = 0;
 const STATS_FETCH_COOLDOWN = 30_000; // 30 seconds
-const AUTO_CLOSE_TIMEOUT_MS = 10_000; // 10 seconds fallback
+const AUTO_CLOSE_TIMEOUT_MS = 30_000; // 30 seconds fallback
 
 // ============================================================================
 // Session start listeners
@@ -79,8 +79,8 @@ const captureSessionBaseline = async (): Promise<void> => {
         }
       }, AUTO_CLOSE_TIMEOUT_MS);
     }
-  } catch {
-    // Silently handle errors
+  } catch (error: unknown) {
+    console.error("[Background] captureSessionBaseline failed:", error);
   }
 };
 
@@ -128,8 +128,8 @@ const triggerStatsPageFetch = async (): Promise<void> => {
         }, AUTO_CLOSE_TIMEOUT_MS);
       }
     }
-  } catch {
-    // Silently handle errors
+  } catch (error: unknown) {
+    console.error("[Background] triggerStatsPageFetch failed:", error);
   }
 };
 
@@ -173,6 +173,21 @@ const detectUntrackedFromBaseline = async (currentStats: UserStats): Promise<voi
   await saveLastExpBySkill(lastExpBySkill);
 };
 
+/**
+ * Runtime type guard for ScreenData messages.
+ * Validates the shape before processing to prevent crashes from malformed data.
+ */
+const isValidScreenData = (data: unknown): data is ScreenData => {
+  if (typeof data !== "object" || !data) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.timestamp === "string" &&
+    typeof d.uuid === "string" &&
+    typeof d.actionText === "object" &&
+    d.actionText !== null
+  );
+};
+
 chrome.runtime.onMessage.addListener((message, sender) => {
   // Only process messages from content scripts (sender.tab exists)
   // Ignore messages from background script itself or side panel
@@ -181,22 +196,26 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   }
 
   if (message.type === UPDATE_SCREEN_DATA) {
+    if (!isValidScreenData(message.data)) {
+      console.warn("[Background] Invalid screen data received, skipping");
+      return false;
+    }
     // Process and save screen data to CSV storage
     // This is the PRIMARY source for current hour exp tracking
     // Stats page data does NOT interfere with this - they are separate systems
-    processScreenData(message.data as ScreenData)
+    processScreenData(message.data)
       .then(() => {
         // Always forward screen data to the side panel so it can update its live display
         // (current skill, action text, etc.) regardless of whether CSV rows were saved.
         // The baseline-setting scrape may not save rows but the panel still needs the data.
         setTimeout(() => {
           chrome.runtime.sendMessage({ type: UPDATE_SCREEN_DATA, data: message.data }).catch(() => {
-            // Silently handle errors (side panel might not be open)
+            // Side panel might not be open
           });
         }, 50);
       })
-      .catch(() => {
-        // Silently handle errors
+      .catch((error: unknown) => {
+        console.error("[Background] processScreenData failed:", error);
       });
     // Return false since we're handling this asynchronously
     return false;
@@ -213,8 +232,8 @@ chrome.runtime.onMessage.addListener((message, sender) => {
       const statsData = message.data as UserStats;
 
       // Save user stats (source of truth for profile/weekly data, NOT for tracked current hour)
-      saveUserStats(statsData).catch(() => {
-        // Silently handle errors
+      saveUserStats(statsData).catch((error: unknown) => {
+        console.error("[Background] saveUserStats failed:", error);
       });
 
       // If baseline is pending, save the session baseline and close auto-opened tab
@@ -231,12 +250,16 @@ chrome.runtime.onMessage.addListener((message, sender) => {
             ]),
           ),
         };
-        saveSessionBaseline(baseline).catch(() => {});
+        saveSessionBaseline(baseline).catch((error: unknown) => {
+          console.error("[Background] saveSessionBaseline failed:", error);
+        });
         baselinePending = false;
       }
 
       // Detect untracked exp by comparing stats page data to lastExpBySkill
-      detectUntrackedFromBaseline(statsData).catch(() => {});
+      detectUntrackedFromBaseline(statsData).catch((error: unknown) => {
+        console.error("[Background] detectUntrackedFromBaseline failed:", error);
+      });
 
       // Auto-close the stats tab if we opened it
       if (autoOpenedStatsTabId !== null) {
@@ -249,14 +272,14 @@ chrome.runtime.onMessage.addListener((message, sender) => {
       // This uses gainedThisWeek from stats page, but doesn't affect tracked current hour
       getTrackedData()
         .then(allRows => updateWeeklyStatsFromStatsURL(statsData, allRows))
-        .catch(() => {
-          // Silently handle errors
+        .catch((error: unknown) => {
+          console.error("[Background] updateWeeklyStatsFromStatsURL failed:", error);
         });
 
       // Forward data to the side panel for real-time updates
       setTimeout(() => {
         chrome.runtime.sendMessage({ type: UPDATE_USER_STATS, data: message.data }).catch(() => {
-          // Silently handle errors (side panel might not be open)
+          // Side panel might not be open
         });
       }, 50);
     }
@@ -296,6 +319,12 @@ const processScreenData = async (data: ScreenData): Promise<boolean> => {
   // Get the main skill's exp from screen data
   const mainSkillExp = parseInt(data.actionText.exp || "0", 10) || 0;
   const mainSkill = data.actionText.currentActionText || "";
+
+  // Validate exp value bounds
+  if (mainSkillExp < 0 || mainSkillExp > 10_000_000_000) {
+    console.warn("[Background] Suspicious exp value, skipping:", mainSkillExp);
+    return false;
+  }
 
   // Maximum gap between scrapes before we consider the baseline stale (5 minutes)
   const MAX_SCRAPE_GAP_MS = 5 * 60 * 1000;
@@ -338,7 +367,9 @@ const processScreenData = async (data: ScreenData): Promise<boolean> => {
               totalExpBefore: lastEntry.exp,
               totalExpAfter: mainSkillExp,
               durationMs: endMs - startMs,
-            }).catch(() => {});
+            }).catch((error: unknown) => {
+              console.error("[Background] saveUntrackedExpRecord failed:", error);
+            });
           }
 
           // Reset baseline, don't attribute the accumulated delta
@@ -512,8 +543,8 @@ const processScreenData = async (data: ScreenData): Promise<boolean> => {
   // affect the tracked current hour data which comes from screen scraping
   const allRows = await getTrackedData();
   const { updateWeeklyStats } = await import("@app/utils/weekly-stats-storage");
-  await updateWeeklyStats(allRows).catch(() => {
-    // Silently handle errors
+  await updateWeeklyStats(allRows).catch((error: unknown) => {
+    console.error("[Background] updateWeeklyStats failed:", error);
   });
 
   return dataSaved;
