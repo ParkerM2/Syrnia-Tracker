@@ -64,10 +64,10 @@ const SkillCard = ({
             {(!imageLoaded || imageError) && <span className="mr-auto text-base font-semibold">{skill}</span>}
             <div className="flex flex-col items-end gap-0.5">
               {displayHourExp > 0 && (
-                <span className="text-sm font-semibold text-green-500">+{formatExp(displayHourExp)}</span>
+                <span className="text-sm font-semibold text-primary">+{formatExp(displayHourExp)}</span>
               )}
               {gainedThisWeek !== null && (
-                <span className="text-xs font-semibold text-blue-500">+{formatExp(gainedThisWeek)}</span>
+                <span className="text-xs font-semibold text-accent-foreground">+{formatExp(gainedThisWeek)}</span>
               )}
             </div>
           </div>
@@ -107,7 +107,7 @@ const SkillCard = ({
                 {parseInt(levelGainedThisWeek, 10) > 0 && (
                   <div>
                     <span className="text-muted-foreground">Levels (Week): </span>
-                    <span className="font-semibold text-purple-500">+{levelGainedThisWeek}</span>
+                    <span className="font-semibold text-secondary-foreground">+{levelGainedThisWeek}</span>
                   </div>
                 )}
               </div>

@@ -174,9 +174,9 @@ const TrackedHistory = () => {
                                 className={cn(
                                   "font-medium",
                                   periodData.hpUsed.used > 0
-                                    ? "text-red-500"
+                                    ? "text-destructive"
                                     : periodData.hpUsed.used < 0
-                                      ? "text-green-500"
+                                      ? "text-primary"
                                       : "text-foreground",
                                 )}>
                                 {periodData.hpUsed.used > 0 ? "-" : ""}
@@ -199,9 +199,9 @@ const TrackedHistory = () => {
                                 className={cn(
                                   "font-medium",
                                   periodData.netProfit > 0
-                                    ? "text-green-500"
+                                    ? "text-primary"
                                     : periodData.netProfit < 0
-                                      ? "text-red-500"
+                                      ? "text-destructive"
                                       : "text-foreground",
                                 )}>
                                 {periodData.netProfit >= 0 ? "+" : ""}
@@ -253,9 +253,9 @@ const TrackedHistory = () => {
                                           className={cn(
                                             "text-sm font-medium",
                                             periodData.hpUsed.used > 0
-                                              ? "text-red-500"
+                                              ? "text-destructive"
                                               : periodData.hpUsed.used < 0
-                                                ? "text-green-500"
+                                                ? "text-primary"
                                                 : "text-foreground",
                                           )}>
                                           {periodData.hpUsed.used > 0 ? "-" : ""}
@@ -287,7 +287,7 @@ const TrackedHistory = () => {
                                     </p>
                                     <div className="mb-2 flex justify-between border-b pb-1">
                                       <span className="text-sm font-semibold">Total Drop Value:</span>
-                                      <span className="text-sm font-semibold text-green-500">
+                                      <span className="text-sm font-semibold text-primary">
                                         {periodData.totalDropValue.toLocaleString(undefined, {
                                           minimumFractionDigits: 0,
                                           maximumFractionDigits: 0,
@@ -314,7 +314,7 @@ const TrackedHistory = () => {
                                                   {stats.totalAmount.toLocaleString()} ({stats.count}x)
                                                 </span>
                                                 {totalValue > 0 && (
-                                                  <span className="text-xs text-green-500">
+                                                  <span className="text-xs text-primary">
                                                     {totalValue.toLocaleString(undefined, {
                                                       minimumFractionDigits: 0,
                                                       maximumFractionDigits: 0,

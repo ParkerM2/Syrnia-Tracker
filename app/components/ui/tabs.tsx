@@ -77,8 +77,8 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(({ cla
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
         isSelected
-          ? "hover:bg-card/80 border-2 border-slate-400 bg-card text-card-foreground shadow-sm dark:border-slate-500"
-          : "border-border/50 bg-secondary/50 border text-muted-foreground hover:border-slate-400 hover:bg-secondary hover:text-foreground dark:hover:border-slate-500",
+          ? "hover:bg-card/80 border-2 border-border bg-card text-card-foreground shadow-sm"
+          : "border-border/50 bg-secondary/50 border text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground",
         className,
       )}
       {...props}

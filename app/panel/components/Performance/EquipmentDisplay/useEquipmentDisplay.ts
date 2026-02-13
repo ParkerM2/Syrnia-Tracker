@@ -212,7 +212,7 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
         value: Math.round(equipment.totals.armour),
         enchant: totalArmourEnchant > 0 ? `+${totalArmourEnchant} Armour` : undefined,
         enchantType: "armour",
-        enchantColorClass: totalArmourEnchant > 0 ? "text-blue-500" : "",
+        enchantColorClass: totalArmourEnchant > 0 ? "text-accent-foreground" : "",
       });
     }
     if (equipment.totals.aim !== undefined) {
@@ -221,7 +221,7 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
         value: Math.round(equipment.totals.aim),
         enchant: totalAimEnchant > 0 ? `+${totalAimEnchant} Aim` : undefined,
         enchantType: "aim",
-        enchantColorClass: totalAimEnchant > 0 ? "text-[#f8ef8c]" : "",
+        enchantColorClass: totalAimEnchant > 0 ? "text-primary" : "",
       });
     }
     if (equipment.totals.power !== undefined) {
@@ -230,7 +230,7 @@ export const useEquipmentDisplay = (equipment: EquipmentDisplayData | undefined)
         value: Math.round(equipment.totals.power),
         enchant: totalPowerEnchant > 0 ? `+${totalPowerEnchant} Power` : undefined,
         enchantType: "power",
-        enchantColorClass: totalPowerEnchant > 0 ? "text-red-500" : "",
+        enchantColorClass: totalPowerEnchant > 0 ? "text-destructive" : "",
       });
     }
 
