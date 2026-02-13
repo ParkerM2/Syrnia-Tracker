@@ -1,5 +1,4 @@
 import { matchText, skillExpRegex } from "@app/utils/helpers";
-import { v4 as uuidv4 } from "uuid";
 import type { ScreenData, CombatExpGain, EquipmentData, EquipmentItem } from "@app/types";
 
 // Track last processed fight to prevent duplicate wearDisplayTD collection
@@ -952,7 +951,7 @@ export const scrapeScreenData = (): ScreenData => {
     images: [],
     links: [],
     timestamp: new Date().toISOString(),
-    uuid: uuidv4(), // Generate unique identifier for this screen scrape
+    uuid: crypto.randomUUID(), // Generate unique identifier for this screen scrape
     monster: monster,
     location: location,
     damageDealt: damage.dealt,

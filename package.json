@@ -8,8 +8,8 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "bash bash-scripts/set_global_env.sh && pnpm clean && tsx build/build.ts",
-    "dev": "bash bash-scripts/set_global_env.sh CLI_CEB_DEV=true && pnpm clean && tsx build/build.ts",
+    "build": "bash build/scripts/set_global_env.sh && pnpm clean && tsx build/build.ts",
+    "dev": "bash build/scripts/set_global_env.sh CLI_CEB_DEV=true && pnpm clean && tsx build/build.ts",
     "reload": "tsx build/reload.ts",
     "lint": "eslint app/ vite.config.ts",
     "lint:fix": "pnpm lint --fix",
@@ -18,7 +18,7 @@
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
     "prepare": "husky",
-    "set-global-env": "bash bash-scripts/set_global_env.sh",
+    "set-global-env": "bash build/scripts/set_global_env.sh",
     "zip": "tsx build/zip.ts"
   },
   "dependencies": {
@@ -35,8 +35,7 @@
     "react-error-boundary": "^6.0.0",
     "recharts": "^3.6.0",
     "tailwind-merge": "^3.3.0",
-    "type-fest": "^4.41.0",
-    "uuid": "^13.0.0"
+    "type-fest": "^4.41.0"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",
@@ -53,7 +52,6 @@
     "@typescript-eslint/parser": "^8.32.1",
     "@vitejs/plugin-react-swc": "^4.2.3",
     "autoprefixer": "^10.4.21",
-    "deepmerge": "^4.3.1",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-import-resolver-typescript": "^4.3.5",
@@ -81,7 +79,6 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.32.1",
     "vite": "^6.3.5",
-    "vite-plugin-node-polyfills": "^0.25.0",
     "vitest": "^4.0.18",
     "ws": "^8.19.0"
   },

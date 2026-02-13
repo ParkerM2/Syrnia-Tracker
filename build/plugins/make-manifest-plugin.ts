@@ -1,6 +1,5 @@
 import { ManifestParser } from "../dev-utils/lib/manifest-parser";
 import { IS_DEV, IS_FIREFOX } from "../env";
-import { colorfulLog } from "../../app/utils/colorful-logger";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { platform } from "node:process";
@@ -56,7 +55,7 @@ export default (config: { outDir: string }): PluginOption => {
       writeFileSync(resolve(to, "refresh.js"), withHMRId(refreshFileString));
     }
 
-    colorfulLog(`Manifest file copy complete: ${manifestPath}`, "success");
+    console.log(`Manifest file copy complete: ${manifestPath}`);
   };
 
   return {

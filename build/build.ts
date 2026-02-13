@@ -7,7 +7,6 @@ import { watchRebuildPlugin } from "./hmr/lib/plugins/watch-rebuild-plugin.js";
 import makeManifestPlugin from "./plugins/make-manifest-plugin";
 import react from "@vitejs/plugin-react-swc";
 import { build } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 const rootDir = resolve(import.meta.dirname, "..");
 const appDir = resolve(rootDir, "app");
@@ -68,7 +67,7 @@ const buildContentScripts = async () => {
           "@app": appDir,
         },
       },
-      plugins: [IS_DEV && watchRebuildPlugin({ refresh: true }), IS_DEV && makeEntryPointPlugin(), nodePolyfills()],
+      plugins: [IS_DEV && watchRebuildPlugin({ refresh: true }), IS_DEV && makeEntryPointPlugin()],
       publicDir: false,
       build: {
         lib: {
@@ -105,7 +104,7 @@ const buildBackground = async () => {
         "@app": appDir,
       },
     },
-    plugins: [IS_DEV && watchRebuildPlugin({ reload: true, id: "chrome-extension-hmr" }), nodePolyfills()],
+    plugins: [IS_DEV && watchRebuildPlugin({ reload: true, id: "chrome-extension-hmr" })],
     publicDir: resolve(rootDir, "public"),
     build: {
       lib: {
@@ -148,7 +147,6 @@ const buildSidePanel = async () => {
       IS_DEV && watchRebuildPlugin({ refresh: true }),
       watchPublicPlugin(),
       makeManifestPlugin({ outDir }),
-      nodePolyfills(),
     ],
     publicDir: resolve(rootDir, "public", "panel"),
     build: {
