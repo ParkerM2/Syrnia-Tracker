@@ -13,6 +13,7 @@
 
 import { escapeCSVField, parseCSVLine } from "./csv-helpers";
 import { parseCSV, csvRowToString, getCSVHeader } from "./csv-tracker";
+import { MS_PER_DAY } from "./time-constants";
 import { getWeeklyStatsHeader, weeklyStatsRowToString, parseWeeklyStatsRow } from "./weekly-stats-storage";
 import type { CSVRow } from "./csv-tracker";
 import type { WeeklyStatsRow } from "./weekly-stats-storage";
@@ -384,7 +385,7 @@ const saveUntrackedExpRecord = async (record: UntrackedExpRecord): Promise<void>
   if (isDuplicate) return;
 
   // Prune old records (90 days retention)
-  const MAX_RECORD_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+  const MAX_RECORD_AGE_MS = 90 * MS_PER_DAY;
   const now = Date.now();
   const pruned = existing.filter(r => now - new Date(r.detectedAt).getTime() < MAX_RECORD_AGE_MS);
   pruned.push(record);

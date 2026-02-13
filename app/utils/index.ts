@@ -8,5 +8,6 @@ export * from "./formatting";
 export * from "./exp-calculator";
 export * from "./weekly-stats-storage";
 export * from "./storage-service";
+export * from "./time-constants";
 export * from "./themes";
 export * from "./parse-theme-css";
