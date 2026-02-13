@@ -85,6 +85,9 @@ export const useTrackedDataQuery = () => {
       // Invalidate to ensure consistency
       queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
     },
+    onError: (error: Error) => {
+      console.error("[useTrackedDataQuery] Failed to clear tracked data:", error);
+    },
   });
 
   // Mutation for clearing data by hour
@@ -95,6 +98,9 @@ export const useTrackedDataQuery = () => {
     onSuccess: () => {
       // Invalidate and refetch after clearing
       queryClient.invalidateQueries({ queryKey: TRACKED_DATA_QUERY_KEY });
+    },
+    onError: (error: Error) => {
+      console.error("[useTrackedDataQuery] Failed to clear tracked data by hour:", error);
     },
   });
 

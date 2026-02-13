@@ -61,6 +61,9 @@ export const useItemValuesQuery = () => {
       // Invalidate to ensure consistency
       queryClient.invalidateQueries({ queryKey: ITEM_VALUES_QUERY_KEY });
     },
+    onError: (error: Error) => {
+      console.error("[useItemValuesQuery] Failed to save item values:", error);
+    },
   });
 
   // Save function
