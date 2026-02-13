@@ -2,11 +2,13 @@ import {
   formatDayHeader,
   formatHourHeader,
   formatMonthHeader,
+  formatWeekHeader,
   formatYearHeader,
   getDayStart,
   getHourStart,
   getMonthStart,
   getTimeGroupKey,
+  getWeekStart,
   getYearStart,
   parseDamageReceived,
 } from "./helpers/lootHelpers";
@@ -14,7 +16,7 @@ import { useTrackedDataQuery, useFormatting, useItemValuesQuery } from "@app/hoo
 import { useMemo, useState, useCallback } from "react";
 
 export type SortOption = "alphabetical" | "totalValue";
-export type TimeFilterOption = "none" | "hour" | "day" | "month" | "year";
+export type TimeFilterOption = "none" | "hour" | "day" | "week" | "month" | "year";
 export type SourceFilterOption = "all" | "drops" | "produced";
 
 export interface LootEntry {
@@ -252,6 +254,8 @@ export const useLootMap = () => {
         return groupByTime(getHourStart, formatHourHeader);
       case "day":
         return groupByTime(getDayStart, formatDayHeader);
+      case "week":
+        return groupByTime(getWeekStart, formatWeekHeader);
       case "month":
         return groupByTime(getMonthStart, formatMonthHeader);
       case "year":

@@ -6,10 +6,172 @@ import {
   saveUserStats,
   getLastExpBySkill,
   saveLastExpBySkill,
+  saveSessionBaseline,
+  saveUntrackedExpRecord,
 } from "@app/utils/storage-service";
 import { updateWeeklyStatsFromStatsURL } from "@app/utils/weekly-stats-storage";
-import type { ScreenData } from "@app/types";
+import type { ScreenData, UserStats } from "@app/types";
 import type { CSVRow } from "@app/utils/csv-tracker";
+
+// ============================================================================
+// Module-level state for session baseline and auto-opened stats tab
+// ============================================================================
+
+let autoOpenedStatsTabId: number | null = null;
+let baselinePending = false;
+let lastStatsPageFetchTime = 0;
+const STATS_FETCH_COOLDOWN = 30_000; // 30 seconds
+const AUTO_CLOSE_TIMEOUT_MS = 10_000; // 10 seconds fallback
+
+// ============================================================================
+// Session start listeners
+// ============================================================================
+
+chrome.runtime.onStartup.addListener(() => {
+  captureSessionBaseline();
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  captureSessionBaseline();
+});
+
+// ============================================================================
+// Session baseline capture
+// ============================================================================
+
+/**
+ * Capture a session baseline by opening/reloading the stats page.
+ * Only acts if the user has an active game.php tab (is playing).
+ */
+const captureSessionBaseline = async (): Promise<void> => {
+  try {
+    // Gate: require game.php to be active
+    const gameTabs = await chrome.tabs.query({
+      url: "*://*.syrnia.com/game.php*",
+    });
+    if (gameTabs.length === 0) return;
+
+    const statsTabs = await chrome.tabs.query({
+      url: "https://www.syrnia.com/theGame/includes2/stats.php*",
+    });
+
+    if (statsTabs.length > 0 && statsTabs[0].id) {
+      await chrome.tabs.reload(statsTabs[0].id);
+      autoOpenedStatsTabId = statsTabs[0].id;
+    } else {
+      const tab = await chrome.tabs.create({
+        url: "https://www.syrnia.com/theGame/includes2/stats.php",
+        active: false,
+      });
+      autoOpenedStatsTabId = tab.id ?? null;
+    }
+
+    baselinePending = true;
+
+    // Fallback: close auto-opened tab after timeout even if no UPDATE_USER_STATS received
+    if (autoOpenedStatsTabId !== null) {
+      const tabIdToClose = autoOpenedStatsTabId;
+      setTimeout(() => {
+        if (autoOpenedStatsTabId === tabIdToClose) {
+          chrome.tabs.remove(tabIdToClose).catch(() => {});
+          autoOpenedStatsTabId = null;
+          baselinePending = false;
+        }
+      }, AUTO_CLOSE_TIMEOUT_MS);
+    }
+  } catch {
+    // Silently handle errors
+  }
+};
+
+// ============================================================================
+// Stats page fetch trigger (for new skill detection)
+// ============================================================================
+
+/**
+ * Trigger a stats page fetch with 30s debounce.
+ * Used when a new skill is detected in processScreenData.
+ */
+const triggerStatsPageFetch = async (): Promise<void> => {
+  const now = Date.now();
+  if (now - lastStatsPageFetchTime < STATS_FETCH_COOLDOWN) return;
+  lastStatsPageFetchTime = now;
+
+  try {
+    // Gate: require game.php to be active
+    const gameTabs = await chrome.tabs.query({
+      url: "*://*.syrnia.com/game.php*",
+    });
+    if (gameTabs.length === 0) return;
+
+    const statsTabs = await chrome.tabs.query({
+      url: "https://www.syrnia.com/theGame/includes2/stats.php*",
+    });
+
+    if (statsTabs.length > 0 && statsTabs[0].id) {
+      await chrome.tabs.reload(statsTabs[0].id);
+    } else {
+      const tab = await chrome.tabs.create({
+        url: "https://www.syrnia.com/theGame/includes2/stats.php",
+        active: false,
+      });
+      autoOpenedStatsTabId = tab.id ?? null;
+
+      // Fallback auto-close after timeout
+      if (autoOpenedStatsTabId !== null) {
+        const tabIdToClose = autoOpenedStatsTabId;
+        setTimeout(() => {
+          if (autoOpenedStatsTabId === tabIdToClose) {
+            chrome.tabs.remove(tabIdToClose).catch(() => {});
+            autoOpenedStatsTabId = null;
+          }
+        }, AUTO_CLOSE_TIMEOUT_MS);
+      }
+    }
+  } catch {
+    // Silently handle errors
+  }
+};
+
+// ============================================================================
+// Untracked exp detection from baseline comparison
+// ============================================================================
+
+/**
+ * Compare current stats from stats page against lastExpBySkill to detect
+ * any exp gained while tracking was inactive.
+ */
+const detectUntrackedFromBaseline = async (currentStats: UserStats): Promise<void> => {
+  const lastExpBySkill = await getLastExpBySkill();
+  const endMs = Date.now();
+
+  for (const [skillName, currentStat] of Object.entries(currentStats.skills)) {
+    const currentTotal = parseInt(currentStat.totalExp, 10) || 0;
+    const lastTracked = lastExpBySkill[skillName];
+
+    if (lastTracked && lastTracked.ts > 0 && lastTracked.exp > 0 && currentTotal > lastTracked.exp) {
+      const delta = currentTotal - lastTracked.exp;
+      if (delta > 0) {
+        await saveUntrackedExpRecord({
+          id: crypto.randomUUID(),
+          skill: skillName,
+          expGained: delta,
+          startUTC: new Date(lastTracked.ts).toISOString(),
+          endUTC: new Date(endMs).toISOString(),
+          detectedAt: new Date(endMs).toISOString(),
+          totalExpBefore: lastTracked.exp,
+          totalExpAfter: currentTotal,
+          durationMs: endMs - lastTracked.ts,
+        });
+
+        // Update so we don't double-count
+        lastExpBySkill[skillName] = { exp: currentTotal, ts: endMs };
+      }
+    }
+  }
+
+  await saveLastExpBySkill(lastExpBySkill);
+};
 
 chrome.runtime.onMessage.addListener((message, sender) => {
   // Only process messages from content scripts (sender.tab exists)
@@ -48,15 +210,45 @@ chrome.runtime.onMessage.addListener((message, sender) => {
     // IMPORTANT: This does NOT affect tracked current hour exp from screen data
     // The tracked current hour exp is calculated independently from screen scraping
     if (message.data && message.data.username && message.data.skills && Object.keys(message.data.skills).length > 0) {
+      const statsData = message.data as UserStats;
+
       // Save user stats (source of truth for profile/weekly data, NOT for tracked current hour)
-      saveUserStats(message.data).catch(() => {
+      saveUserStats(statsData).catch(() => {
         // Silently handle errors
       });
+
+      // If baseline is pending, save the session baseline and close auto-opened tab
+      if (baselinePending) {
+        const baseline = {
+          timestamp: new Date().toISOString(),
+          skills: Object.fromEntries(
+            Object.entries(statsData.skills).map(([name, stat]) => [
+              name,
+              {
+                level: parseInt(stat.level, 10) || 0,
+                totalExp: parseInt(stat.totalExp, 10) || 0,
+              },
+            ]),
+          ),
+        };
+        saveSessionBaseline(baseline).catch(() => {});
+        baselinePending = false;
+      }
+
+      // Detect untracked exp by comparing stats page data to lastExpBySkill
+      detectUntrackedFromBaseline(statsData).catch(() => {});
+
+      // Auto-close the stats tab if we opened it
+      if (autoOpenedStatsTabId !== null) {
+        const tabIdToClose = autoOpenedStatsTabId;
+        autoOpenedStatsTabId = null;
+        chrome.tabs.remove(tabIdToClose).catch(() => {});
+      }
 
       // Update weekly stats from stats URL (source of truth for weekly totals)
       // This uses gainedThisWeek from stats page, but doesn't affect tracked current hour
       getTrackedData()
-        .then(allRows => updateWeeklyStatsFromStatsURL(message.data, allRows))
+        .then(allRows => updateWeeklyStatsFromStatsURL(statsData, allRows))
         .catch(() => {
           // Silently handle errors
         });
@@ -128,8 +320,28 @@ const processScreenData = async (data: ScreenData): Promise<boolean> => {
           // First time seeing this skill — initialize baseline, don't count as gain
           lastExpBySkill[mainSkill] = { exp: mainSkillExp, ts: now };
           gainedExp = "0";
+
+          // Trigger stats page fetch for comprehensive baseline
+          triggerStatsPageFetch();
         } else if (now - lastEntry.ts > MAX_SCRAPE_GAP_MS) {
-          // Stale gap — reset baseline, don't attribute the accumulated delta
+          // Stale gap — check for untracked exp before resetting baseline
+          if (mainSkillExp > lastEntry.exp) {
+            const startMs = lastEntry.ts;
+            const endMs = now;
+            saveUntrackedExpRecord({
+              id: crypto.randomUUID(),
+              skill: mainSkill,
+              expGained: mainSkillExp - lastEntry.exp,
+              startUTC: new Date(startMs).toISOString(),
+              endUTC: new Date(endMs).toISOString(),
+              detectedAt: new Date(endMs).toISOString(),
+              totalExpBefore: lastEntry.exp,
+              totalExpAfter: mainSkillExp,
+              durationMs: endMs - startMs,
+            }).catch(() => {});
+          }
+
+          // Reset baseline, don't attribute the accumulated delta
           lastExpBySkill[mainSkill] = { exp: mainSkillExp, ts: now };
           gainedExp = "0";
         } else {

@@ -174,6 +174,8 @@ export const getTimeGroupKey = (timestamp: string, timeFilter: string): string =
       return getHourStart(timestamp);
     case "day":
       return getDayStart(timestamp);
+    case "week":
+      return getWeekStart(timestamp);
     case "month":
       return getMonthStart(timestamp);
     case "year":

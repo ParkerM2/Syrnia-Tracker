@@ -2,16 +2,19 @@ import CustomThemeDialog from "./CustomThemeDialog";
 import { useCustomThemes } from "./useCustomThemes";
 import { cn, Button, Card, CardContent, CardHeader, CardTitle, Label, Select } from "@app/components";
 import { useStorage } from "@app/hooks";
-import { exampleThemeStorage } from "@app/utils/storage";
+import { exampleThemeStorage, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, zoomStorage } from "@app/utils/storage";
 import { themes, makeCustomThemeName } from "@app/utils/themes";
 import { memo } from "react";
 
 /**
  * Settings Component
  */
+const zoomOptions = Array.from({ length: (ZOOM_MAX - ZOOM_MIN) / ZOOM_STEP + 1 }, (_, i) => ZOOM_MIN + i * ZOOM_STEP);
+
 const Settings = memo(() => {
   const themeStorage = useStorage(exampleThemeStorage);
   const currentThemeName = themeStorage?.themeName || "default";
+  const { zoomLevel } = useStorage(zoomStorage);
 
   const {
     customThemes: hookCustomThemes,
@@ -66,6 +69,31 @@ const Settings = memo(() => {
                   ))}
                 </optgroup>
               )}
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Zoom Level */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Display</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="bg-card/50 flex flex-col gap-2 rounded-lg border border-border p-3">
+            <Label htmlFor="zoom-select" className="text-base font-medium">
+              Zoom Level
+            </Label>
+            <p className="text-sm text-muted-foreground">Scale the entire side panel interface</p>
+            <Select
+              id="zoom-select"
+              value={String(zoomLevel)}
+              onChange={e => zoomStorage.setZoomLevel(Number(e.target.value))}>
+              {zoomOptions.map(level => (
+                <option key={level} value={String(level)}>
+                  {level}%{level === 100 ? " (Default)" : ""}
+                </option>
+              ))}
             </Select>
           </div>
         </CardContent>

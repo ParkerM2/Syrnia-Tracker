@@ -127,23 +127,75 @@ const hasExpIncreased = (): { increased: boolean; skill?: string; newExp?: numbe
   return { increased: false };
 };
 
+// Track the last completion message text to avoid duplicate triggers
+let lastCompletionText = "";
+
+/**
+ * Fallback trigger: detect "you gained X [skill] experience" messages.
+ * Handles farming (harvest/plant) where the total exp disappears from the DOM
+ * after the timer finishes and only the gained amount is shown.
+ * Only checked when hasExpIncreased() didn't fire.
+ */
+const hasCompletionMessage = (): { detected: boolean; skill?: string; gained?: number } => {
+  const centerContent = document.querySelector("#centerContent");
+  if (!centerContent) return { detected: false };
+
+  const text = centerContent.textContent || "";
+
+  // Don't re-trigger on the same screen text
+  if (text === lastCompletionText) return { detected: false };
+
+  // Pattern: "you gained X [skill] experience"
+  const match = text.match(/you gained (\d+) (\w+) experience/i);
+  if (!match || !match[1] || !match[2]) return { detected: false };
+
+  const gained = parseInt(match[1], 10);
+  if (isNaN(gained) || gained <= 0) return { detected: false };
+
+  const rawSkill = match[2].toLowerCase();
+  const skill = rawSkill.charAt(0).toUpperCase() + rawSkill.slice(1);
+
+  // Mark this text as processed
+  lastCompletionText = text;
+
+  return { detected: true, skill, gained };
+};
+
 // Send data when exp increases - this indicates fight end
 const sendData = () => {
   // Prevent concurrent processing
   if (isProcessingFight) return;
 
-  // Check if exp has increased for any skill
+  // Primary: check if total exp increased on screen
   const expCheck = hasExpIncreased();
 
+  // Secondary: check for completion messages (farming harvest/plant)
+  // Only when primary trigger didn't fire (total exp not visible on screen)
+  let completionCheck: ReturnType<typeof hasCompletionMessage> | null = null;
   if (!expCheck.increased) {
-    return; // No exp change, no scrape needed
+    completionCheck = hasCompletionMessage();
+    if (!completionCheck.detected) return;
   }
 
-  // Exp increased - fight ended! Scrape all data now
   isProcessingFight = true;
 
   // Scrape the data
   const data = scrapeScreenData();
+
+  // If triggered by completion message, synthesize the total exp so the
+  // background's normal delta calculation works unchanged
+  if (completionCheck?.detected && completionCheck.skill && completionCheck.gained) {
+    const lastTotal = lastSeenExpBySkill.get(completionCheck.skill) || 0;
+    const newTotal = lastTotal + completionCheck.gained;
+
+    data.actionText.currentActionText = completionCheck.skill;
+    data.actionText.exp = String(newTotal);
+    if (!data.actionType) data.actionType = "skilling";
+
+    // Update map so future deltas stay correct
+    lastSeenExpBySkill.set(completionCheck.skill, newTotal);
+  }
+
   if (data.actionType === "combat") {
     data.totalFights = 1;
   }

@@ -200,14 +200,16 @@ const LootTable = memo(({ filteredLootEntries, sortedAndGroupedLoot, timeFilter 
             <div className="bg-muted/50 flex items-center justify-between rounded-md px-4 py-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">{group.header}</span>
-                <span
+                <Badge
                   className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-                    netProfit >= 0 ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-600",
+                    "pointer-events-none hover:scale-100",
+                    netProfit >= 0
+                      ? "border-primary/30 bg-primary/15 text-primary"
+                      : "border-destructive/30 bg-destructive/15 text-destructive",
                   )}>
                   {netProfit >= 0 ? "+" : ""}
                   {netProfit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} GP
-                </span>
+                </Badge>
               </div>
               <Badge
                 as="button"

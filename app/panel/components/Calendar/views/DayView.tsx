@@ -5,6 +5,7 @@ import { calculateExpForNextLevel } from "@app/utils/exp-calculator";
 import { formatExp } from "@app/utils/formatting";
 import { memo, useCallback, useMemo, useState } from "react";
 import type { CalendarCellData } from "../types";
+import type { UntrackedExpRecord } from "@app/types";
 import type { CSSProperties } from "react";
 
 interface DayViewProps {
@@ -35,6 +36,78 @@ const SKILL_BADGE_STYLE: CSSProperties = {
   color: "var(--accent-foreground)",
 };
 
+const UNTRACKED_BADGE_STYLE: CSSProperties = {
+  backgroundColor: "color-mix(in srgb, var(--destructive) 15%, transparent)",
+  borderWidth: "1px",
+  borderColor: "color-mix(in srgb, var(--destructive) 30%, transparent)",
+  color: "var(--destructive)",
+};
+
+const formatUntrackedTimeRange = (record: UntrackedExpRecord): string => {
+  const start = new Date(record.startUTC);
+  const end = new Date(record.endUTC);
+  const sameDay = start.toDateString() === end.toDateString();
+
+  const dateOpts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true };
+
+  if (sameDay) {
+    const datePart = start.toLocaleDateString(undefined, dateOpts);
+    const startTime = start.toLocaleTimeString(undefined, timeOpts);
+    const endTime = end.toLocaleTimeString(undefined, timeOpts);
+    return `${datePart}, ${startTime} - ${endTime}`;
+  }
+
+  const startStr = start.toLocaleDateString(undefined, { ...dateOpts, ...timeOpts });
+  const endStr = end.toLocaleDateString(undefined, { ...dateOpts, ...timeOpts });
+  return `${startStr} - ${endStr}`;
+};
+
+const formatDuration = (ms: number): string => {
+  const totalMinutes = Math.round(ms / 60_000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+};
+
+// --- Untracked EXP info card ---
+
+interface UntrackedExpCardProps {
+  records: UntrackedExpRecord[];
+}
+
+const UntrackedExpCard = memo(({ records }: UntrackedExpCardProps) => {
+  const totalExp = records.reduce((sum, r) => sum + r.expGained, 0);
+
+  return (
+    <div className="border-destructive/30 bg-destructive/5 rounded-lg border p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+          !
+        </span>
+        <span className="text-xs font-semibold text-destructive">
+          Untracked EXP &middot; {formatExp(totalExp)} total
+        </span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {records.map(record => (
+          <div key={record.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <span className="font-medium text-foreground">{record.skill}</span>
+            <span className="bg-destructive/15 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+              +{formatExp(record.expGained)} exp
+            </span>
+            <span className="text-muted-foreground">{formatUntrackedTimeRange(record)}</span>
+            <span className="text-muted-foreground/70 text-[10px]">({formatDuration(record.durationMs)})</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+UntrackedExpCard.displayName = "UntrackedExpCard";
+
 // --- Hour row with data ---
 
 interface HourRowProps {
@@ -61,6 +134,14 @@ const HourRow = memo(({ hour, data, mainSkill, trendPct }: HourRowProps) => {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{formatHourLabel(hour)}</CardTitle>
           <div className="flex items-center gap-1.5">
+            {data.hasUntrackedExp && (
+              <div
+                className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold"
+                style={UNTRACKED_BADGE_STYLE}>
+                <span className="font-bold">!</span>
+                <span>Untracked</span>
+              </div>
+            )}
             {mainSkill && (
               <div className="rounded-md px-2 py-0.5 text-xs font-semibold" style={SKILL_BADGE_STYLE}>
                 {mainSkill}
@@ -148,7 +229,7 @@ const HourRow = memo(({ hour, data, mainSkill, trendPct }: HourRowProps) => {
                 <span
                   className={cn(
                     "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-                    data.netProfit > 0 ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-600",
+                    data.netProfit > 0 ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive",
                   )}>
                   {data.netProfit > 0 ? "+" : ""}
                   {formatGP(data.netProfit)} GP
@@ -166,6 +247,10 @@ const HourRow = memo(({ hour, data, mainSkill, trendPct }: HourRowProps) => {
                 </span>
               )}
             </div>
+          )}
+
+          {data.hasUntrackedExp && data.untrackedRecords && data.untrackedRecords.length > 0 && (
+            <UntrackedExpCard records={data.untrackedRecords} />
           )}
         </CardContent>
       )}

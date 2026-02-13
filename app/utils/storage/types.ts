@@ -71,6 +71,14 @@ export interface CustomThemesStateType {
   themes: CustomTheme[];
 }
 
+export interface ZoomStateType {
+  zoomLevel: number;
+}
+
+export type ZoomStorageType = BaseStorageType<ZoomStateType> & {
+  setZoomLevel: (level: number) => Promise<void>;
+};
+
 export type CustomThemesStorageType = BaseStorageType<CustomThemesStateType> & {
   addTheme: (theme: CustomTheme) => Promise<void>;
   updateTheme: (id: string, updates: Partial<Pick<CustomTheme, "name" | "variables">>) => Promise<void>;

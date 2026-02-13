@@ -1,7 +1,9 @@
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@app/components";
 import { cn } from "@app/utils/cn";
 import { formatExp } from "@app/utils/formatting";
 import { memo } from "react";
 import type { CalendarCellData } from "./types";
+import type { UntrackedExpRecord } from "@app/types";
 
 interface CalendarCellProps {
   label: string;
@@ -27,6 +29,26 @@ const getIntensityClass = (totalExp: number): string => {
   return "bg-primary/25";
 };
 
+const formatUntrackedRange = (record: UntrackedExpRecord): string => {
+  const start = new Date(record.startUTC);
+  const end = new Date(record.endUTC);
+  const sameDay = start.toDateString() === end.toDateString();
+
+  const dateOpts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  const timeOpts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit", hour12: true };
+
+  if (sameDay) {
+    const datePart = start.toLocaleDateString(undefined, dateOpts);
+    const startTime = start.toLocaleTimeString(undefined, timeOpts);
+    const endTime = end.toLocaleTimeString(undefined, timeOpts);
+    return `${datePart}, ${startTime} - ${endTime}`;
+  }
+
+  const startStr = start.toLocaleDateString(undefined, dateOpts);
+  const endStr = end.toLocaleDateString(undefined, dateOpts);
+  return `${startStr} - ${endStr}`;
+};
+
 const MAX_VISIBLE_SKILLS = 4;
 
 const CalendarCell = memo(
@@ -42,7 +64,7 @@ const CalendarCell = memo(
         onClick={onClick}
         disabled={!onClick}
         className={cn(
-          "flex min-h-[5rem] flex-col items-start overflow-hidden rounded-md border p-1.5 text-left transition-colors",
+          "relative flex min-h-[5rem] flex-col items-start overflow-hidden rounded-md border p-1.5 text-left transition-colors",
           onClick && "hover:border-primary/50 cursor-pointer",
           !onClick && "cursor-default",
           isToday && "ring-2 ring-primary",
@@ -59,6 +81,29 @@ const CalendarCell = memo(
           {label}
         </span>
 
+        {/* Untracked exp indicator */}
+        {data.hasUntrackedExp && data.untrackedRecords && data.untrackedRecords.length > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold leading-none text-destructive-foreground shadow-sm">
+                  !
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold text-destructive">Untracked EXP</span>
+                  {data.untrackedRecords.map(record => (
+                    <span key={record.id} className="text-xs">
+                      {formatExp(record.expGained)} {record.skill} exp ({formatUntrackedRange(record)})
+                    </span>
+                  ))}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         {hasData && (
           <div className="mt-1 flex w-full flex-1 flex-col text-[10px]">
             {/* ── Totals header ── */}
@@ -68,7 +113,7 @@ const CalendarCell = memo(
                 <span
                   className={cn(
                     "truncate rounded-full px-1.5 text-[9px] font-semibold leading-tight",
-                    data.netProfit > 0 ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-600",
+                    data.netProfit > 0 ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive",
                   )}>
                   {data.netProfit > 0 ? "+" : ""}
                   {formatGP(data.netProfit)} GP
