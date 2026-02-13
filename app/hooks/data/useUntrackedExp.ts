@@ -49,7 +49,6 @@ export const useUntrackedExp = () => {
     const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === "local" && changes.untracked_exp_records) {
         queryClient.invalidateQueries({ queryKey: UNTRACKED_EXP_QUERY_KEY });
-        queryClient.refetchQueries({ queryKey: UNTRACKED_EXP_QUERY_KEY, type: "active" });
       }
     };
 
