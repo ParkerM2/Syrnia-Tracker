@@ -1,4 +1,4 @@
-/* eslint-disable import-x/exports-last */
+import { escapeCSVField, parseCSVLine } from "./csv-helpers";
 import type { ScreenData } from "@app/types";
 
 export interface CSVRow {
@@ -463,17 +463,6 @@ export const csvRowToObject = (row: string[]): CSVRow | null => {
 };
 
 /**
- * Escape CSV field (handles commas, quotes, newlines)
- */
-const escapeCSVField = (field: string | undefined | null): string => {
-  const safeField = field || "";
-  if (safeField.includes(",") || safeField.includes('"') || safeField.includes("\n")) {
-    return `"${safeField.replace(/"/g, '""')}"`;
-  }
-  return safeField;
-};
-
-/**
  * Convert CSV row object to CSV string
  */
 export const csvRowToString = (row: CSVRow): string =>
@@ -516,36 +505,7 @@ export const parseCSV = (csvContent: string): CSVRow[] => {
   // Skip header row
   const dataLines = lines.slice(1);
 
-  return dataLines
-    .map(line => {
-      // Simple CSV parsing (handles quoted fields)
-      const row: string[] = [];
-      let current = "";
-      let inQuotes = false;
-
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        const nextChar = line[i + 1];
-
-        if (char === '"') {
-          if (inQuotes && nextChar === '"') {
-            current += '"';
-            i++; // Skip next quote
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (char === "," && !inQuotes) {
-          row.push(current);
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-      row.push(current); // Add last field
-
-      return csvRowToObject(row);
-    })
-    .filter((row): row is CSVRow => row !== null);
+  return dataLines.map(line => csvRowToObject(parseCSVLine(line))).filter((row): row is CSVRow => row !== null);
 };
 
 /**

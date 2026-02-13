@@ -11,12 +11,18 @@
  * - CSV export is unified and consistent
  */
 
+import { escapeCSVField, parseCSVLine } from "./csv-helpers";
 import { parseCSV, csvRowToString, getCSVHeader } from "./csv-tracker";
-import { getUserStatsCSVHeader } from "./user-stats-storage";
 import { getWeeklyStatsHeader, weeklyStatsRowToString, parseWeeklyStatsRow } from "./weekly-stats-storage";
 import type { CSVRow } from "./csv-tracker";
 import type { WeeklyStatsRow } from "./weekly-stats-storage";
 import type { SessionBaseline, UntrackedExpRecord, UserStats } from "@app/types";
+
+/**
+ * Get CSV header for user stats
+ */
+const getUserStatsCSVHeader = (): string =>
+  "timestamp,username,skill,level,totalExp,expForNextLevel,percentToNext,expLeft,gainedThisHour,gainedThisWeek,levelGainedThisWeek";
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -151,29 +157,7 @@ const getUserStats = async (): Promise<UserStats | null> => {
   }> = [];
 
   dataLines.forEach(line => {
-    const row: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      const nextChar = line[i + 1];
-
-      if (char === '"') {
-        if (inQuotes && nextChar === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === "," && !inQuotes) {
-        row.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    row.push(current);
+    const row = parseCSVLine(line);
 
     if (row.length >= 11) {
       rows.push({
@@ -462,21 +446,6 @@ const downloadAllDataCSV = async (saveAs: boolean = true): Promise<void> => {
 };
 
 // ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Escape CSV field
- */
-const escapeCSVField = (field: string | undefined | null): string => {
-  const safeField = field || "";
-  if (safeField.includes(",") || safeField.includes('"') || safeField.includes("\n")) {
-    return `"${safeField.replace(/"/g, '""')}"`;
-  }
-  return safeField;
-};
-
-// ============================================================================
 // Exports
 // ============================================================================
 
@@ -504,4 +473,5 @@ export {
   downloadUserStatsCSV,
   downloadWeeklyStatsCSV,
   downloadAllDataCSV,
+  getUserStatsCSVHeader,
 };
