@@ -4,6 +4,7 @@ import { useUntrackedExp } from "@app/hooks/data/useUntrackedExp";
 import { aggregateRows, filterRowsByRange } from "@app/utils/aggregate-rows";
 import { useMemo } from "react";
 import type { CalendarCellData, CalendarViewMode } from "./types";
+import type { UntrackedExpRecord } from "@app/types";
 
 const EMPTY_CELL: CalendarCellData = {
   hasData: false,
@@ -119,13 +120,14 @@ const getCellDateRange = (viewMode: CalendarViewMode, currentDate: Date, key: st
 export const useCalendarData = (viewMode: CalendarViewMode, currentDate: Date) => {
   const { allRows, loading } = useTrackedDataMap();
   const { itemValues } = useItemValuesQuery();
-  const { getUntrackedForRange } = useUntrackedExp();
+  const { getUntrackedForRange, getRecordsInRange } = useUntrackedExp();
 
   // Map view mode to cell granularity for untracked indicator logic
   const cellGranularity = viewMode === "day" ? "hour" : viewMode === "year" ? "month" : "day";
 
   const cellData = useMemo(() => {
     const map = new Map<string, CalendarCellData>();
+    const overflowUntrackedRecords: UntrackedExpRecord[] = [];
     const { start, end } = getVisibleRange(viewMode, currentDate);
     const visibleRows = filterRowsByRange(allRows, start, end);
 
@@ -180,46 +182,76 @@ export const useCalendarData = (viewMode: CalendarViewMode, currentDate: Date) =
       });
     }
 
-    // Merge untracked exp into existing cells
-    map.forEach((cell, key) => {
-      const { start: cellStart, end: cellEnd } = getCellDateRange(viewMode, currentDate, key);
-      const untracked = getUntrackedForRange(cellStart, cellEnd, cellGranularity);
+    // --- Untracked exp handling ---
+    if (viewMode === "day") {
+      // Day view: split records into fits-in-hour vs overflow
+      const { start: dayStart, end: dayEnd } = getVisibleRange("day", currentDate);
+      const allDayUntracked = getRecordsInRange(dayStart, dayEnd);
 
-      if (untracked.totalExp > 0) {
-        cell.totalExp += untracked.totalExp;
-        Object.entries(untracked.totalBySkill).forEach(([skill, exp]) => {
-          cell.expBySkill[skill] = (cell.expBySkill[skill] || 0) + exp;
-        });
-      }
+      allDayUntracked.forEach(record => {
+        const rStart = new Date(record.startUTC);
+        const rEnd = new Date(record.endUTC);
 
-      if (untracked.indicatorRecords.length > 0) {
-        cell.hasUntrackedExp = true;
-        cell.untrackedRecords = untracked.indicatorRecords;
-      }
-    });
+        // Record fits in one hour if start and end share the same hour on the same day
+        const fitsInOneHour = rStart.getHours() === rEnd.getHours() && rStart.toDateString() === rEnd.toDateString();
 
-    // Create cells for time ranges that have untracked exp but no tracked data
-    const allCellKeys = generateAllCellKeys(viewMode, currentDate);
-    allCellKeys.forEach(key => {
-      if (map.has(key)) return;
-      const { start: cellStart, end: cellEnd } = getCellDateRange(viewMode, currentDate, key);
-      const untracked = getUntrackedForRange(cellStart, cellEnd, cellGranularity);
-      if (untracked.totalExp > 0) {
-        map.set(key, {
-          ...EMPTY_CELL,
-          hasData: true,
-          totalExp: untracked.totalExp,
-          expBySkill: { ...untracked.totalBySkill },
-          hasUntrackedExp: untracked.indicatorRecords.length > 0,
-          untrackedRecords: untracked.indicatorRecords.length > 0 ? untracked.indicatorRecords : undefined,
-        });
-      }
-    });
+        if (fitsInOneHour) {
+          const key = String(rStart.getHours());
+          let cell = map.get(key);
+          if (!cell) {
+            cell = { ...EMPTY_CELL, hasData: true, totalExp: 0, expBySkill: {} };
+            map.set(key, cell);
+          }
+          cell.totalExp += record.expGained;
+          cell.expBySkill[record.skill] = (cell.expBySkill[record.skill] || 0) + record.expGained;
+          cell.hasUntrackedExp = true;
+          cell.untrackedRecords = [...(cell.untrackedRecords || []), record];
+        } else {
+          overflowUntrackedRecords.push(record);
+        }
+      });
+    } else {
+      // Non-day views: keep existing merge logic
+      map.forEach((cell, key) => {
+        const { start: cellStart, end: cellEnd } = getCellDateRange(viewMode, currentDate, key);
+        const untracked = getUntrackedForRange(cellStart, cellEnd, cellGranularity);
 
-    return map;
-  }, [viewMode, currentDate, allRows, itemValues, getUntrackedForRange, cellGranularity]);
+        if (untracked.totalExp > 0) {
+          cell.totalExp += untracked.totalExp;
+          Object.entries(untracked.totalBySkill).forEach(([skill, exp]) => {
+            cell.expBySkill[skill] = (cell.expBySkill[skill] || 0) + exp;
+          });
+        }
 
-  const getCell = (key: string): CalendarCellData => cellData.get(key) || EMPTY_CELL;
+        if (untracked.indicatorRecords.length > 0) {
+          cell.hasUntrackedExp = true;
+          cell.untrackedRecords = untracked.indicatorRecords;
+        }
+      });
 
-  return { cellData, getCell, loading };
+      // Create cells for time ranges that have untracked exp but no tracked data
+      const allCellKeys = generateAllCellKeys(viewMode, currentDate);
+      allCellKeys.forEach(key => {
+        if (map.has(key)) return;
+        const { start: cellStart, end: cellEnd } = getCellDateRange(viewMode, currentDate, key);
+        const untracked = getUntrackedForRange(cellStart, cellEnd, cellGranularity);
+        if (untracked.totalExp > 0) {
+          map.set(key, {
+            ...EMPTY_CELL,
+            hasData: true,
+            totalExp: untracked.totalExp,
+            expBySkill: { ...untracked.totalBySkill },
+            hasUntrackedExp: untracked.indicatorRecords.length > 0,
+            untrackedRecords: untracked.indicatorRecords.length > 0 ? untracked.indicatorRecords : undefined,
+          });
+        }
+      });
+    }
+
+    return { map, overflow: overflowUntrackedRecords };
+  }, [viewMode, currentDate, allRows, itemValues, getUntrackedForRange, getRecordsInRange, cellGranularity]);
+
+  const getCell = (key: string): CalendarCellData => cellData.map.get(key) || EMPTY_CELL;
+
+  return { cellData: cellData.map, getCell, loading, overflowUntrackedRecords: cellData.overflow };
 };

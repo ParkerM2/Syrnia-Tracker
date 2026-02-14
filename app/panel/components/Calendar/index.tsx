@@ -12,7 +12,7 @@ const Calendar = memo(() => {
   const { viewMode, setViewMode, currentDate, viewStack, drillDown, goBack, navigatePrev, navigateNext, goToToday } =
     useCalendar();
 
-  const { cellData, getCell, loading } = useCalendarData(viewMode, currentDate);
+  const { cellData, getCell, loading, overflowUntrackedRecords } = useCalendarData(viewMode, currentDate);
 
   if (loading) {
     return <div className="py-8 text-center text-sm text-muted-foreground">Loading calendar data...</div>;
@@ -38,7 +38,9 @@ const Calendar = memo(() => {
           <MonthView currentDate={currentDate} cellData={cellData} getCell={getCell} onDrillDown={drillDown} />
         )}
         {viewMode === "week" && <WeekView currentDate={currentDate} getCell={getCell} onDrillDown={drillDown} />}
-        {viewMode === "day" && <DayView currentDate={currentDate} getCell={getCell} />}
+        {viewMode === "day" && (
+          <DayView currentDate={currentDate} getCell={getCell} overflowUntrackedRecords={overflowUntrackedRecords} />
+        )}
       </CardContent>
     </Card>
   );
