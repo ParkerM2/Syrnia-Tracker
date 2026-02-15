@@ -392,6 +392,16 @@ const saveUntrackedExpRecord = async (record: UntrackedExpRecord): Promise<void>
   await setInStorage(STORAGE_KEYS.UNTRACKED_EXP, pruned);
 };
 
+/**
+ * Mark specific untracked exp records as resolved
+ */
+const resolveUntrackedExpRecords = async (ids: string[]): Promise<void> => {
+  const records = await getUntrackedExpRecords();
+  const now = new Date().toISOString();
+  const updated = records.map(r => (ids.includes(r.id) ? { ...r, resolved: true, resolvedAt: now } : r));
+  await setInStorage(STORAGE_KEYS.UNTRACKED_EXP, updated);
+};
+
 // ============================================================================
 // CSV Export Operations
 // ============================================================================
@@ -472,6 +482,7 @@ export {
   saveSessionBaseline,
   getUntrackedExpRecords,
   saveUntrackedExpRecord,
+  resolveUntrackedExpRecords,
   downloadTrackedDataCSV,
   downloadUserStatsCSV,
   downloadWeeklyStatsCSV,

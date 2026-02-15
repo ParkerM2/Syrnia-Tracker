@@ -5,5 +5,6 @@ export * from "./useSessionBaseline";
 export * from "./useTrackedDataMap";
 export * from "./useTrackedDataQuery";
 export * from "./useUntrackedExp";
+export * from "./useUntrackedResolution";
 export * from "./useUserStatsQuery";
 export * from "./useWeeklyStatsQuery";

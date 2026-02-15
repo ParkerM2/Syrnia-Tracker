@@ -106,6 +106,8 @@ export interface UntrackedExpRecord {
   totalExpBefore: number; // Total exp at startUTC
   totalExpAfter: number; // Total exp at endUTC
   durationMs: number; // endUTC - startUTC in milliseconds
+  resolved?: boolean; // true after user distributes and saves
+  resolvedAt?: string; // ISO timestamp of resolution
 }
 
 export type * from "type-fest";

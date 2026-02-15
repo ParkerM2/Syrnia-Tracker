@@ -1,7 +1,7 @@
 import { getUntrackedExpRecords } from "@app/utils/storage-service";
 import { MS_PER_DAY, MS_PER_HOUR } from "@app/utils/time-constants";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { UntrackedExpRecord } from "@app/types";
 
 // Cell durations in ms for each granularity level
@@ -58,10 +58,14 @@ export const useUntrackedExp = () => {
     };
   }, [queryClient]);
 
+  // Derived value: unresolved records only
+  const unresolvedRecords = useMemo(() => records.filter(r => !r.resolved), [records]);
+
   // Get records that overlap a time range
   const getRecordsInRange = useCallback(
     (start: Date, end: Date): UntrackedExpRecord[] =>
       records.filter(record => {
+        if (record.resolved) return false; // Skip resolved records
         const rStart = new Date(record.startUTC).getTime();
         const rEnd = new Date(record.endUTC).getTime();
         return rStart < end.getTime() && rEnd > start.getTime();
@@ -90,5 +94,5 @@ export const useUntrackedExp = () => {
     [getRecordsInRange],
   );
 
-  return { records, getRecordsInRange, getUntrackedForRange };
+  return { records, unresolvedRecords, getRecordsInRange, getUntrackedForRange };
 };
